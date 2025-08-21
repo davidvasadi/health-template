@@ -1,2 +1,0 @@
-email:david.vasadi@gmail.com // Strapi
-pwd: Chiro_temp25 // Strapi

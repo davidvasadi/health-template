@@ -10,7 +10,7 @@ import { CartProvider } from '@/context/cart-context';
 import { cn } from '@/lib/utils';
 import { ViewTransitions } from 'next-view-transitions';
 import fetchContentType from '@/lib/strapi/fetchContentType';
-
+import  Booking  from '@/components/booking';
 const inter = Inter({
     subsets: ["latin"],
     display: "swap",
@@ -53,11 +53,12 @@ export default async function LocaleLayout({
                     <body
                         className={cn(
                             inter.className,
-                            "bg-charcoal antialiased h-full w-full"
+                            "bg-white antialiased h-full w-full"
                         )}
                     >
                         <Navbar data={pageData.navbar} locale={locale} />
                         {children}
+                        <Booking />
                         <Footer data={pageData.footer} locale={locale} />
                     </body>
                 </CartProvider>

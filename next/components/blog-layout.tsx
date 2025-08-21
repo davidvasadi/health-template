@@ -20,8 +20,8 @@ export async function BlogLayout({
     <Container className="mt-16 lg:mt-32">
       <div className="flex justify-between items-center px-2 py-8">
         <Link href="/blog" className="flex space-x-2 items-center">
-          <IconArrowLeft className="w-4 h-4 text-muted" />
-          <span className="text-sm text-muted">Back</span>
+          <IconArrowLeft className="w-4 h-4 text-breaker-bay-950" />
+          <span className="text-sm text-breaker-bay-950">Back</span>
         </Link>
       </div>
       <div className="w-full mx-auto">
@@ -46,14 +46,14 @@ export async function BlogLayout({
               {article.categories?.map((category, idx) => (
                 <p
                   key={`category-${idx}`}
-                  className="text-xs font-bold text-muted px-2 py-1 rounded-full bg-neutral-800 capitalize"
+                  className="text-xs font-bold text-breaker-bay-50 px-2 py-1 rounded-full bg-breaker-bay-700 capitalize"
                 >
                   {category.name}
                 </p>
               ))}
             </div>
             <header className="flex flex-col">
-              <h1 className="mt-8 text-4xl font-bold tracking-tight text-neutral-200 sm:text-5xl ">
+              <h1 className="mt-8 text-4xl font-bold tracking-tight text-breaker-bay-950 sm:text-5xl ">
                 {article.title}
               </h1>
             </header>
@@ -78,7 +78,7 @@ export async function BlogLayout({
                 dateTime={article.publishedAt}
                 className="flex items-center text-base "
               >
-                <span className="text-muted text-sm">
+                <span className="text-breaker-bay-950 text-sm">
                   {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
                 </span>
               </time>

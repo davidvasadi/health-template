@@ -29,7 +29,7 @@ export const BlogPostRows = ({ articles }: { articles: Article[] }) => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search articles"
-          className="text-sm min-w-full sm:min-w-96  p-2 rounded-md bg-neutral-800 border-none  focus:ring-0 focus:outline-none outline-none text-neutral-200 placeholder-neutral-400"
+          className="text-sm min-w-full sm:min-w-96  p-2 rounded-md bg-breaker-bay-950 border-none  focus:ring-0 focus:outline-none outline-none text-neutral-200 placeholder-neutral-400"
         />
       </div>
 
@@ -54,15 +54,18 @@ export const BlogPostRow = ({ article }: { article: Article }) => {
       className="flex md:flex-row flex-col items-start justify-between md:items-center group py-4"
     >
       <div>
-        <p className="text-neutral-300 text-lg font-medium group-hover:text-white transition duration-200">
+          <p className="text-breaker-bay-950 text-lg font-medium group-hover:text-breaker-bay-600 transition duration-200">
           {article.title}
         </p>
-        <p className="text-neutral-300 text-sm mt-2 max-w-xl group-hover:text-white transition duration-200">
+        <p className="text-breaker-bay-950 text-lg font-medium group-hover:text-breaker-bay-600 transition duration-200">
+          {article.title}
+        </p>
+        <p className="text-breaker-bay-950 text-sm mt-2 max-w-xl group-hover:text-breaker-bay-600 transition duration-200">
           {truncate(article.description, 80)}
         </p>
 
         <div className="flex gap-2 items-center my-4">
-          <p className="text-neutral-300 text-sm  max-w-xl group-hover:text-white transition duration-200">
+          <p className="text-breaker-bay-950 text-sm  max-w-xl group-hover:text-breaker-bay-600 transition duration-200">
             {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
           </p>
           <div className="h-1 w-1 rounded-full bg-neutral-800"></div>
@@ -70,7 +73,7 @@ export const BlogPostRow = ({ article }: { article: Article }) => {
             {article.categories?.map((category, idx) => (
               <p
                 key={`category-${idx}`}
-                className="text-xs font-bold text-muted px-2 py-1 rounded-full bg-neutral-800 capitalize"
+                className="text-xs font-bold text-breaker-bay-50 px-2 py-1 rounded-full bg-neutral-800 capitalize"
               >
                 {category.name}
               </p>

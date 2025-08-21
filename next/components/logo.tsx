@@ -21,8 +21,8 @@ export const Logo = ({ image, locale }: { image?: Image, locale?: string }) => {
           className="h-10 w-10 rounded-xl mr-2"
         />
 
-<span className="block w-fit mx-auto text-center text-white font-thin">
-  Csonka Bence<br/>Csontkovács
+<span className="block w-fit mx-auto text-center text-var(--breaker-950) font-thin">
+  Csonka Bence<br/> <span className="font-semibold">Csontkovács</span> 
 </span>
       </Link>
     );

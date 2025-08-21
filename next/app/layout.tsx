@@ -8,7 +8,7 @@ import { SlugProvider } from "./context/SlugContext";
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#06b6d4" },
-    { media: "(prefers-color-scheme: dark)", color: "#06b6d4" },
+    // { media: "(prefers-color-scheme: dark)", color: "#06b6d4" },
   ],
 };
 
