@@ -1,128 +1,135 @@
+"use client";
+
 import { Link } from "next-view-transitions";
 import React from "react";
-import { BlurImage } from "@/components/blur-image";
-import { Logo } from "./logo";
-import Image from "next/image";
 import Balancer from "react-wrap-balancer";
+import { BlurImage } from "./blur-image";
 import { truncate } from "@/lib/utils";
 import { format } from "date-fns";
 import { strapiImage } from "@/lib/strapi/strapiImage";
 import { Article } from "@/types/types";
+import { motion } from "framer-motion";
 
-export const BlogCard = ({ article, locale }: { article: Article, locale: string }) => {
+const spring = { type: "spring" as const, stiffness: 520, damping: 30, mass: 0.7 };
+
+/** --- BlogCard (horizontális, 2 oszlop) --- */
+export const BlogCard = ({ article, locale }: { article: Article; locale: string }) => {
   return (
-    <Link
-      className="shadow-derek grid grid-cols-1 md:grid-cols-2  rounded-3xl group border border-transparent hover:border-neutral-800 w-full hover:bg-neutral-900  overflow-hidden  hover:scale-[1.02] transition duration-200"
-      href={`/${locale}/blog/${article.slug}`}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={spring}
+      viewport={{ once: true }}
     >
-      <div className="">
-        {article.image ? (
-          <BlurImage
-            src={strapiImage(article.image.url)}
-            alt={article.title}
-            height="1200"
-            width="1200"
-            className="h-full object-cover object-top w-full rounded-3xl"
-          />
-        ) : (
-          <div className="h-full flex items-center justify-center group-hover:bg-breaker-bay-100">
-            {/* <Logo /> */}
-          </div>
-        )}
-      </div>
-      <div className="p-4 md:p-8 group-hover:bg-breaker-bay-950 group-hover:text-white flex flex-col justify-between">
-        <div>
-          <div className="flex gap-4 flex-wrap mb-4">
-            {article.categories?.map((category, idx) => (
-              <p
-                key={`category-${idx}`}
-                className="text-xs font-bold text-breaker-bay-50 px-4 py-2 rounded-full bg-breaker-bay-900 capitalize"
+      <Link
+        href={`/${locale}/blog/${article.slug}`}
+        className="grid grid-cols-1 md:grid-cols-2 rounded-3xl overflow-hidden bg-white ring-1 ring-neutral-200 hover:ring-neutral-300 transition-shadow shadow-sm hover:shadow-lg"
+      >
+        <div className="relative">
+          {article.image ? (
+            <BlurImage
+              src={strapiImage(article.image.url)}
+              alt={article.title}
+              width={1200}
+              height={900}
+              className="h-full w-full object-cover transition-transform duration-400 hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="h-full min-h-56 bg-neutral-100" />
+          )}
+        </div>
+
+        <div className="p-5 md:p-7">
+          <div className="mb-2 flex gap-2 flex-wrap">
+            {article.categories?.map((c, i) => (
+              <span
+                key={c.name + i}
+                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
               >
-                {category.name}
-              </p>
+                {c.name}
+              </span>
             ))}
           </div>
-          <p className="text-lg md:text-4xl font-bold mb-4 text-breaker-bay-950 group-hover:text-white transition duration-200">
+
+          <h3 className="text-neutral-900 text-2xl font-bold tracking-tight">
             <Balancer>{article.title}</Balancer>
-          </p>
-          <p className="text-left text-breaker-bay-950 md:text-xl mt-2 group-hover:text-white transition duration-200">
-            {truncate(article.description, 500)}
-          </p>
+          </h3>
+
+          <p className="mt-2 text-neutral-600">{truncate(article.description, 200)}</p>
+
+          <div className="mt-4 flex items-center gap-2 text-neutral-500 text-xs">
+            <span>{format(new Date(article.publishedAt), "MMMM dd, yyyy")}</span>
+            <span className="h-1 w-1 rounded-full bg-neutral-300" />
+            <span className="relative inline-block">
+              <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-700 transition-all duration-300 group-hover:w-full" />
+              Read
+            </span>
+          </div>
         </div>
-        <div className="flex space-x-2 items-center  mt-6">
-          {/* <Image
-            src={article.authorAvatar}
-            alt={article.author}
-            width={20}
-            height={20}
-            className="rounded-full h-5 w-5"
-          /> */}
-          {/* <p className="text-sm font-normal text-muted">{article.author}</p> */}
-          <div className="h-1 w-1 bg-neutral-300 rounded-full"></div>
-          <p className="text-breaker-bay-950 text-sm  max-w-xl group-hover:text-white transition duration-200">
-            {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
-          </p>
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 };
 
-export const BlogCardVertical = ({ article, locale }: { article: Article, locale: string }) => {
+/** --- BlogCardVertical (függőleges kártya) --- */
+export const BlogCardVertical = ({ article, locale }: { article: Article; locale: string }) => {
   return (
-    <Link
-      className="shadow-derek rounded-3xl group border border-transparent hover:border-neutral-800 w-full hover:bg-neutral-900  overflow-hidden  hover:scale-[1.02] transition duration-200"
-      href={`/${locale}/blog/${article.slug}`}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={spring}
+      viewport={{ once: true }}
     >
-      <div className="">
-        {article.image ? (
-          <BlurImage
-            src={strapiImage(article.image.url || "")}
-            alt={article.title}
-            height="800"
-            width="800"
-            className=" h-64 md:h-96 object-cover object-top w-full rounded-3xl"
-          />
-        ) : (
-          <div className=" h-64 md:h-96 flex items-center justify-center group-hover:bg-neutral-900">
-            {/* <Logo /> */}
-          </div>
-        )}
-      </div>
-      <div className="p-4 md:p-8 group-hover:bg-neutral-900 flex flex-col justify-between">
-        <div>
-          <div className="flex gap-4 flex-wrap mb-4">
-            {article.categories?.map((category, idx) => (
-              <p
-                key={`category-${idx}`}
-                className="text-xs font-bold text-breaker-bay-50 px-4 py-2 rounded-full bg-neutral-800 capitalize"
+      <Link
+        href={`/${locale}/blog/${article.slug}`}
+        className="block rounded-3xl overflow-hidden bg-white ring-1 ring-neutral-200 hover:ring-neutral-300 transition-shadow shadow-sm hover:shadow-lg"
+      >
+        {/* kép */}
+        <div className="relative">
+          {article.image ? (
+            <BlurImage
+              src={strapiImage(article.image.url)}
+              alt={article.title}
+              width={1200}
+              height={800}
+              className="h-64 md:h-96 w-full object-cover transition-transform duration-400 hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="h-64 md:h-96 w-full bg-neutral-100" />
+          )}
+        </div>
+
+        {/* tartalom */}
+        <div className="p-5 md:p-7">
+          <div className="mb-2 flex gap-2 flex-wrap">
+            {article.categories?.map((c, i) => (
+              <span
+                key={c.name + i}
+                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
               >
-                {category.name}
-              </p>
+                {c.name}
+              </span>
             ))}
           </div>
-          <p className="text-lg md:text-xl font-bold mb-4 text-breaker-bay-950 group-hover:text-breaker-bay-50 transition duration-200">
+
+          <h3 className="text-neutral-900 text-xl md:text-2xl font-bold tracking-tight">
             <Balancer>{article.title}</Balancer>
+          </h3>
+
+          <p className="mt-2 text-neutral-600 text-sm md:text-base">
+            {truncate(article.description, 200)}
           </p>
-          <p className="text-left text-sm md:text-base mt-2 text-breaker-bay-950 group-hover:text-breaker-bay-50 transition duration-200">
-            {truncate(article.description, 500)}
-          </p>
+
+          <div className="mt-4 flex items-center gap-2 text-neutral-500 text-xs">
+            <span>{format(new Date(article.publishedAt), "MMMM dd, yyyy")}</span>
+            <span className="h-1 w-1 rounded-full bg-neutral-300" />
+            <span className="relative inline-block">
+              <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-700 transition-all duration-300 group-hover:w-full" />
+              Read
+            </span>
+          </div>
         </div>
-        <div className="flex space-x-2 items-center  mt-6">
-          {/* <Image
-            src={article.authorAvatar}
-            alt={article.author}
-            width={20}
-            height={20}
-            className="rounded-full h-5 w-5"
-          />
-          <p className="text-sm font-normal text-muted">{article.author}</p> */}
-          <div className="h-1 w-1 bg-neutral-300 rounded-full"></div>
-          <p className="text-breaker-bay-950 text-sm  max-w-xl group-hover:text-breaker-bay-50 transition duration-200">
-            {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
-          </p>
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 };

@@ -1,93 +1,79 @@
 "use client";
-import { truncate } from "@/lib/utils";
-import { format } from "date-fns";
-import { Link } from "next-view-transitions";
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 import FuzzySearch from "fuzzy-search";
+import { motion } from "framer-motion";
 import { Article } from "@/types/types";
+import { Link } from "next-view-transitions";
+import { format } from "date-fns";
+import { truncate } from "@/lib/utils";
 
-export const BlogPostRows = ({ articles }: { articles: Article[] }) => {
+const spring = { type: "spring" as const, stiffness: 520, damping: 30, mass: 0.7 };
+
+export const BlogPostRows: React.FC<{ articles: Article[] }> = ({ articles }) => {
   const [search, setSearch] = useState("");
-
-  const searcher = new FuzzySearch(articles, ["title"], {
-    caseSensitive: false,
-  });
-
-  const [results, setResults] = useState(articles);
-  useEffect(() => {
-    const results = searcher.search(search);
-    setResults(results);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  const [results, setResults] = useState<Article[]>(articles);
+  const searcher = useMemo(() => new FuzzySearch(articles, ["title"], { caseSensitive: false }), [articles]);
+  useEffect(() => { setResults(searcher.search(search)); }, [search, searcher]);
 
   return (
-    <div className="w-full py-20">
-      <div className="flex sm:flex-row flex-col justify-between gap-4 items-center mb-10">
-        <p className="text-2xl font-bold text-white">More Posts</p>
+    <section className="w-full py-12 md:py-16">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">More posts</h2>
         <input
-          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search articles"
-          className="text-sm min-w-full sm:min-w-96  p-2 rounded-md bg-breaker-bay-950 border-none  focus:ring-0 focus:outline-none outline-none text-neutral-200 placeholder-neutral-400"
+          placeholder="Search articles…"
+          className="text-sm w-full md:w-96 p-2 rounded-lg bg-white border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-breaker-bay-500 text-neutral-900 placeholder-neutral-400"
         />
       </div>
 
-      <div className="divide-y divide-neutral-800">
-        {results.length === 0 ? (
-          <p className="text-neutral-400 text-center p-4">No results found</p>
-        ) : (
-          results.map((article, index) => (
-            <BlogPostRow article={article} key={article.slug + index} />
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
-export const BlogPostRow = ({ article }: { article: Article }) => {
-  return (
-    <Link
-      href={`blog/${article.slug}`}
-      key={`${article.slug}`}
-      className="flex md:flex-row flex-col items-start justify-between md:items-center group py-4"
-    >
-      <div>
-          <p className="text-breaker-bay-950 text-lg font-medium group-hover:text-breaker-bay-600 transition duration-200">
-          {article.title}
+      {results.length === 0 ? (
+        <p className="text-neutral-500 text-center p-6 rounded-xl bg-white ring-1 ring-neutral-200">
+          No results found
         </p>
-        <p className="text-breaker-bay-950 text-lg font-medium group-hover:text-breaker-bay-600 transition duration-200">
-          {article.title}
-        </p>
-        <p className="text-breaker-bay-950 text-sm mt-2 max-w-xl group-hover:text-breaker-bay-600 transition duration-200">
-          {truncate(article.description, 80)}
-        </p>
-
-        <div className="flex gap-2 items-center my-4">
-          <p className="text-breaker-bay-950 text-sm  max-w-xl group-hover:text-breaker-bay-600 transition duration-200">
-            {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
-          </p>
-          <div className="h-1 w-1 rounded-full bg-neutral-800"></div>
-          <div className="flex gap-4 flex-wrap ">
-            {article.categories?.map((category, idx) => (
-              <p
-                key={`category-${idx}`}
-                className="text-xs font-bold text-breaker-bay-50 px-2 py-1 rounded-full bg-neutral-800 capitalize"
+      ) : (
+        <motion.ul
+          initial="hidden"
+          animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+          className="divide-y divide-neutral-200 bg-white rounded-2xl ring-1 ring-neutral-200 overflow-hidden"
+        >
+          {results.map((a, i) => (
+            <motion.li
+              key={a.slug + i}
+              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: spring } }}
+              className="group"
+            >
+              <Link
+                href={`blog/${a.slug}`}
+                className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-4 hover:bg-neutral-50 transition-colors"
               >
-                {category.name}
-              </p>
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* <Image
-        src={blog.authorAvatar}
-        alt={blog.author}
-        width={40}
-        height={40}
-        className="rounded-full md:h-10 md:w-10 h-6 w-6 mt-4 md:mt-0 object-cover"
-      /> */}
-    </Link>
+                <div className="min-w-0">
+                  <p className="text-neutral-900 text-base md:text-lg font-medium hover:text-breaker-bay-700 transition-colors">
+                    {a.title}
+                  </p>
+                  <p className="text-neutral-600 text-sm mt-1 max-w-2xl">{truncate(a.description, 100)}</p>
+                  <div className="mt-3 flex items-center gap-2 text-neutral-500 text-xs">
+                    <span>{format(new Date(a.publishedAt), "MMMM dd, yyyy")}</span>
+                    <span className="h-1 w-1 rounded-full bg-neutral-300" />
+                    <span className="flex flex-wrap gap-1">
+                      {a.categories?.map((c, idx) => (
+                        <span
+                          key={c.name + idx}
+                          className="rounded-full bg-neutral-100 text-neutral-700 px-2 py-0.5 text-[11px]"
+                        >
+                          {c.name}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </motion.li>
+          ))}
+        </motion.ul>
+      )}
+    </section>
   );
 };

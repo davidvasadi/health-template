@@ -52,22 +52,13 @@ export const Pricing = ({
           {sub_heading}
         </Subheading>
 
-        {/* Mobil nézet – egyszerű, letisztult, snap-es carousel */}
-        <div className="lg:hidden -mx-4 px-4 pt-10">
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-1">
+        {/* Reszponzív rács – mobil/tablet 1 oszlop, desktopon max 2 oszlop */}
+        <div className="pt-10 lg:pt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {plans.map((plan) => (
-              <div key={plan.name} className="w-[85%] shrink-0 snap-center">
-                <Card plan={plan} onClick={() => onClick(plan)} minimal />
-              </div>
+              <Card key={plan.name} plan={plan} onClick={() => onClick(plan)} />
             ))}
           </div>
-        </div>
-
-        {/* Desktop rács – tiszta, levegős elrendezés (max 2 kártya egymás mellett) */}
-        <div className="hidden lg:grid grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-6 max-w-5xl mx-auto pt-12">
-          {plans.map((plan) => (
-            <Card key={plan.name} plan={plan} onClick={() => onClick(plan)} />
-          ))}
         </div>
       </Container>
     </section>
@@ -107,7 +98,7 @@ const Card = ({
 
           {isFeatured && (
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium text-breaker-bay-800 bg-breaker-bay-100 ring-1 ring-inset ring-breaker-bay-300/60">
-              Featured
+              Népszerű
             </span>
           )}
         </header>
@@ -116,9 +107,9 @@ const Card = ({
         <div className="mt-6 flex items-baseline gap-2">
           {plan.price ? (
             <>
-              <span className="text-base font-semibold text-breaker-bay-700">$</span>
+              <span className="text-base font-semibold text-breaker-bay-700">HUF</span>
               <span className="text-4xl md:text-5xl font-bold tracking-tight text-breaker-bay-950">{plan.price}</span>
-              <span className="text-sm md:text-base font-normal text-breaker-bay-900/70">/ launch</span>
+              <span className="text-sm md:text-base font-normal text-breaker-bay-900/70">/ alkalom</span>
             </>
           ) : (
             <span className="text-2xl md:text-3xl font-bold text-breaker-bay-950">{plan?.CTA?.text}</span>
@@ -128,7 +119,7 @@ const Card = ({
         <Button
           variant="outline"
           className={cn(
-            "mt-6 w-full rounded-xl",
+            "mt-6 w-full rounded-lg",
             isFeatured
               ? "bg-breaker-bay-600 text-white hover:bg-breaker-bay-700"
               : "bg-white text-breaker-bay-950 ring-1 ring-inset ring-breaker-bay-300/70 hover:bg-breaker-bay-50"

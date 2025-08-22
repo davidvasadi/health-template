@@ -1,6 +1,42 @@
 "use client";
-import { cn } from "@/lib/utils";
-import { AnimatePresence, motion } from "framer-motion";
+
+/**
+ * \n * =============================== MODAL KOMPONENS CSOMAG ===============================
+ * CÉL:
+ *   - Újrafelhasználható, context-alapú, Framer Motion-nel animált modál ablak React + TS környezethez.
+ *   - A komponensek együtt egy komplett modálrendszert adnak: trigger, test (body), tartalom és lábléc.
+ *
+ * FŐ FUNKCIÓK:
+ *   - Globális "open" állapot Contextben; bárhol a fán elérhető a useModal hookkal.
+ *   - Test görgetés letiltása nyitáskor (body overflow kezelése), visszaengedése záráskor.
+ *   - Kívülre kattintásra zárás (useOutsideClick hook).
+ *   - Háttér (overlay) és doboz animációk (belépés/kilépés) Framer Motion-nel, blur effekt.
+ *   - Tailwind osztályokkal könnyen átstilizálható felépítés.
+ *
+ * EXPORTOK:
+ *   ModalProvider, useModal, Modal, ModalTrigger, ModalBody, ModalContent, ModalFooter, useOutsideClick
+ *
+ * HASZNÁLAT (példa):
+ *   <Modal>
+ *     <ModalTrigger>Megnyitás</ModalTrigger>
+ *     <ModalBody>
+ *       <ModalContent>Ide jön a tartalom</ModalContent>
+ *       <ModalFooter>
+ *         <button>Ok</button>
+ *       </ModalFooter>
+ *     </ModalBody>
+ *   </Modal>
+ *
+ * MEGJEGYZÉSEK / TIPPEK:
+ *   - A11y: érdemes a modál dobozra felvenni role="dialog" és aria-modal="true" attribútumokat,
+ *           valamint fókusz-csapdát és ESC zárást (itt TODO-ként jelölve a kommentekben).
+ *   - Body overflow: egyszerű megoldás, ha a kiinduló érték nem "auto", érdemes eltárolni és visszaállítani.
+ *   - Típusosság: a useOutsideClick eseményét lehetne szigorúbban típusozni (MouseEvent | TouchEvent).
+ * ======================================================================================
+ */
+
+import { cn } from "@/lib/utils"; // Tailwind-hez hasznos segédfüggvény osztálynevek összevonására
+import { AnimatePresence, motion } from "framer-motion"; // Belépő/kilépő animációk + animálható elemek
 import React, {
   ReactNode,
   createContext,
@@ -9,17 +45,27 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Button } from "../elements/button";
+import { Button } from "../elements/button"; // Projekt-specifikus gomb komponens
 
+/**
+ * A modál állapotát leíró Context típus.
+ * - open: meg van-e nyitva a modál
+ * - setOpen: nyitás/zárás állapotváltó függvény
+ */
 interface ModalContextType {
   open: boolean;
   setOpen: (open: boolean) => void;
 }
 
+// A Context, amely a modál globális állapotát osztja meg a gyermek komponensekkel.
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
+/**
+ * Provider, amely a modál nyitottságát egy useState-ben kezeli,
+ * és elérhetővé teszi a Contexten keresztül a gyermekek számára.
+ */
 export const ModalProvider = ({ children }: { children: ReactNode }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // Alapértelmezetten zárt modál
 
   return (
     <ModalContext.Provider value={{ open, setOpen }}>
@@ -28,6 +74,10 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * Hook a Context kényelmes használatához.
+ * Ha nincs ModalProvider a komponensfa felett, hiba dobódik (guard).
+ */
 export const useModal = () => {
   const context = useContext(ModalContext);
   if (!context) {
@@ -36,10 +86,18 @@ export const useModal = () => {
   return context;
 };
 
+/**
+ * Kényelmi komponens: a kapott gyermekeket egy ModalProvider-be csomagolja,
+ * így egyszerűen használható önálló modál-szigetként.
+ */
 export function Modal({ children }: { children: ReactNode }) {
   return <ModalProvider>{children}</ModalProvider>;
 }
 
+/**
+ * Gomb/trigger a modál megnyitásához.
+ * - Kattintáskor open=true, majd opcionálisan meghívja a kapott onClick-et is.
+ */
 export const ModalTrigger = ({
   children,
   className,
@@ -53,8 +111,8 @@ export const ModalTrigger = ({
   return (
     <Button
       onClick={() => {
-        setOpen(true);
-        onClick?.();
+        setOpen(true); // Nyitás
+        onClick?.(); // Kiegészítő kattintási logika, ha adtunk
       }}
       className={className}
     >
@@ -63,6 +121,12 @@ export const ModalTrigger = ({
   );
 };
 
+/**
+ * A modál "teste":
+ * - Figyeli az open állapotot és tiltja/engedélyezi a body görgetést.
+ * - Kívülre kattintásra zár.
+ * - Overlay + doboz animációk AnimatePresence-szel és motion.div-vel.
+ */
 export const ModalBody = ({
   children,
   className,
@@ -72,28 +136,34 @@ export const ModalBody = ({
 }) => {
   const { open } = useModal();
 
+  // Test (document.body) görgetés kezelése a modál nyitottsága alapján.
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = "hidden"; // Nyitva: görgetés tiltása
     } else {
-      document.body.style.overflow = "auto";
+      document.body.style.overflow = "auto"; // Zárva: visszaengedés
     }
   }, [open]);
 
-  const modalRef = useRef(null);
+  const modalRef = useRef<HTMLDivElement | null>(null); // A modál doboz referenciája
   const { setOpen } = useModal();
+
+  // Kívülre kattintás esetén zárjuk a modált
   useOutsideClick(modalRef, () => setOpen(false));
+
+  // TODO (A11y): ESC billentyű lenyomására is zárjuk a modált; fókusz csapda kialakítása
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
+          // Teljes képernyős konténer, amely tartalmazza az overlayt és a dobozt
           initial={{
             opacity: 0,
           }}
           animate={{
             opacity: 1,
-            backdropFilter: "blur(10px)",
+            backdropFilter: "blur(10px)", // Háttér életlenítés
           }}
           exit={{
             opacity: 0,
@@ -101,14 +171,17 @@ export const ModalBody = ({
           }}
           className="fixed [perspective:800px] [transform-style:preserve-3d] inset-0 h-full w-full  flex items-center justify-center z-50"
         >
+          {/* Sötét, áttetsző háttér réteg */}
           <Overlay />
 
+          {/* A modál doboza (kártya) */}
           <motion.div
             ref={modalRef}
             className={cn(
               "min-h-[50%] max-h-[90%] md:max-w-[40%] bg-white  border border-transparent md:rounded-2xl relative z-50 flex flex-col flex-1 overflow-hidden",
               className
             )}
+            // Belépő animáció (kicsiből nagyobbra, enyhe 3D billenéssel)
             initial={{
               opacity: 0,
               scale: 0.5,
@@ -131,6 +204,7 @@ export const ModalBody = ({
               stiffness: 260,
               damping: 35,
             }}
+            // TODO (A11y): role="dialog" aria-modal="true" aria-labelledby/aria-describedby hozzárendelése
           >
             <CloseIcon />
             {children}
@@ -141,6 +215,10 @@ export const ModalBody = ({
   );
 };
 
+/**
+ * Tartalmi konténer a modál belsejéhez (paddel ellátva),
+ * ide érdemes a tényleges szöveget/űrlapot stb. tenni.
+ */
 export const ModalContent = ({
   children,
   className,
@@ -155,6 +233,9 @@ export const ModalContent = ({
   );
 };
 
+/**
+ * Lábléc a modálhoz (pl. gombok helye). Alapból jobbra igazítva, világos háttérrel.
+ */
 export const ModalFooter = ({
   children,
   className,
@@ -169,6 +250,10 @@ export const ModalFooter = ({
   );
 };
 
+/**
+ * Háttér (overlay) komponens: elsötétíti a hátteret és animált blur-t ad.
+ * Teljes képernyőt lefedi, a modál doboz alatt helyezkedik el.
+ */
 const Overlay = ({ className }: { className?: string }) => {
   return (
     <motion.div
@@ -188,12 +273,16 @@ const Overlay = ({ className }: { className?: string }) => {
   );
 };
 
+/**
+ * Jobb felső sarokban elhelyezett X ikon gomb, amely bezárja a modált.
+ */
 const CloseIcon = () => {
   const { setOpen } = useModal();
   return (
     <button
-      onClick={() => setOpen(false)}
+      onClick={() => setOpen(false)} // Zárás kattintásra
       className="absolute top-4 right-4 group"
+      // TODO (A11y): aria-label="Bezárás" hozzáadása képernyőolvasókhoz
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -215,18 +304,32 @@ const CloseIcon = () => {
   );
 };
 
-// Hook to detect clicks outside of a component.
-// Add it in a separate file, I've added here for simplicity
+// ============================================================================
+// HOOK: kívülre kattintás figyelése
+// ============================================================================
+
+/**
+ * useOutsideClick
+ * - Figyeli a mousedown és touchstart eseményeket.
+ * - Ha a kattintás/tap a megadott ref-en kívül történik, meghívja a callback-et.
+ *
+ * @param ref   A figyelt elem referenciája (tipikusan a modál doboz)
+ * @param callback  Függvény, amelyet akkor hívunk, ha kívülre kattintottunk
+ */
 export const useOutsideClick = (
   ref: React.RefObject<HTMLDivElement>,
   callback: Function
 ) => {
   useEffect(() => {
     const listener = (event: any) => {
-      // DO NOTHING if the element being clicked is the target element or their children
+      // MEGJEGYZÉS: az event itt "any"; szigorúbb típus: MouseEvent | TouchEvent
+
+      // NINCS TEENDŐ, ha a célpont a ref aktuális eleme vagy annak gyermeke
       if (!ref.current || ref.current.contains(event.target)) {
         return;
       }
+
+      // Egyébként hívjuk a callback-et (pl. modál zárása)
       callback(event);
     };
 

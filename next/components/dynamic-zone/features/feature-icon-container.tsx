@@ -21,7 +21,7 @@ export const FeatureIconContainer = ({
       >
         <div
           className={cn(
-            "bg-charcoal rounded-[5px] h-full w-full relative z-20",
+            "bg-white rounded-[5px] h-full w-full relative z-20",
             className
           )}
         >

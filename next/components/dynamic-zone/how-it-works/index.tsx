@@ -18,108 +18,97 @@ export const HowItWorks = ({
   steps: { title: string; description: string }[];
 }) => {
   return (
-    // nincs háttér-festés, semmi fehér „bevágás”
-    <section className="relative bg-transparent">
-      {/* ── Háttér: aurórák + pötty-rács + ÍVELT GERINC ── */}
+    <section className="relative isolate overflow-hidden bg-white">
+      {/* Felső finom seam-fade */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 md:h-24"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,1), rgba(255,255,255,0))",
+        }}
+      />
+
+      {/* Háttér: két lágy mesh-blob */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        {/* Aurórák – lágy perem, nem csinálnak szögletes sarkot */}
         <div
-          className="absolute -top-24 -left-24 h-[42rem] w-[42rem] rounded-full blur-3xl"
+          className="absolute -top-32 -left-24 h-[34rem] w-[34rem] blur-3xl"
           style={{
-            opacity: 0.5,
+            opacity: 0.35,
             background:
-              "radial-gradient(600px 400px at 30% 30%, rgba(81,247,240,0.24), rgba(4,200,200,0.12) 42%, rgba(255,255,255,0) 72%)",
+              "radial-gradient(40% 45% at 40% 40%, rgba(4,200,200,0.25), rgba(81,247,240,0.12) 45%, rgba(255,255,255,0) 70%)",
             maskImage:
-              "radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)",
+              "radial-gradient(60% 60% at 50% 50%, black 60%, transparent 100%)",
             WebkitMaskImage:
-              "radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)",
+              "radial-gradient(60% 60% at 50% 50%, black 60%, transparent 100%)",
           }}
         />
         <div
-          className="absolute -bottom-32 -right-24 h-[40rem] w-[40rem] rounded-full blur-3xl"
+          className="absolute -bottom-40 -right-24 h-[36rem] w-[36rem] blur-3xl"
           style={{
-            opacity: 0.46,
+            opacity: 0.32,
             background:
-              "radial-gradient(560px 380px at 70% 60%, rgba(144,255,246,0.22), rgba(0,159,163,0.1) 44%, rgba(255,255,255,0) 72%)",
+              "radial-gradient(42% 48% at 60% 60%, rgba(0,159,163,0.22), rgba(144,255,246,0.14) 46%, rgba(255,255,255,0) 72%)",
             maskImage:
-              "radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)",
+              "radial-gradient(58% 58% at 50% 50%, black 62%, transparent 100%)",
             WebkitMaskImage:
-              "radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)",
+              "radial-gradient(58% 58% at 50% 50%, black 62%, transparent 100%)",
           }}
         />
 
-        {/* pötty-rács – finoman, hogy ne nyomja agyon a gerincet */}
-        <div
-          className="absolute inset-0 opacity-[0.08] text-breaker-bay-800"
-          style={{
-            backgroundImage: "radial-gradient(currentColor 1px, transparent 2px)",
-            backgroundSize: "20px 20px",
-          }}
-        />
-
-        {/* ÍVELT GERINC – előbb a „glow”, utána a fővonal, erősebb stroke */}
+        {/* FLOW-vonalak: a TELJES szekciót kitöltik (top-0, bottom-0) */}
         <svg
-          className="absolute left-1/2 -translate-x-1/2 top-10 h-[92%] w-[560px] max-w-[60vw]"
-          viewBox="0 0 520 1600"
+          className="absolute inset-y-0 left-1/2 -translate-x-1/2 h-full w-[1100px] max-w-none opacity-70"
+          viewBox="0 0 900 2400"
+          preserveAspectRatio="none"
           aria-hidden
         >
           <defs>
-            <linearGradient id="spineLine" x1="0" x2="1">
-              <stop offset="0%" stopColor="rgba(0,159,163,0.0)" />
-              <stop offset="50%" stopColor="rgba(0,159,163,0.6)" />
-              <stop offset="100%" stopColor="rgba(0,159,163,0.0)" />
+            <linearGradient id="flowStroke" x1="0" x2="1">
+              <stop offset="0%" stopColor="rgba(0,159,163,0)" />
+              <stop offset="50%" stopColor="rgba(0,159,163,0.45)" />
+              <stop offset="100%" stopColor="rgba(0,159,163,0)" />
             </linearGradient>
-            <radialGradient id="disc" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgba(199,255,250,0.95)" />
-              <stop offset="100%" stopColor="rgba(199,255,250,0.22)" />
-            </radialGradient>
           </defs>
 
-          {/* halvány alávonal (glow) a kontrasztért */}
+          {/* 3 egymásba úszó görbe – végigérnek az aljáig */}
           <path
-            d="M260 40 C 320 160, 210 300, 280 440 C 350 580, 210 740, 270 880 C 330 1020, 220 1160, 280 1320"
+            d="M450 60 C 540 260, 360 520, 540 760 C 690 960, 360 1220, 540 1480 C 690 1680, 380 1960, 520 2220"
             fill="none"
-            stroke="rgba(0,159,163,0.18)"
-            strokeWidth="7"
-            strokeLinecap="round"
-            style={{ filter: "blur(6px)" }}
-          />
-
-          {/* fő „gerinc” vonal */}
-          <path
-            d="M260 40 C 320 160, 210 300, 280 440 C 350 580, 210 740, 270 880 C 330 1020, 220 1160, 280 1320"
-            fill="none"
-            stroke="url(#spineLine)"
-            strokeWidth="3"
+            stroke="url(#flowStroke)"
+            strokeWidth="1.8"
             strokeLinecap="round"
           />
-
-          {/* „csigolyák” */}
-          {Array.from({ length: 12 }).map((_, i) => {
-            const y = 120 + i * 110;
-            const x = 260 + (i % 2 ? 18 : -14);
-            const rx = Math.max(20, 40 - i * 1.2);
-            const ry = Math.max(12, 25 - i * 1.0);
-            return (
-              <g key={i} transform={`translate(${x}, ${y})`} opacity={0.95}>
-                <ellipse
-                  rx={rx + 6}
-                  ry={ry + 4}
-                  fill="rgba(0,159,163,0.12)"
-                  style={{ filter: "blur(6px)" }}
-                />
-                <ellipse rx={rx} ry={ry} fill="url(#disc)" />
-                <ellipse rx={rx - 8} ry={ry - 5} fill="rgba(255,255,255,0.8)" />
-              </g>
-            );
-          })}
+          <path
+            d="M420 100 C 560 300, 340 560, 500 820 C 680 1080, 340 1340, 520 1600 C 660 1820, 360 2060, 480 2300"
+            fill="none"
+            stroke="url(#flowStroke)"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M480 40 C 600 240, 380 500, 560 740 C 640 980, 380 1240, 560 1500 C 640 1740, 400 2000, 520 2320"
+            fill="none"
+            stroke="url(#flowStroke)"
+            strokeWidth="1.1"
+            strokeLinecap="round"
+          />
         </svg>
+
+        {/* Alsó kifutó fade */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-12 md:h-16"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))",
+          }}
+        />
       </div>
 
-      {/* ── Tartalom ── */}
-      <Container className="py-20 md:py-28 max-w-7xl mx-auto relative z-10">
-        {/* SEMMI fehér háttér – így nincs „fehér sarok” */}
-        <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
+      {/* Tartalom (egymás alatt) */}
+      <Container className="py-20 md:py-28 max-w-7xl mx-auto relative z-0">
+        <FeatureIconContainer className="flex justify-center items-center">
           <IconSettings className="h-6 w-6 text-breaker-bay-950" />
         </FeatureIconContainer>
 
@@ -131,7 +120,6 @@ export const HowItWorks = ({
           {sub_heading}
         </Subheading>
 
-        {/* MINDEN EGYMÁS ALATT – nincs grid, csak függőleges lista */}
         <div className="mt-8 space-y-6">
           {steps?.map((item, index) => (
             <Card

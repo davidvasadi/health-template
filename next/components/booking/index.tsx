@@ -277,7 +277,7 @@ export default function AppointmentBooking() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 md:py-12">
+    <div className="max-w-7xl mx-auto px-4 py-10 md:py-12">
       <HeaderCard />
 
       {/* Kétoszlopos desktop elrendezés */}

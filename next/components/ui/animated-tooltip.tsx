@@ -1,93 +1,209 @@
 "use client";
-import React, { useState } from "react";
-import {
-  motion,
-  useTransform,
-  AnimatePresence,
-  useMotionValue,
-  useSpring,
-} from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, useMotionValue, MotionConfig } from "framer-motion";
 import { StrapiImage } from "@/components/ui/strapi-image";
 
-export const AnimatedTooltip = ({
+type Item = {
+  id: number;
+  firstname: string;
+  lastname: string;
+  job?: string;
+  image: { url: string; alternativeText?: string } | any;
+};
+
+type Props = {
+  items: Item[];
+  autoplay?: boolean;
+  autoplayMs?: number;
+  neighbors?: 1 | 2; // desktopon a látható szomszédok száma
+};
+
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+const circularOffset = (from: number, to: number, len: number) => {
+  const raw = to - from;
+  const wrapped = ((raw + len / 2) % len) - len / 2;
+  return wrapped;
+};
+
+export const AnimatedTooltip: React.FC<Props> = ({
   items,
-}: {
-  items: {
-    id: number;
-    firstname: string;
-    lastname: string;
-    job: string;
-    image: any;
-  }[];
+  autoplay = true,
+  autoplayMs = 3600,
+  neighbors = 1, // desktop default
 }) => {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const springConfig = { stiffness: 100, damping: 5 };
-  const x = useMotionValue(0); // going to set this value on mouse move
-  // rotate the tooltip
-  const rotate = useSpring(
-    useTransform(x, [-100, 100], [-45, 45]),
-    springConfig
-  );
-  // translate the tooltip
-  const translateX = useSpring(
-    useTransform(x, [-100, 100], [-50, 50]),
-    springConfig
-  );
-  const handleMouseMove = (event: any) => {
-    const halfWidth = event.target.offsetWidth / 2;
-    x.set(event.nativeEvent.offsetX - halfWidth); // set the x value, which is then used in transform and rotate
+  const data = useMemo(() => (Array.isArray(items) ? items.filter(Boolean) : []), [items]);
+  const [index, setIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  if (!data.length) return null;
+
+  // Mobil detektálás
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const up = () => setIsMobile(mq.matches);
+    up();
+    mq.addEventListener?.("change", up);
+    return () => mq.removeEventListener?.("change", up);
+  }, []);
+
+  // Autoplay
+  useEffect(() => {
+    if (!autoplay || data.length <= 1) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % data.length), autoplayMs);
+    return () => clearInterval(t);
+  }, [autoplay, autoplayMs, data.length]);
+
+  // Drag
+  const dragX = useMotionValue(0);
+  const dragThreshold = 80;
+  const onDragEnd = (_: any, info: { offset: { x: number } }) => {
+    if (info.offset.x < -dragThreshold) setIndex((i) => (i + 1) % data.length);
+    else if (info.offset.x > dragThreshold) setIndex((i) => (i - 1 + data.length) % data.length);
   };
 
+  // Mobilon is coverflow marad, csak finomabb oldalsó kártya-hatás
+  const effNeighbors = isMobile ? 1 : neighbors;
+
+  const slots = useMemo(() => {
+    const arr: number[] = [];
+    for (let o = -effNeighbors; o <= effNeighbors; o++) arr.push(mod(index + o, data.length));
+    return arr;
+  }, [index, data.length, effNeighbors]);
+
   return (
-    <>
-      {items.map((item) => (
-        <div
-          className="-mr-4  relative group"
-          key={item.firstname}
-          onMouseEnter={() => setHoveredIndex(item.id)}
-          onMouseLeave={() => setHoveredIndex(null)}
-        >
-          <AnimatePresence mode="popLayout">
-            {hoveredIndex === item.id && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.6 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  transition: {
-                    type: "spring",
-                    stiffness: 260,
-                    damping: 10,
-                  },
-                }}
-                exit={{ opacity: 0, y: 20, scale: 0.6 }}
-                style={{
-                  translateX: translateX,
-                  rotate: rotate,
-                  whiteSpace: "nowrap",
-                }}
-                className="absolute -top-16 -left-1/2 translate-x-1/2 flex text-xs  flex-col items-center justify-center rounded-md bg-black z-50 shadow-xl px-4 py-2"
-              >
-                <div className="absolute inset-x-10 z-30 w-[20%] -bottom-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent h-px " />
-                <div className="absolute left-10 w-[40%] z-30 -bottom-px bg-gradient-to-r from-transparent via-sky-500 to-transparent h-px " />
-                <div className="font-bold text-white relative z-30 text-base">
-                  {`${item.firstname} ${item.lastname}`}
-                </div>
-                <div className="text-white text-xs">{item.job}</div>
-              </motion.div>
+    <MotionConfig transition={{ type: "spring", stiffness: 230, damping: 26, mass: 0.9 }}>
+      <div className="relative w-full">
+        <div className="relative mx-auto w-full max-w-6xl">
+          {/* MOBILON magasabb konténer, hogy a kép NAGY legyen */}
+          <div className="relative h-[68vh] md:h-[54vh] [contain:layout_paint_style]">
+            {/* Rétegek sorrendje fix: a coverflow kapja a legmagasabb z-indexet */}
+            <div
+              className="absolute inset-0 perspective-[1100px] flex items-center justify-center z-20"
+              aria-roledescription="coverflow"
+              style={{ touchAction: "pan-y" }}
+            >
+              {slots.map((i) => {
+                const item = data[i];
+                const alt =
+                  item?.image?.alternativeText ||
+                  `${item?.firstname ?? ""} ${item?.lastname ?? ""}`.trim() ||
+                  "image";
+
+                const offset = circularOffset(index, i, data.length); // -effNeighbors..+effNeighbors
+                const isCenter = offset === 0;
+
+                // 3D paraméterek
+                const baseX = (isMobile ? 180 : 220) * offset; // mobilon kicsit szorosabb
+                const rotY = isMobile ? -20 * Math.sign(offset) * Math.min(Math.abs(offset), 1) : -34 * Math.sign(offset) * Math.min(Math.abs(offset), 1);
+                const scaleSide = isMobile ? 0.9 : 0.88;
+                const scale = isCenter ? 1 : scaleSide;
+                const z = (effNeighbors - Math.abs(offset)) * 10;
+
+                // Mobilon SOFT oldalsó effekt (nincs blur → border nem sérül)
+                const sideFxMobile = isCenter ? "" : "opacity-80";
+                const sideFxDesktop = isCenter ? "" : "saturate-[0.95] brightness-[0.98]";
+
+                return (
+                  <motion.div
+                    key={item?.id ?? i}
+                    className="absolute transform-gpu"
+                    style={{ zIndex: 100 + z, transformStyle: "preserve-3d" }}
+                    initial={{ opacity: 0.01, x: baseX, rotateY: rotY, scale }}
+                    animate={{ opacity: 1, x: baseX, rotateY: rotY, scale }}
+                    exit={{ opacity: 0 }}
+                    whileHover={isCenter ? { scale: 1.015 } : {}}
+                  >
+                    {/* KÁRTYA — border + radius mindig jó (iOS hackkel) */}
+                    <motion.div
+                      className={[
+                        // mobil: nagy, álló
+                        "w-[88vw] max-w-[560px] aspect-[4/5]",
+                        // desktop: szélesebb
+                        "md:w-[48vw] md:max-w-[500px] md:aspect-[16/10]",
+                        "relative rounded-2xl overflow-hidden bg-neutral-900 ring-1 ring-neutral-300/40 shadow-lg select-none transform-gpu",
+                        isMobile ? sideFxMobile : sideFxDesktop,
+                      ].join(" ")}
+                      drag={isCenter ? "x" : false}
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragMomentum={false}
+                      dragElastic={0.12}
+                      onDragEnd={onDragEnd}
+                      style={{ x: isCenter ? dragX : undefined }}
+                      role="button"
+                      aria-label={isCenter ? "Lapozás: húzd balra/jobbra" : `Ugrás ehhez: ${item.firstname} ${item.lastname}`}
+                      onClick={() => {
+                        if (!isCenter) setIndex(i);
+                      }}
+                    >
+                      {/* KÉP WRAPPER — iOS border+filter hack: overflow + mask */}
+                      <div
+                        className="relative h-full w-full rounded-inherit overflow-hidden transform-gpu"
+                        style={{
+                          WebkitMaskImage: "-webkit-radial-gradient(white, black)", // iOS border+filter bug workaround
+                        }}
+                      >
+                        <StrapiImage
+                          src={item?.image?.url}
+                          alt={alt}
+                          width={isCenter ? 1400 : 1000}
+                          height={isCenter ? (isMobile ? 1400 : 900) : (isMobile ? 1100 : 700)}
+                          className="h-full w-full object-cover rounded-[inherit]"
+                          decoding="async"
+                          loading={isCenter ? "eager" : "lazy"}
+                          draggable={false}
+                        />
+                      </div>
+
+                      {/* finom overlay és border rásegítés */}
+                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-white/10" />
+                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-black/10 via-transparent to-black/30" />
+
+                      {/* caption */}
+                      <div className="absolute left-3 right-3 bottom-3 flex justify-start">
+                        <div className="inline-flex max-w-[92%] items-center gap-2 rounded-xl bg-white/80 px-3 py-1.5 text-neutral-900 backdrop-blur-[2px] shadow-sm">
+                          <span className="inline-flex items-center gap-2 text-[13px] md:text-sm font-semibold">
+                            <span className="inline-block h-2 w-2 rounded-full bg-breaker-bay-600" />
+                            {item.firstname} {item.lastname}
+                          </span>
+                          {item?.job && <span className="text-xs opacity-80">• {item.job}</span>}
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* DOT NAV — felül marad (z-30), nem csúszik be mögé semmi */}
+            {data.length > 1 && (
+              <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+                {data.map((_, i) => {
+                  const active = i === index;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setIndex(i)}
+                      aria-label={`Ugrás a ${i + 1}. elemre`}
+                      className={["h-1.5 rounded-full transition-all", active ? "w-6 bg-neutral-900" : "w-1.5 bg-neutral-300 hover:bg-neutral-400"].join(" ")}
+                    />
+                  );
+                })}
+              </div>
             )}
-          </AnimatePresence>
-          <StrapiImage 
-            onMouseMove={handleMouseMove}
-            height={100}
-            width={100}
-            src={item?.image?.url}
-            alt={item?.image?.alternativeText}
-            className="object-cover !m-0 !p-0 object-top rounded-full h-14 w-14 border-2 group-hover:scale-105 group-hover:z-30 border-white  relative transition duration-500"
-          />
+
+            {/* TAP ZÓNÁK — z-40, hogy biztosan kattintható legyen minden fölött */}
+            <button
+              className="absolute inset-y-0 left-0 w-1/2 md:w-1/4 z-40"
+              aria-label="Előző"
+              onClick={() => setIndex((i) => (i - 1 + data.length) % data.length)}
+            />
+            <button
+              className="absolute inset-y-0 right-0 w-1/2 md:w-1/4 z-40"
+              aria-label="Következő"
+              onClick={() => setIndex((i) => (i + 1) % data.length)}
+            />
+          </div>
         </div>
-      ))}
-    </>
+      </div>
+    </MotionConfig>
   );
 };

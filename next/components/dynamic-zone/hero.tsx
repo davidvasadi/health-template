@@ -391,7 +391,13 @@ export const Hero = ({
   const secondaryCTAs = useMemo(() => (primaryCTA ? CTAs.filter((c) => c !== primaryCTA) : CTAs), [CTAs, primaryCTA]);
 
   return (
-    <section className="relative h-screen isolate overflow-hidden">
+    <motion.section
+      className="relative h-screen isolate overflow-hidden"
+      initial={{ opacity: 0, y: 10, scale: 0.995 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
       {/* HÁTTÉR: spine (átlátszó, nincs preload villanás) */}
       {showScene && (
         <SpineScene onReady={() => setSceneReady(true)} dpr={dpr} hidden={!docVisible} />
@@ -467,60 +473,50 @@ export const Hero = ({
         </motion.div>
       </div>
 
-      {/* JOBB ALSÓ STÁTUSZKÁRTYA — "kártya" méret az eredetivel egyező, új színképlet */}
+      {/* JOBB ALSÓ STÁTUSZKÁRTYA — "kártya" méret, KISEBB változat hogy ne lógjon bele a hero kártyába */}
 {primaryCTA && (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.1, duration: 0.35 }}
-    className="absolute bottom-6 right-6 z-40 hidden md:block"
+    transition={{ delay: 0.1, duration: 0.3 }}
+    className="absolute bottom-5 right-5 z-40 hidden md:block"
     aria-live="polite"
   >
     <div
-      className="relative rounded-2xl px-5 py-4 shadow-xl border"
+      className="relative w-[210px] rounded-xl px-4 py-3 shadow-lg border"
       style={{
-        /* Üvegkártya: világosabb háttér, enyhe teal kontúr, finom árnyék */
-        background: "rgba(255,255,255,0.85)",
+        background: "rgba(255,255,255,0.82)",
         borderColor: "rgba(4,200,200,0.18)",
-        backdropFilter: "blur(12px) saturate(160%)",
-        WebkitBackdropFilter: "blur(12px) saturate(160%)",
-        boxShadow: "0 10px 26px rgba(0,0,0,0.08)",
+        backdropFilter: "blur(10px) saturate(150%)",
+        WebkitBackdropFilter: "blur(10px) saturate(150%)",
+        boxShadow: "0 8px 22px rgba(0,0,0,0.08)",
       }}
     >
-      {/* diszkrét teal "fénycsóva" háttér, túlzó glow nélkül */}
+      {/* diszkrét teal "fénycsóva" háttér (kisebb, hogy ne vonja el a figyelmet) */}
       <div
-        className="pointer-events-none absolute -inset-px rounded-2xl -z-10"
-        style={{
-          background: "linear-gradient(135deg, rgba(4,200,200,0.18) 0%, rgba(4,200,200,0.00) 60%)",
-          filter: "blur(8px)",
-        }}
+        className="pointer-events-none absolute -inset-px rounded-xl -z-10"
+        style={{ background: "linear-gradient(135deg, rgba(4,200,200,0.16) 0%, rgba(4,200,200,0.00) 58%)", filter: "blur(6px)" }}
         aria-hidden
       />
 
-      {/* CÍMKE + IDŐPONT */}
-      <p className="text-[12px] uppercase tracking-wide" style={{ color: "rgba(13,81,84,0.9)" }}>
+      {/* CÍMKE + IDŐPONT (kompakt tipó) */}
+      <p className="text-[11px] uppercase tracking-wide" style={{ color: "rgba(13,81,84,0.9)" }}>
         Legközelebbi szabad időpont
       </p>
-      {/*
-        A megjelenített időpont (nextSlotLabel) így készül:
-        - Ha a komponens kap `nextSlotDate` propot (Date|string|number), azt használjuk.
-        - Ha nem, a computeNextSlot() számol a `businessHours` alapján (alap: H–P 09:00–18:00, 30p slot).
-        - A labelt Intl.DateTimeFormat(locale) formázza (pl. "csü., 16:30").
-      */}
-      <p className="mt-0.5" style={{ color: "var(--breaker-950)", fontWeight: 700, fontSize: 20 }}>
+      <p className="mt-0.5" style={{ color: "var(--breaker-950)", fontWeight: 700, fontSize: 18 }}>
         {nextSlotLabel}
       </p>
 
-      {/* JOBB OLDALI CTA — primer stílus, nem túl harsány */}
-      <div className="mt-3 flex justify-end">
+      {/* CTA — kompakt outline/üveg primer */}
+      <div className="mt-2.5 flex justify-end">
         {(() => { const v = "primary" as const; return (
           <Button
             as={Link}
             href={ctaHref(locale, primaryCTA)}
-            className={`${ctaBaseClass()} ${ctaClassByVariant(v)} hover:-translate-y-px`}
+            className={`${ctaBaseClass()} ${ctaClassByVariant(v)} hover:-translate-y-px h-9 px-3 py-1 text-sm`}
             style={ctaStyleByVariant(v)}
           >
-            {primaryCTA.text}
+            Foglalás
           </Button>
         ); })()}
       </div>
@@ -540,6 +536,6 @@ export const Hero = ({
           </div>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 };

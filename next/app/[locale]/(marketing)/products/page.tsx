@@ -60,7 +60,7 @@ export default async function Products({
       <AmbientColor />
       <Container className="pt-40 pb-40">
         <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
-          <IconShoppingCartUp className="h-6 w-6 text-white" />
+          <IconShoppingCartUp className="h-6 w-6 text-breaker-bay-700" />
         </FeatureIconContainer>
         <Heading as="h1" className="pt-4">
           {productPage.heading}

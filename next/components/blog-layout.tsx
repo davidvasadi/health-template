@@ -1,3 +1,5 @@
+"use client";
+
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Container } from "./container";
 import { Link } from "next-view-transitions";
@@ -5,8 +7,11 @@ import { format } from "date-fns";
 import { StrapiImage } from "@/components/ui/strapi-image";
 import DynamicZoneManager from "./dynamic-zone/manager";
 import { Article } from "@/types/types";
+import { motion } from "framer-motion";
 
-export async function BlogLayout({
+const spring = { type: "spring" as const, stiffness: 520, damping: 30, mass: 0.7 };
+
+export function BlogLayout({
   article,
   locale,
   children,
@@ -15,78 +20,66 @@ export async function BlogLayout({
   locale: string;
   children: React.ReactNode;
 }) {
-
   return (
-    <Container className="mt-16 lg:mt-32">
-      <div className="flex justify-between items-center px-2 py-8">
-        <Link href="/blog" className="flex space-x-2 items-center">
-          <IconArrowLeft className="w-4 h-4 text-breaker-bay-950" />
-          <span className="text-sm text-breaker-bay-950">Back</span>
+    <Container className="mt-12 md:mt-16 lg:mt-24">
+      <div className="flex items-center gap-2 px-2 py-4">
+        <Link href={`/${locale}/blog`} className="flex items-center gap-2 group">
+          <IconArrowLeft className="h-4 w-4 text-neutral-900 group-hover:text-breaker-bay-700 transition-colors" />
+          <span className="text-sm text-neutral-900 group-hover:text-breaker-bay-700 transition-colors">
+            Vissza · Back
+          </span>
         </Link>
       </div>
-      <div className="w-full mx-auto">
+
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={spring}
+        className="rounded-3xl overflow-hidden ring-1 ring-neutral-200 bg-white"
+      >
         {article?.image ? (
-          <StrapiImage 
+          <StrapiImage
             src={article.image.url}
-            height={800}
-            width={800}
-            className="h-40 md:h-96 w-full aspect-square object-cover rounded-3xl [mask-image:radial-gradient(circle,white,transparent)]"
+            height={1200}
+            width={2000}
+            className="h-[36vh] min-h-[260px] w-full object-cover"
             alt={article.title}
           />
         ) : (
-          <div className="h-40 md:h-96 w-full aspect-squace rounded-3xl shadow-derek bg-neutral-900 flex items-center justify-center">
-            {/* <Logo /> */}
+          <div className="h-[36vh] min-h-[260px] w-full bg-neutral-100" />
+        )}
+      </motion.div>
+
+      <div className="mx-auto max-w-3xl">
+        <header className="mt-8">
+          <h1 className="text-neutral-900 text-3xl md:text-5xl font-bold tracking-tight">
+            {article.title}
+          </h1>
+          <p className="mt-3 text-neutral-500 text-sm">
+            {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
+          </p>
+          <div className="mt-3 flex gap-2 flex-wrap">
+            {article.categories?.map((c, i) => (
+              <span
+                key={c.name + i}
+                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
+              >
+                {c.name}
+              </span>
+            ))}
+          </div>
+        </header>
+
+        <article className="prose prose-neutral mt-8 md:mt-10 max-w-none text-[17px] leading-relaxed">
+          {children}
+        </article>
+
+        {article?.dynamic_zone && (
+          <div className="mt-10 md:mt-12">
+            <DynamicZoneManager dynamicZone={article.dynamic_zone} locale={locale} />
           </div>
         )}
       </div>
-      <div className="xl:relative">
-        <div className="mx-auto max-w-2xl">
-          <article className="pb-8 pt-8">
-            <div className="flex gap-4 flex-wrap ">
-              {article.categories?.map((category, idx) => (
-                <p
-                  key={`category-${idx}`}
-                  className="text-xs font-bold text-breaker-bay-50 px-2 py-1 rounded-full bg-breaker-bay-700 capitalize"
-                >
-                  {category.name}
-                </p>
-              ))}
-            </div>
-            <header className="flex flex-col">
-              <h1 className="mt-8 text-4xl font-bold tracking-tight text-breaker-bay-950 sm:text-5xl ">
-                {article.title}
-              </h1>
-            </header>
-            <div className="mt-8 prose prose-sm prose-invert">
-              {children}
-            </div>
-            <div className="flex space-x-2 items-center pt-12 border-t border-neutral-800 mt-12">
-              <div className="flex space-x-2 items-center ">
-                {/* <StrapiImage 
-                  src={article.authorAvatar}
-                  alt={article.author}
-                  width={20}
-                  height={20}
-                  className="rounded-full h-5 w-5"
-                />
-                <p className="text-sm font-normal text-muted">
-                  {article.author}
-                </p> */}
-              </div>
-              <div className="h-5 rounded-lg w-0.5 bg-neutral-700" />
-              <time
-                dateTime={article.publishedAt}
-                className="flex items-center text-base "
-              >
-                <span className="text-breaker-bay-950 text-sm">
-                  {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
-                </span>
-              </time>
-            </div>
-          </article>
-        </div>
-      </div>
-      {article?.dynamic_zone && (<DynamicZoneManager dynamicZone={article?.dynamic_zone} locale={locale} />)}
     </Container>
   );
 }

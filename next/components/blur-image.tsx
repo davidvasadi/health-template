@@ -1,17 +1,19 @@
 "use client";
-import { cn } from "@/lib/utils";
+
 import Image from "next/image";
 import React, { useState } from "react";
+import { cn } from "@/lib/utils";
 
-export const BlurImage = (props: React.ComponentProps<typeof Image>) => {
+/** Blur → éles + finom scale-in */
+export const BlurImage: React.FC<React.ComponentProps<typeof Image>> = (props) => {
   const [isLoading, setLoading] = useState(true);
+  const { src, width, height, alt, ...rest } = props;
 
-  const { src, width, height, alt, layout, ...rest } = props;
   return (
     <Image
       className={cn(
-        "transition duration-300",
-        isLoading ? "blur-sm" : "blur-0",
+        "transition-[filter,transform] duration-300 will-change-transform",
+        isLoading ? "blur-sm scale-[1.02]" : "blur-0 scale-100",
         props.className
       )}
       onLoad={() => setLoading(false)}
@@ -20,9 +22,7 @@ export const BlurImage = (props: React.ComponentProps<typeof Image>) => {
       height={height}
       loading="lazy"
       decoding="async"
-      blurDataURL={src as string}
-      layout={layout}
-      alt={alt ? alt : "Avatar"}
+      alt={alt ?? "Image"}
       {...rest}
     />
   );

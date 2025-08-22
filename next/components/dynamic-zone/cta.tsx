@@ -1,25 +1,40 @@
 "use client";
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useRef } from "react";
+import Link from "next/link";
+import {
+  motion,
+  MotionConfig,
+  useReducedMotion,
+  useMotionValue,
+  useTransform,
+  useScroll,
+} from "framer-motion";
 import { Button } from "../elements/button";
 import { Container } from "../container";
-import Link from "next/link";
 import { AmbientColor } from "../decorations/ambient-color";
 
 // Inline arrow icon (no external deps)
 const ArrowRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+    {...props}
+  >
     <path d="M5 12h14" />
     <path d="M13 5l7 7-7 7" />
   </svg>
 );
 
 /**
- * CTA section – premium chiropractic (all-in-one, no external assets)
- * - Original layout kept (copy left, buttons right)
- * - Full, clean WHITE background with a realistic-feel animated spine
- * - Pure inline SVG + CSS transforms (GPU-friendly, no heavy filters)
- * - Breaker Bay glass CTA variants included below
+ * CTA – breaker bay palette (brand-consistent)
+ * - API & layout preserved
+ * - Breaker bay palette via --breaker-* vars
+ * - FM extras: scroll glow ring, magnetic primary CTA, focus pulse, heading underline
  */
 export const CTA = ({
   heading,
@@ -32,15 +47,16 @@ export const CTA = ({
   CTAs: { text: string; URL: string; variant?: string }[];
   locale: string;
 }) => {
+  // Variant mapping for backward compat
   const variantClass = (v?: string) => {
-    if (!v) return "cta-primary";
+    if (!v) return "cta-solid";
     switch (v) {
       case "primary":
       case "cta-primary":
-        return "cta-primary";
+        return "cta-solid";
       case "accent":
       case "cta-accent":
-        return "cta-accent";
+        return "cta-outline";
       case "ghost":
       case "cta-ghost":
         return "cta-ghost";
@@ -49,160 +65,215 @@ export const CTA = ({
     }
   };
 
-  // Background now uses abstract fascia ribbons; remove vertebra/disc logic
-  const vertebrae: any[] = [];
-  const discs: any[] = [];
+  const prefersReduced = useReducedMotion();
+  const sharedSpring = { type: "spring", stiffness: 220, damping: 26, mass: 0.9 } as const;
+
+  const textGroup = {
+    hidden: { opacity: 0, y: 8 },
+    show: { opacity: 1, y: 0, transition: { ...sharedSpring, staggerChildren: 0.06, delayChildren: 0.04 } },
+  } as const;
+  const textItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: sharedSpring } } as const;
+
+  const buttonVariants = {
+    rest: { y: 0, scale: 1, boxShadow: "var(--cta-shadow-rest)" },
+    hover: { y: -2, scale: 1.02, boxShadow: "var(--cta-shadow-hover)" },
+    tap: { y: 0, scale: 0.98 },
+  } as const;
+  const arrowVariants = { rest: { x: 0 }, hover: { x: 5 }, tap: { x: 0 } } as const;
+
+  // Pointer parallax
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const rx = useTransform(py, [-40, 40], [6, -6]);
+  const ry = useTransform(px, [-40, 40], [-6, 6]);
+  const translateBeamX = useTransform(px, [-40, 40], ["-6%", "6%"]);
+  const translateBeamY = useTransform(py, [-40, 40], ["-3%", "3%"]);
+
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - (r.left + r.width / 2);
+    const y = e.clientY - (r.top + r.height / 2);
+    const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+    px.set(clamp(x / 10, -40, 40));
+    py.set(clamp(y / 10, -40, 40));
+  };
+  const onPointerLeave = () => { px.set(0); py.set(0); };
+
+  // Scroll glow ring
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start 80%", "end 20%"] });
+  const ringGlow = useTransform(scrollYProgress, [0, 1], [0.15, 0.9]);
+  const ringScale = useTransform(scrollYProgress, [0, 1], [1, 1.06]);
+
+  // Magnetic primary CTA
+  const magX = useMotionValue(0);
+  const magY = useMotionValue(0);
+  const magneticHandlers = {
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+      const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+      const relX = e.clientX - (r.left + r.width / 2);
+      const relY = e.clientY - (r.top + r.height / 2);
+      const strength = 0.18;
+      magX.set(Math.max(-8, Math.min(8, (relX * strength) / 10)));
+      magY.set(Math.max(-6, Math.min(6, (relY * strength) / 10)));
+    },
+    onPointerLeave: () => { magX.set(0); magY.set(0); },
+  } as const;
 
   return (
-    <div className="relative isolate py-28 md:py-40 bg-white overflow-hidden cta-chiro">
-      {/* subtle ambient tint */}
-      <AmbientColor />
+    <MotionConfig reducedMotion={prefersReduced ? "always" : "never"} transition={sharedSpring}>
+      <motion.div
+        ref={sectionRef}
+        className="relative isolate py-28 md:py-40 bg-white overflow-hidden cta-shell will-change-transform fm-surface"
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+        style={{ perspective: 900 }}
+      >
+        {/* Ambient tint */}
+        <AmbientColor />
 
-      {/* === CLEAN BACKGROUND (subtle, elegant) === */}
-      <div aria-hidden className="absolute inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-white" />
+        {/* Backdrop */}
+        <div aria-hidden className="absolute inset-0 -z-10 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-[rgba(246,249,250,0.9)]" />
 
-        {/* Minimal premium divider */}
-        <div className="hidden md:block absolute inset-y-10 right-[8%] w-px gradient-divider" />
-
-        {/* Embossed spine watermark (ultra subtle) */}
-        <svg className="hidden md:block absolute right-[6%] top-1/2 -translate-y-1/2 w-[420px] h-[520px] spine-mark" viewBox="0 0 420 520" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-          {/* soft outer glow line */}
-          <path className="glow" d="M210 60 C190 140 230 220 210 300 C200 360 220 420 210 480" />
-          {/* crisp spine curve */}
-          <path d="M210 60 C190 140 230 220 210 300 C200 360 220 420 210 480" />
-          {/* small ticks to hint vertebrae (no gimmicks) */}
-          {Array.from({ length: 9 }).map((_, i) => {
-            const y = 100 + i * 42;
-            const len = i < 2 ? 28 : i < 6 ? 34 : 30;
-            return (
-              <line key={i} className="tick" x1={210 - len / 2} x2={210 + len / 2} y1={y} y2={y} />
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* === CONTENT === */}
-      <Container className="relative z-10 w-full px-6 md:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-10 md:gap-12">
-          <div className="flex-1 min-w-0">
-            <motion.h2
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.6 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="text-breaker-bay-950 text-2xl md:text-4xl font-bold tracking-tight text-center md:text-left"
-            >
-              {heading}
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.6 }}
-              transition={{ duration: 0.55, ease: "easeOut", delay: 0.05 }}
-              className="max-w-xl mx-auto md:mx-0 mt-5 md:mt-6 text-sm md:text-base leading-relaxed text-neutral-500 text-center md:text-left"
-            >
-              {sub_heading}
-            </motion.p>
-
-            {/* Trust mini-bullets to reduce friction */}
-            <ul className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-[12px] md:text-[13px] text-neutral-500">
-              <li className="flex items-center gap-2"><span className="inline-block rounded-full w-1.5 h-1.5 bg-[var(--breaker-400)]"/>Személyre szabott kezelés</li>
-              <li className="flex items-center gap-2"><span className="inline-block rounded-full w-1.5 h-1.5 bg-[var(--breaker-400)]"/>Gyors időpontfoglalás</li>
-              <li className="flex items-center gap-2"><span className="inline-block rounded-full w-1.5 h-1.5 bg-[var(--breaker-400)]"/>Átlátható folyamat</li>
-            </ul>
-          </div>
-
+          {/* Radial glows */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-            className="relative flex flex-wrap items-center justify-center md:justify-end gap-3 md:gap-4 pt-2"
+            className="absolute -top-40 -left-40 size-[520px] rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(0,180,170,.12), transparent 60%)", rotateX: rx, rotateY: ry, opacity: ringGlow, scale: ringScale }}
+            animate={{ scale: prefersReduced ? 1 : [1, 1.03, 1] }}
+            transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute -bottom-40 -right-40 size-[520px] rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(0,180,170,.10), transparent 60%)", rotateX: rx, rotateY: ry, opacity: ringGlow, scale: ringScale }}
+            animate={{ scale: prefersReduced ? 1 : [1, 1.05, 1] }}
+            transition={{ duration: 7.5, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+          />
+
+          {/* Ring field */}
+          <motion.svg
+            className="absolute right-[6%] top-1/2 -translate-y-1/2 w-[420px] h-[520px] hidden md:block"
+            viewBox="0 0 420 520"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ rotateX: rx, rotateY: ry }}
           >
-            {CTAs?.map((cta, index) => (
-              <Button
-                as={Link}
-                key={index}
-                href={`/${locale}${cta.URL}`}
-                aria-label={`${cta.text}`}
-                className={`group relative inline-flex items-center gap-2 px-5 md:px-6 py-3 md:py-3.5 rounded-xl font-medium shadow-sm transition will-change-transform ${variantClass(
-                  cta.variant
-                )} btn-sheen focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--breaker-300)] focus-visible:ring-offset-white ${index===0 ? 'cta-emphasis' : ''}`}
-              >
-                <span>{cta.text}</span>
-                <ArrowRightIcon className="cta-arrow w-4 h-4" aria-hidden />
-              </Button>
+            <defs>
+              <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="var(--ring-color)" stopOpacity=".18" />
+                <stop offset="100%" stopColor="var(--ring-color)" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <circle key={i} cx="210" cy="260" r={40 + i * 38} fill="none" stroke="var(--ring-stroke)" strokeOpacity=".10" strokeWidth="1.25" />
             ))}
-            
-        </motion.div>
+            <motion.circle cx="210" cy="260" r="120" fill="url(#rg)" style={{ opacity: ringGlow, scale: ringScale, transformOrigin: "210px 260px" }} />
+            <path d="M160 70 C 260 140, 110 220, 230 300 C 330 360, 180 420, 260 490" stroke="var(--ring-stroke)" strokeOpacity=".18" strokeDasharray="2 7" strokeWidth="2" fill="none" />
+            <motion.circle cx="210" cy="260" r="170" fill="none" stroke="var(--ring-color)" strokeWidth="2.5" strokeLinecap="round" style={{ pathLength: scrollYProgress, opacity: scrollYProgress }} strokeDasharray="1 1" />
+          </motion.svg>
+
+          {/* Parallax beams */}
+          <motion.div
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-[52vw] -translate-x-1/2 opacity-70 mix-blend-normal"
+            style={{ WebkitMaskImage: "linear-gradient(90deg,transparent,black 20%,black 80%,transparent)", maskImage: "linear-gradient(90deg,transparent,black 20%,black 80%,transparent)", x: translateBeamX, y: translateBeamY }}
+          >
+            <motion.div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(100deg,rgba(0,0,0,0)_0%,rgba(0,180,170,0.06)_35%,rgba(0,180,170,0.10)_50%,rgba(0,180,170,0.06)_65%,rgba(0,0,0,0)_100%)" }}
+              animate={prefersReduced ? undefined : { x: ["-18%", "18%", "-18%"], opacity: [0.55, 0.75, 0.55] }}
+              transition={{ duration: 12, ease: "easeInOut", repeat: Infinity }}
+            />
+          </motion.div>
+          <div className="hidden md:block absolute inset-y-12 right-[8%] w-px bg-[linear-gradient(to_bottom,rgba(0,0,0,.10),rgba(0,0,0,0))]" />
         </div>
-      </Container>
 
-      {/* === GLOBAL STYLES === */}
-      <style jsx global>{`
-        /* using breaker-bay palette from global CSS (no local :root override) */
+        {/* Content */}
+        <Container className="relative z-10 w-full px-6 md:px-8">
+          <motion.div className="flex flex-col md:flex-row justify-between items-center gap-10 md:gap-12" variants={textGroup} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.5 }}>
+            <div className="flex-1 min-w-0">
+              <motion.h2 variants={textItem} className="text-breaker-bay-950 text-2xl md:text-4xl font-semibold tracking-tight text-center md:text-left">{heading}</motion.h2>
+              <motion.p variants={textItem} className="max-w-xl mx-auto md:mx-0 mt-5 md:mt-6 text-sm md:text-base leading-relaxed text-neutral-600 text-center md:text-left">{sub_heading}</motion.p>
+              {/* Heading underline */}
+              <motion.div aria-hidden className="mx-auto md:mx-0 mt-3 h-[2px] w-16 rounded bg-[var(--breaker-400)]" initial={{ scaleX: 0, opacity: 0 }} whileInView={{ scaleX: 1, opacity: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 300, damping: 28 }} style={{ transformOrigin: "0% 50%" }} />
 
-        @keyframes glassSheen {
-          0% { transform: translateX(-120%); opacity: .0; }
-          25% { opacity: .35; }
-          60% { opacity: .0; }
-          100% { transform: translateX(120%); opacity: .0; }
-        }
+              {/* Trust chips */}
+              <motion.ul variants={textItem} className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 text-[12px] md:text-[13px] text-neutral-600">
+                {["Személyre szabott kezelés", "Gyors időpontfoglalás", "Átlátható folyamat"].map((t, i) => (
+                  <motion.li key={i} whileHover={{ y: -1, scale: 1.02 }} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-black/5 bg-white/70 shadow-[inset_0_1px_0_0_rgba(255,255,255,.7)]">
+                    <span className="inline-block size-1.5 rounded-full bg-[var(--breaker-400)]" />
+                    {t}
+                  </motion.li>
+                ))}
+              </motion.ul>
+            </div>
 
-        /* CTA üveg variánsok (border nélkül) */
-        .cta-primary{
-          background: linear-gradient(180deg, rgba(29,228,226,0.18) 0%, rgba(4,200,200,0.12) 100%);
-          backdrop-filter: blur(14px) saturate(160%);
-          -webkit-backdrop-filter: blur(14px) saturate(160%);
-          color: var(--breaker-950) !important;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 24px rgba(0,0,0,0.10);
-        }
-        .cta-accent{
-          background: linear-gradient(180deg, rgba(144,255,246,0.18) 0%, rgba(199,255,250,0.10) 100%);
-          backdrop-filter: blur(14px) saturate(160%);
-          -webkit-backdrop-filter: blur(14px) saturate(160%);
-          color: var(--breaker-900) !important;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 24px rgba(0,0,0,0.08);
-        }
-        .cta-ghost{
-          background: rgba(255,255,255,0.06);
-          backdrop-filter: blur(10px) saturate(140%);
-          -webkit-backdrop-filter: blur(10px) saturate(140%);
-          color: var(--breaker-800) !important;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
-        }
-        .cta-primary:hover,.cta-accent:hover,.cta-ghost:hover{ transform: translateY(-1px); }
+            <motion.div initial={{ opacity: 0, scale: 0.985 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.5 }} transition={sharedSpring} className="relative flex flex-wrap items-center justify-center md:justify-end gap-3 md:gap-4 pt-2">
+              {CTAs?.map((cta, index) => {
+                const isPrimary = index === 0;
+                const wrapperProps = isPrimary ? { style: { x: magX, y: magY }, ...magneticHandlers } : {};
+                return (
+                  <motion.div key={index} variants={buttonVariants} initial="rest" whileHover="hover" whileTap="tap" {...wrapperProps}>
+                    <Button
+                      as={Link}
+                      href={`/${locale}${cta.URL}`}
+                      aria-label={`${cta.text}`}
+                      className={`group relative inline-flex items-center gap-2 px-5 md:px-6 py-3 md:py-3.5 rounded-lg font-medium transition will-change-transform fm-focus ${variantClass(cta.variant)} focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--breaker-300)] focus-visible:ring-offset-white ${isPrimary ? "cta-emphasis" : ""}`}
+                    >
+                      <span>{cta.text}</span>
+                      <motion.span className="cta-arrow w-4 h-4" variants={arrowVariants} aria-hidden>
+                        <ArrowRightIcon className="w-4 h-4" />
+                      </motion.span>
+                    </Button>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </motion.div>
+        </Container>
 
-        /* Button sheen */
-        .btn-sheen{ position: relative; overflow: hidden; }
-        .btn-sheen::after{
-          content: "";
-          position: absolute; inset: 0; pointer-events: none;
-          background: linear-gradient(75deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%);
-          transform: translateX(-120%);
-          opacity: 0;
-        }
-        .btn-sheen:hover::after{ animation: glassSheen 1200ms ease-out forwards; }
+        {/* Global styles */}
+        <style jsx global>{`
+          :root{
+            --ring-color: rgba(0,180,170,1);
+            --ring-stroke: rgba(10,120,115,1);
+            --cta-shadow-rest: 0 1px 0 rgba(255,255,255,.8) inset, 0 8px 20px rgba(0,0,0,.06);
+            --cta-shadow-hover: 0 1px 0 rgba(255,255,255,.8) inset, 0 12px 26px rgba(0,0,0,.08);
+          }
+          .fm-surface{ box-shadow: 0 1px 0 rgba(255,255,255,.8) inset; }
 
-        /* Minimal premium accents */
-        .gradient-divider{ background: linear-gradient(to bottom, color-mix(in srgb, var(--breaker-400) 26%, transparent), transparent); opacity:.35; }
-        .spine-mark path{ stroke: var(--breaker-700); stroke-opacity: .08; stroke-width: 2; }
-        .spine-mark .tick{ stroke: var(--breaker-600); stroke-opacity: .08; stroke-width: 2; }
-        .spine-mark .glow{ stroke: var(--breaker-300); stroke-opacity: .08; stroke-width: 10; }
+          /* Button skins */
+          .cta-solid{
+            background: linear-gradient(180deg, rgba(0,195,185,0.16) 0%, rgba(0,175,165,0.12) 100%), white;
+            border: 1px solid rgba(0,0,0,.06);
+            box-shadow: var(--cta-shadow-rest);
+            color: var(--breaker-950) !important;
+          }
+          .cta-solid:hover{ transform: translateY(-1px); box-shadow: var(--cta-shadow-hover); }
 
-        /* Conversion helpers */
-        .cta-arrow{ transition: transform .25s ease; }
-        .group:hover .cta-arrow{ transform: translateX(4px); }
-        .group:active{ transform: translateY(1px); }
-        .cta-emphasis{ box-shadow: 0 8px 28px rgba(0,0,0,0.08), 0 0 0 2px color-mix(in srgb, var(--breaker-300) 26%, transparent); }
+          .cta-outline{
+            background: white;
+            border: 1px solid color-mix(in srgb, var(--breaker-400) 34%, rgba(0,0,0,.06));
+            box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
+            color: var(--breaker-900) !important;
+          }
+          .cta-outline:hover{ transform: translateY(-1px); }
 
-        /* Reduced motion */
-        @media (prefers-reduced-motion: reduce){
-          .btn-sheen::after{ animation: none !important; }
-        }
-      `}</style>
-    </div>
+          .cta-ghost{
+            background: rgba(255,255,255,.6);
+            border: 1px solid rgba(0,0,0,.05);
+            color: var(--breaker-800) !important;
+          }
+          .cta-ghost:hover{ transform: translateY(-1px); }
+
+          /* Focus pulse for keyboard users */
+          @keyframes focusPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,0,0,0) } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--breaker-300) 18%, transparent) } }
+          .fm-focus:focus-visible { animation: focusPulse 900ms ease-out 1; }
+
+          /* Micro-interactions */
+          .cta-arrow{ display:inline-flex; align-items:center; }
+          .group:active{ transform: translateY(1px); }
+          .cta-emphasis{ box-shadow: 0 10px 30px rgba(0,0,0,.08), 0 0 0 2px color-mix(in srgb, var(--breaker-300) 28%, transparent); }
+        `}</style>
+      </motion.div>
+    </MotionConfig>
   );
 };
-
