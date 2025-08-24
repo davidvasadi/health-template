@@ -59,15 +59,15 @@ export default async function Products({
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
       <AmbientColor />
       <Container className="pt-40 pb-40">
-        <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
+        {/* <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
           <IconShoppingCartUp className="h-6 w-6 text-breaker-bay-700" />
         </FeatureIconContainer>
-        <Heading as="h1" className="pt-4">
+        <Heading as="h1" className="pt-4 text-breaker-bay-950">
           {productPage.heading}
         </Heading>
         <Subheading className="max-w-3xl mx-auto">
           {productPage.sub_heading}
-        </Subheading>
+        </Subheading> */}
         <Featured products={featured} locale={params.locale} />
         <ProductItems products={products?.data} locale={params.locale} />
       </Container>
