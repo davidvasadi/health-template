@@ -124,17 +124,17 @@ export const CTA = ({
     <MotionConfig reducedMotion={prefersReduced ? "always" : "never"} transition={sharedSpring}>
       <motion.div
         ref={sectionRef}
-        className="relative isolate py-28 md:py-40 bg-white overflow-hidden cta-shell will-change-transform fm-surface"
+        className="relative isolate py-28 md:py-40  overflow-hidden cta-shell will-change-transform fm-surface"
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         style={{ perspective: 900 }}
       >
         {/* Ambient tint */}
-        <AmbientColor />
+        {/* <AmbientColor /> */}
 
         {/* Backdrop */}
         <div aria-hidden className="absolute inset-0 -z-10 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-[rgba(246,249,250,0.9)]" />
+          <div className="absolute inset-0 bg-gradient-to-b " />
 
           {/* Radial glows */}
           <motion.div

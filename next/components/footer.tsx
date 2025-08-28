@@ -9,7 +9,7 @@ type FooterProps = {
 
 export const Footer = ({ data, locale }: FooterProps) => {
   return (
-    <footer className="relative bg-white">
+    <footer className="relative ">
       {/* Felső “hairline” fényvonal (finom, nem tolakodó) */}
       <div className="h-px w-full bg-gradient-to-r from-breaker-bay-300/0 via-breaker-bay-300/50 to-breaker-bay-300/0" />
 

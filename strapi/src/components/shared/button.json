@@ -13,24 +13,22 @@
     "URL": {
       "type": "string"
     },
-    "target": {
-      "type": "enumeration",
-      "enum": [
-        "_blank",
-        "_self",
-        "_parent",
-        "_top"
-      ]
-    },
     "variant": {
       "type": "enumeration",
+      "default": "primary",
       "enum": [
         "simple",
         "outline",
         "primary",
         "muted"
-      ],
-      "default": "primary"
+      ]
+    },
+    "target": {
+      "type": "enumeration",
+      "enum": [
+        "_self",
+        "_blank"
+      ]
     }
   }
 }

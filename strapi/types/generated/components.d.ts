@@ -360,9 +360,7 @@ export interface SharedButton extends Struct.ComponentSchema {
     icon: 'cursor';
   };
   attributes: {
-    target: Schema.Attribute.Enumeration<
-      ['_blank', '_self', '_parent', '_top']
-    >;
+    target: Schema.Attribute.Enumeration<['_self', '_blank']>;
     text: Schema.Attribute.String;
     URL: Schema.Attribute.String;
     variant: Schema.Attribute.Enumeration<

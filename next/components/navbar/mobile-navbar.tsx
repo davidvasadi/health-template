@@ -1,9 +1,6 @@
 "use client";
 /**
- * MobileNavbar (fix)
- * - Header: továbbra is csak scroll után kap semleges glass hátteret + ring (változatlan)
- * - Megnyitott menü: NINCS border/ring, neutrális üveg overlay + panel
- * - Animáció: overlay fade, panel spring slide/fade — villanás nélkül
+ * MobileNavbar (villanásmentes overlay + középre igazított panel, katt-azon kívül zár)
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -17,7 +14,7 @@ import { Logo } from "@/components/logo";
 import { LocaleSwitcher } from "../locale-switcher";
 
 /* ──────────────────────────────────────────────────────────────────────────────
-   Paletta + CTA glass + sheen (Hero/desktop egységes)
+   Paletta + CTA glass + sheen
    ────────────────────────────────────────────────────────────────────────────── */
 const MobileNavCSS = () => (
   <style jsx global>{`
@@ -40,7 +37,6 @@ const MobileNavCSS = () => (
     .mobile-navbar-scope svg [fill]:not([fill="none"]) { fill: currentColor; }
     .mobile-navbar-scope svg [stroke]:not([stroke="none"]) { stroke: currentColor; }
 
-    /* CTA – glass + sheen (árnyék/border nélkül) */
     .btn-xl {
       position: relative;
       border-radius: 0.75rem;
@@ -98,9 +94,6 @@ const MobileNavCSS = () => (
   `}</style>
 );
 
-/* ──────────────────────────────────────────────────────────────────────────────
-   Típusok
-   ────────────────────────────────────────────────────────────────────────────── */
 type Props = {
   leftNavbarItems: { URL: string; text: string; target?: string; children?: { URL: string; text: string }[] }[];
   rightNavbarItems: { URL: string; text: string; target?: string }[];
@@ -108,16 +101,13 @@ type Props = {
   locale: string;
 };
 
-/* ──────────────────────────────────────────────────────────────────────────────
-   Komponens
-   ────────────────────────────────────────────────────────────────────────────── */
 export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }: Props) => {
   const pathname = usePathname();
   const { scrollY } = useScroll();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Header blur CSAK görgetésre
+  // Header blur csak görgetésre
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 80));
 
   // ESC + scroll-lock nyitott menü esetén
@@ -133,7 +123,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
     };
   }, [open]);
 
-  // CTA sorrend: 1. accent, 2. primary, többi ghost
+  // CTA sorrend
   const ctaClass = useMemo(
     () => (i: number) => (i === 0 ? "cta-accent btn-glass" : i === 1 ? "cta-primary btn-glass" : "cta-ghost btn-glass"),
     []
@@ -146,26 +136,14 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
     return current === clean || current.startsWith(clean + "/");
   };
 
-  // Chip linkek (LocaleSwitcher minta)
-  const chipBase =
-    "flex items-center justify-start text-base leading-[110%] rounded-md transition duration-200 select-none font-medium";
-  const chipPad = "px-4 py-2";
-  const chipActive = "bg-breaker-bay-950 text-breaker-bay-50 shadow-[inset_0_1px_0_rgba(0,159,163,0.55)]";
-  const chipIdle   = "text-breaker-bay-950 hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90 hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]";
-
   const NAV_FG = "var(--breaker-950)";
   const SCROLLED_GLASS_BG = "rgba(255,255,255,0.10)";
   const SCROLLED_BLUR = 14;
 
-  // Variánsok a villanásmentes animációhoz
-  const overlayVariants = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: 0.22, ease: "easeOut" } },
-    exit:    { opacity: 0, transition: { duration: 0.18, ease: "easeIn" } },
-  };
+  // Panel animációk
   const panelVariants = {
     initial: { y: -12, opacity: 0, scale: 0.995 },
-    animate: { y: 0,  opacity: 1, scale: 1, transition: { type: "spring", stiffness: 420, damping: 28, mass: 0.6 } },
+    animate: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 420, damping: 28, mass: 0.6 } },
     exit:    { y: -12, opacity: 0, scale: 0.995, transition: { duration: 0.18, ease: "easeIn" } },
   };
 
@@ -173,7 +151,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
     <>
       <MobileNavCSS />
 
-      {/* FIXED MOBIL HEADER – mx-3, rounded-2xl; csak scroll után glass + ring */}
+      {/* FIXED MOBIL HEADER */}
       <div
         style={{ ["--nav-fg" as any]: NAV_FG } as React.CSSProperties}
         className={cn(
@@ -196,7 +174,6 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                 background: SCROLLED_GLASS_BG,
                 backdropFilter: `blur(${SCROLLED_BLUR}px) saturate(150%)`,
                 WebkitBackdropFilter: `blur(${SCROLLED_BLUR}px) saturate(150%)`,
-                // RING a headeren marad scroll után
                 boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
               }}
               aria-hidden
@@ -221,41 +198,46 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         </div>
       </div>
 
-      {/* OVERLAY + PANEL – NINCS BORDER/RING; neutrális üveg; finom anim */}
+      {/* OVERLAY – mindig mountolva (villanásmentes), csak opacity anim */}
+      <motion.div
+        id="mobile-menu-overlay"
+        aria-hidden={!open}
+        className="fixed inset-0 z-50"
+        initial={false}
+        animate={{ opacity: open ? 1 : 0 }}
+        transition={{ duration: open ? 0.22 : 0.18, ease: open ? "easeOut" : "easeIn" }}
+        onClick={() => setOpen(false)}
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          backdropFilter: "blur(12px) saturate(160%)",
+          WebkitBackdropFilter: "blur(12px) saturate(160%)",
+          willChange: "opacity",
+          transform: "translateZ(0)",
+          isolation: "isolate",
+          pointerEvents: open ? "auto" : "none",
+        }}
+      />
+
+      {/* PANEL – középen, EREDETI szélességgel (w-full + mx-3) */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            id="mobile-menu"
-            role="dialog"
-            aria-modal="true"
-            variants={overlayVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="fixed inset-0 z-50"
-          >
-            {/* neutrális üveg overlay – katt a háttérre: zár */}
+          <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+            {/* pointer-events-none a WRAPPER-en → átereszt az overlay-re
+                pointer-events-auto a PANEL-en → a panel kattintható marad */}
             <motion.div
-              onClick={() => setOpen(false)}
-              className="absolute inset-0 will-change-transform"
-              variants={overlayVariants}
-              style={{
-                background: "rgba(255,255,255,0.06)",      // semleges, NINCS kék
-                backdropFilter: "blur(12px) saturate(160%)",
-                WebkitBackdropFilter: "blur(12px) saturate(160%)",
-                // NINCS border/ring
-              }}
-            />
-
-            {/* panel – mx-3, rounded-2xl, NINCS border/ring */}
-            <motion.div
+              role="dialog"
+              aria-modal="true"
+              id="mobile-menu"
+              key="mobile-panel"
               variants={panelVariants}
-              className="relative z-10 mx-3 mt-[calc(env(safe-area-inset-top)+72px)] rounded-2xl p-4"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full mx-3 rounded-2xl p-4 pointer-events-auto"
               style={{
                 background: "rgba(255,255,255,0.10)",
                 backdropFilter: "blur(24px) saturate(170%)",
                 WebkitBackdropFilter: "blur(24px) saturate(170%)",
-                // NINCS border/ring itt
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -325,7 +307,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                 })}
               </nav>
 
-              {/* CTA-k – accent → primary → ghost; glass + sheen */}
+              {/* CTA-k */}
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 {rightNavbarItems.map((item, index) => (
                   <Button
@@ -341,7 +323,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                 ))}
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

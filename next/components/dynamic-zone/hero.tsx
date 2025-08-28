@@ -456,7 +456,7 @@ export const Hero = ({
       </div>
 
       {/* JOBB ALSÓ STÁTUSZKÁRTYA */}
-      {primaryCTA && (
+      {/* {primaryCTA && (
         <MotionDiv
           initial={reducedMotion ? undefined : (hasEnteredOnce ? false : { opacity: 0, y: 12 })}
           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
@@ -497,7 +497,7 @@ export const Hero = ({
             </div>
           </div>
         </MotionDiv>
-      )}
+      )} */}
 
       {/* ⛔️ Mobilos sticky micro-CTA — ELTÁVOLÍTVA  */}
     </MotionSection>

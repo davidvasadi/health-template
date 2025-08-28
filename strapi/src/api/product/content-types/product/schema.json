@@ -69,6 +69,16 @@
       "component": "shared.perks",
       "repeatable": true
     },
+    "button": {
+      "type": "component",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      },
+      "component": "shared.button",
+      "repeatable": false
+    },
     "plans": {
       "type": "relation",
       "relation": "oneToMany",
@@ -101,6 +111,16 @@
         }
       },
       "default": false
+    },
+    "seo": {
+      "type": "component",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      },
+      "component": "shared.seo",
+      "repeatable": false
     }
   }
 }

@@ -11,7 +11,7 @@ export const truncate = (text: string, length: number) => {
 
 export const formatNumber = (
   number: number,
-  locale: string = "en-US"
+  locale: string = "hu-HU"
 ): string => {
   return new Intl.NumberFormat(locale, {
     style: "decimal",

@@ -16,7 +16,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 
   const pageData = await fetchContentType("products", {
-    filters: { slug: params.slug },
+    filters: { 
+      slug: params.slug,
+      locale: params.locale,          // ← locale a FILTERS alatt (mint a blognál)
+    },
     populate: "seo.metaImage",
   }, true)
 
@@ -32,11 +35,15 @@ export default async function SingleProductPage({
 }) {
 
   const product = await fetchContentType("products", {
-    filters: { slug: params.slug },
+    filters: { 
+      slug: params.slug,
+      locale: params.locale,          // ← locale a FILTERS alatt
+    },
+    // populate: { images: { populate: '*' }, seo: { populate: 'metaImage' }, dynamic_zone: { populate: 'deep' } }
   }, true)
 
   if (!product) {
-    redirect("/products");
+    redirect(`/${params.locale}/products`); // ← locale-aware redirect
   }
 
   return (

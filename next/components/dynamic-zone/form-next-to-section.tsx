@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AnimatedTooltip } from "@/components/ui/animated-tooltip";
 import Link from "next/link";
-import { IconBrandGithub, IconBrandLinkedin, IconBrandX } from "@tabler/icons-react";
+import { IconBrandGithub, IconBrandLinkedin, IconBrandX, IconBrandMeta,IconBrandFacebook,IconBrandInstagram,IconBrandTiktok } from "@tabler/icons-react";
 import { Button } from "../elements/button";
 
 /**
@@ -73,9 +73,9 @@ export function FormNextToSection({
   } as const;
 
   const socials = [
-    { title: "twitter", href: "https://twitter.com/strapijs", icon: <IconBrandX className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
-    { title: "github", href: "https://github.com/strapi", icon: <IconBrandGithub className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
-    { title: "linkedin", href: "https://linkedin.com/strapi", icon: <IconBrandLinkedin className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
+    { title: "instagram", href: "https://instagram.com/strapijs", icon: <IconBrandInstagram className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
+    { title: "tiktok", href: "https://tiktok.com/strapi", icon: <IconBrandTiktok className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
+    { title: "facebook", href: "https://facebook.hu/strapi", icon: <IconBrandFacebook className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" /> },
   ];
 
   return (

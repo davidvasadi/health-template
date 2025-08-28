@@ -21,7 +21,7 @@ export async function generateMetadata({
 
   const pageData = await fetchContentType("product-page", {
     filters: {
-      locale: params.locale,
+      locale: params.locale,            // ← locale a FILTERS alatt (mint a blognál)
     },
     populate: "seo.metaImage",
   }, true)
@@ -37,13 +37,20 @@ export default async function Products({
   params: { locale: string };
 }) {
 
-  // Fetch the product-page and products data
+  // product-page lokalizáltan
   const productPage = await fetchContentType('product-page', {
     filters: {
-      locale: params.locale,
+      locale: params.locale,            // ← locale a FILTERS alatt
     },
   }, true);
-  const products = await fetchContentType('products');
+
+  // products lokalizáltan (shape marad: { data: [...] })
+  const products = await fetchContentType('products', {
+    filters: {
+      locale: params.locale,            // ← locale a FILTERS alatt
+    },
+    populate: { images: { populate: '*' } }, // ha kell kép, ráteheted
+  }, false);
 
   const localizedSlugs = productPage.localizations?.reduce(
     (acc: Record<string, string>, localization: any) => {
@@ -52,6 +59,7 @@ export default async function Products({
     },
     { [params.locale]: "products" }
   );
+
   const featured = products?.data.filter((product: { featured: boolean }) => product.featured);
 
   return (
@@ -59,7 +67,8 @@ export default async function Products({
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
       <AmbientColor />
       <Container className="pt-40 pb-40">
-        {/* <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
+        {/* 
+        <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
           <IconShoppingCartUp className="h-6 w-6 text-breaker-bay-700" />
         </FeatureIconContainer>
         <Heading as="h1" className="pt-4 text-breaker-bay-950">
@@ -67,7 +76,8 @@ export default async function Products({
         </Heading>
         <Subheading className="max-w-3xl mx-auto">
           {productPage.sub_heading}
-        </Subheading> */}
+        </Subheading>
+        */}
         <Featured products={featured} locale={params.locale} />
         <ProductItems products={products?.data} locale={params.locale} />
       </Container>
