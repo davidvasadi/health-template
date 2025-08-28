@@ -15,7 +15,7 @@ type Props = {
   items: Item[];
   autoplay?: boolean;
   autoplayMs?: number;
-  neighbors?: 1 | 2; // desktopon a látható szomszédok száma
+  neighbors?: 1 | 2;
 };
 
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -29,12 +29,14 @@ export const AnimatedTooltip: React.FC<Props> = ({
   items,
   autoplay = true,
   autoplayMs = 3600,
-  neighbors = 1, // desktop default
+  neighbors = 1,
 }) => {
+  // ⬇️ hooks MINDIG lefutnak
   const data = useMemo(() => (Array.isArray(items) ? items.filter(Boolean) : []), [items]);
+  const hasData = data.length > 0;
+
   const [index, setIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  if (!data.length) return null;
 
   // Mobil detektálás
   useEffect(() => {
@@ -52,7 +54,7 @@ export const AnimatedTooltip: React.FC<Props> = ({
     return () => clearInterval(t);
   }, [autoplay, autoplayMs, data.length]);
 
-  // Drag
+  // Drag (hook: useMotionValue) – mindig meghívjuk
   const dragX = useMotionValue(0);
   const dragThreshold = 80;
   const onDragEnd = (_: any, info: { offset: { x: number } }) => {
@@ -60,22 +62,23 @@ export const AnimatedTooltip: React.FC<Props> = ({
     else if (info.offset.x > dragThreshold) setIndex((i) => (i - 1 + data.length) % data.length);
   };
 
-  // Mobilon is coverflow marad, csak finomabb oldalsó kártya-hatás
   const effNeighbors = isMobile ? 1 : neighbors;
 
   const slots = useMemo(() => {
+    if (!hasData) return [];
     const arr: number[] = [];
     for (let o = -effNeighbors; o <= effNeighbors; o++) arr.push(mod(index + o, data.length));
     return arr;
-  }, [index, data.length, effNeighbors]);
+  }, [index, data.length, effNeighbors, hasData]);
+
+  // ⬇️ „early return” CSAK A VÉGÉN
+  if (!hasData) return null;
 
   return (
     <MotionConfig transition={{ type: "spring", stiffness: 230, damping: 26, mass: 0.9 }}>
       <div className="relative w-full">
         <div className="relative mx-auto w-full max-w-6xl">
-          {/* MOBILON magasabb konténer, hogy a kép NAGY legyen */}
           <div className="relative h-[68vh] md:h-[54vh] [contain:layout_paint_style]">
-            {/* Rétegek sorrendje fix: a coverflow kapja a legmagasabb z-indexet */}
             <div
               className="absolute inset-0 perspective-[1100px] flex items-center justify-center z-20"
               aria-roledescription="coverflow"
@@ -88,17 +91,18 @@ export const AnimatedTooltip: React.FC<Props> = ({
                   `${item?.firstname ?? ""} ${item?.lastname ?? ""}`.trim() ||
                   "image";
 
-                const offset = circularOffset(index, i, data.length); // -effNeighbors..+effNeighbors
+                const offset = circularOffset(index, i, data.length);
                 const isCenter = offset === 0;
 
-                // 3D paraméterek
-                const baseX = (isMobile ? 180 : 220) * offset; // mobilon kicsit szorosabb
-                const rotY = isMobile ? -20 * Math.sign(offset) * Math.min(Math.abs(offset), 1) : -34 * Math.sign(offset) * Math.min(Math.abs(offset), 1);
+                const baseX = (isMobile ? 180 : 220) * offset;
+                const rotY =
+                  isMobile
+                    ? -20 * Math.sign(offset) * Math.min(Math.abs(offset), 1)
+                    : -34 * Math.sign(offset) * Math.min(Math.abs(offset), 1);
                 const scaleSide = isMobile ? 0.9 : 0.88;
                 const scale = isCenter ? 1 : scaleSide;
                 const z = (effNeighbors - Math.abs(offset)) * 10;
 
-                // Mobilon SOFT oldalsó effekt (nincs blur → border nem sérül)
                 const sideFxMobile = isCenter ? "" : "opacity-80";
                 const sideFxDesktop = isCenter ? "" : "saturate-[0.95] brightness-[0.98]";
 
@@ -112,12 +116,9 @@ export const AnimatedTooltip: React.FC<Props> = ({
                     exit={{ opacity: 0 }}
                     whileHover={isCenter ? { scale: 1.015 } : {}}
                   >
-                    {/* KÁRTYA — border + radius mindig jó (iOS hackkel) */}
                     <motion.div
                       className={[
-                        // mobil: nagy, álló
                         "w-[88vw] max-w-[560px] aspect-[4/5]",
-                        // desktop: szélesebb
                         "md:w-[48vw] md:max-w-[500px] md:aspect-[16/10]",
                         "relative rounded-2xl overflow-hidden bg-neutral-900 ring-1 ring-neutral-300/40 shadow-lg select-none transform-gpu",
                         isMobile ? sideFxMobile : sideFxDesktop,
@@ -134,11 +135,10 @@ export const AnimatedTooltip: React.FC<Props> = ({
                         if (!isCenter) setIndex(i);
                       }}
                     >
-                      {/* KÉP WRAPPER — iOS border+filter hack: overflow + mask */}
                       <div
                         className="relative h-full w-full rounded-inherit overflow-hidden transform-gpu"
                         style={{
-                          WebkitMaskImage: "-webkit-radial-gradient(white, black)", // iOS border+filter bug workaround
+                          WebkitMaskImage: "-webkit-radial-gradient(white, black)",
                         }}
                       >
                         <StrapiImage
@@ -153,11 +153,9 @@ export const AnimatedTooltip: React.FC<Props> = ({
                         />
                       </div>
 
-                      {/* finom overlay és border rásegítés */}
                       <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-white/10" />
                       <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-black/10 via-transparent to-black/30" />
 
-                      {/* caption */}
                       <div className="absolute left-3 right-3 bottom-3 flex justify-start">
                         <div className="inline-flex max-w-[92%] items-center gap-2 rounded-xl bg-white/80 px-3 py-1.5 text-neutral-900 backdrop-blur-[2px] shadow-sm">
                           <span className="inline-flex items-center gap-2 text-[13px] md:text-sm font-semibold">
@@ -173,7 +171,6 @@ export const AnimatedTooltip: React.FC<Props> = ({
               })}
             </div>
 
-            {/* DOT NAV — felül marad (z-30), nem csúszik be mögé semmi */}
             {data.length > 1 && (
               <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
                 {data.map((_, i) => {
@@ -190,7 +187,6 @@ export const AnimatedTooltip: React.FC<Props> = ({
               </div>
             )}
 
-            {/* TAP ZÓNÁK — z-40, hogy biztosan kattintható legyen minden fölött */}
             <button
               className="absolute inset-y-0 left-0 w-1/2 md:w-1/4 z-40"
               aria-label="Előző"

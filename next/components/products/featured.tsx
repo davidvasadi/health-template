@@ -20,25 +20,25 @@ export function Featured({
   products: Product[];
   locale: string;
 }) {
-  if (!products?.length) return null;
+  // ⬇️ hooks MINDIG lefutnak (nincs early return a tetején)
+  const hasProducts = products?.length > 0;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // airy, világos – 1. és 3. slide fehéres (neutral-50), a többin breaker-bay-50
   const slideBg = useMemo(
     () => [
-      "bg-gradient-to-br from-white via-neutral-50 to-white",       // 1. → fehéres, de nem sík
+      "bg-gradient-to-br from-white via-neutral-50 to-white",
       "bg-gradient-to-tl from-white via-neutral-100 to-white",
-
     ],
     []
   );
 
-  // nav offset (állítsd, ha más): pl. 112px
   const navVars = { ["--nav-h" as any]: "120px" } as CSSProperties;
 
   useEffect(() => {
+    if (!hasProducts) return; // ⬅️ feltételt a hook *belső* logikájában kezeljük
+
     const prefersReduce =
       typeof window !== "undefined" &&
       typeof window.matchMedia === "function" &&
@@ -47,7 +47,7 @@ export function Featured({
     const ctx = gsap.context(() => {
       const sections = gsap.utils.toArray<HTMLElement>(".bb-slide");
       const headings = sections.map((s) => s.querySelector<HTMLElement>(".bb-heading"));
-      const images = gsap.utils.toArray<HTMLElement>(".bb-overlay-image"); // fontos!
+      const images = gsap.utils.toArray<HTMLElement>(".bb-overlay-image");
       const outerWrappers = gsap.utils.toArray<HTMLElement>(".bb-slide-outer");
       const innerWrappers = gsap.utils.toArray<HTMLElement>(".bb-slide-inner");
       const countNode = document.querySelector<HTMLElement>(".bb-count");
@@ -55,7 +55,6 @@ export function Featured({
       let animating = false;
       let index = 0;
 
-      // ---------- Kezdeti állapot ----------
       gsap.set([...sections, ...images, ...headings], { zIndex: 0, autoAlpha: 0 });
       sections[0] && gsap.set(sections[0], { zIndex: 2, autoAlpha: 1 });
       images[0] && gsap.set(images[0], { zIndex: 2, autoAlpha: 1 });
@@ -66,43 +65,29 @@ export function Featured({
       outerWrappers[0] && gsap.set(outerWrappers[0], { xPercent: 0 });
       innerWrappers[0] && gsap.set(innerWrappers[0], { xPercent: 0 });
 
-      // ---------- BETÖLTÉSKORI INTRO ----------
       if (!prefersReduce) {
-  const firstHeading = headings[0];
-  const firstImage   = images[0];
-  const firstCard    = sections[0]?.querySelector<HTMLElement>(".bb-card");
-  const counterWrap  = countNode?.parentElement || undefined;
+        const firstHeading = headings[0];
+        const firstImage   = images[0];
+        const firstCard    = sections[0]?.querySelector<HTMLElement>(".bb-card");
+        const counterWrap  = countNode?.parentElement || undefined;
 
-  // START STATES
-  // Cím + kártya balról (NINCS y!), kép + számláló lentről
-  if (firstHeading) gsap.set(firstHeading, { autoAlpha: 0, x: -40 });
-  if (firstCard)    gsap.set(firstCard,    { autoAlpha: 0, x: -40 });
-  const bottomGroup = [firstImage, counterWrap].filter(Boolean) as Element[];
-  if (bottomGroup.length) gsap.set(bottomGroup, { autoAlpha: 0, y: 40 });
+        if (firstHeading) gsap.set(firstHeading, { autoAlpha: 0, x: -40 });
+        if (firstCard)    gsap.set(firstCard,    { autoAlpha: 0, x: -40 });
+        const bottomGroup = [firstImage, counterWrap].filter(Boolean) as Element[];
+        if (bottomGroup.length) gsap.set(bottomGroup, { autoAlpha: 0, y: 40 });
 
-  const intro = gsap.timeline();
+        const intro = gsap.timeline();
+        intro.to([firstHeading, firstCard].filter(Boolean) as Element[], {
+          autoAlpha: 1, x: 0, duration: 0.42, ease: "power3.out",
+        }, 0);
 
-  // Cím + kártya egyszerre, balról
-  intro.to([firstHeading, firstCard].filter(Boolean) as Element[], {
-    autoAlpha: 1,
-    x: 0,
-    duration: 0.42,
-    ease: "power3.out",
-  }, 0);
+        if (bottomGroup.length) {
+          intro.to(bottomGroup, {
+            autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out",
+          }, 0.05);
+        }
+      }
 
-  // Kép + számláló alulról
-  if (bottomGroup.length) {
-    intro.to(bottomGroup, {
-      autoAlpha: 1,
-      y: 0,
-      duration: 0.42,
-      ease: "power3.out",
-    }, 0.05);
-  }
-}
-
-
-      // ---------- Navigációs váltófüggvény ----------
       function gotoSection(newIndex: number, direction: number) {
         if (animating) return;
         animating = true;
@@ -111,12 +96,9 @@ export function Featured({
 
         const tl = gsap.timeline({
           defaults: { duration: spring.duration, ease: spring.ease },
-          onComplete() {
-            animating = false;
-          },
+          onComplete() { animating = false; },
         });
 
-        // rétegezés – csak a két érintett látszik
         gsap.set([...sections, ...images, ...headings], { zIndex: 0, autoAlpha: 0 });
         gsap.set([sections[index]!, images[newIndex]!, headings[index]!], { zIndex: 1, autoAlpha: 1 });
         gsap.set([sections[newIndex]!, images[index]!, headings[newIndex]!], { zIndex: 2, autoAlpha: 1 });
@@ -130,25 +112,17 @@ export function Featured({
           .fromTo(outerWrappers[newIndex]!, { xPercent: 100 * direction }, { xPercent: 0 }, 0)
           .fromTo(innerWrappers[newIndex]!, { xPercent: -100 * direction }, { xPercent: 0 }, 0);
 
-        // CÍM ANIM: jelenlegi jobbra, következő balról be
         if (currentHeading) tl.to(currentHeading, { xPercent: 30 * direction }, 0);
         if (nextHeading) tl.fromTo(nextHeading, { xPercent: -30 * direction }, { xPercent: 0 }, 0);
 
-        // képek swipe + finom zoom
         tl.fromTo(
-          images[newIndex]!,
-          { xPercent: 125 * direction, scaleX: 1.35, scaleY: 1.18 },
-          { xPercent: 0, scaleX: 1, scaleY: 1, duration: 1 },
-          0
+          images[newIndex]!, { xPercent: 125 * direction, scaleX: 1.35, scaleY: 1.18 },
+          { xPercent: 0, scaleX: 1, scaleY: 1, duration: 1 }, 0
         ).fromTo(
-          images[index]!,
-          { xPercent: 0, scaleX: 1, scaleY: 1 },
-          { xPercent: -125 * direction, scaleX: 1.35, scaleY: 1.18 },
-          0
-        )
-        .timeScale(0.9);
+          images[index]!, { xPercent: 0, scaleX: 1, scaleY: 1 },
+          { xPercent: -125 * direction, scaleX: 1.35, scaleY: 1.18 }, 0
+        ).timeScale(0.9);
 
-        // vég: előző slide + heading teljesen off
         const prevSection = sections[prevIndex];
         const prevHeading = headings[prevIndex];
         tl.set(prevHeading, { autoAlpha: 0 }).set(prevSection, { autoAlpha: 0 });
@@ -157,20 +131,18 @@ export function Featured({
         setCurrentIndex(index);
       }
 
-      // Observer + keyboard
       const obs = Observer.create({
         type: "wheel,touch,pointer",
         preventDefault: true,
         wheelSpeed: -1,
-        onUp: () => !animating && gotoSection(index + 1, +1),
-        onDown: () => !animating && gotoSection(index - 1, -1),
+        onUp: () => gotoSection(index + 1, +1),
+        onDown: () => gotoSection(index - 1, -1),
         tolerance: 10,
       });
 
       const onKey = (e: KeyboardEvent) => {
-        if (["ArrowUp", "ArrowLeft"].includes(e.code) && !animating) gotoSection(index - 1, -1);
-        if (["ArrowDown", "ArrowRight", "Space", "Enter"].includes(e.code) && !animating)
-          gotoSection(index + 1, +1);
+        if (["ArrowUp", "ArrowLeft"].includes(e.code)) gotoSection(index - 1, -1);
+        if (["ArrowDown", "ArrowRight", "Space", "Enter"].includes(e.code)) gotoSection(index + 1, +1);
       };
       document.addEventListener("keydown", onKey);
 
@@ -181,7 +153,10 @@ export function Featured({
     }, rootRef);
 
     return () => ctx.revert();
-  }, [products.length]);
+  }, [products.length, hasProducts]);
+
+  // ⬇️ „early return” CSAK A VÉGÉN
+  if (!hasProducts) return null;
 
   return (
     <div
@@ -195,7 +170,6 @@ export function Featured({
           <div className="bb-slide-outer w-full h-full overflow-hidden">
             <div className="bb-slide-inner w-full h-full overflow-hidden">
               <div className="bb-slide-content absolute inset-0 flex items-start justify-center">
-                {/* airy háttér + finom mintázat; 1. slide-on halványabb textúra */}
                 <div className={`absolute inset-0 z-[1] ${slideBg[i % slideBg.length]}`} />
                 <div
                   className={`absolute inset-0 z-[1] ${
@@ -203,7 +177,6 @@ export function Featured({
                   } [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`}
                 />
 
-                {/* NAV alá tolt konténer */}
                 <div
                   className="relative z-[2] mx-auto w-[100vw] max-w-[1200px] grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
                   style={{
@@ -213,12 +186,10 @@ export function Featured({
                       "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
                   }}
                 >
-                  {/* Cím → .bb-heading az animációhoz */}
                   <h2 className="bb-heading col-span-12 row-start-1 row-end-2 self-end text-[clamp(1.35rem,5vw,3.25rem)] font-semibold text-breaker-bay-950 tracking-tight">
                     {p.name}
                   </h2>
 
-                  {/* GLASS kártya – BAL FENT (kapott .bb-card osztályt az intromhoz) */}
                   <Link
                     href={`/${locale}/products/${p.slug}` as never}
                     aria-label={`${p.name} details`}
@@ -265,7 +236,7 @@ export function Featured({
         </section>
       ))}
 
-      {/* OVERLAY: egyetlen képhalmaz – ezt animálja a GSAP */}
+      {/* OVERLAY képek */}
       <section className="fixed inset-0 z-20 pointer-events-none">
         <div
           className="relative mx-auto w-[100vw] max-w-[1200px] grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
@@ -276,7 +247,6 @@ export function Featured({
               "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
           }}
         >
-          {/* számláló */}
           <div className="col-start-11 col-end-13 row-start-1 row-end-2 flex justify-end">
             <span className="relative inline-block text-right">
               <span className="bb-count inline-block leading-none text-[clamp(1.3rem,2.8vw,3rem)] font-semibold text-breaker-bay-900/75">
@@ -286,7 +256,6 @@ export function Featured({
             </span>
           </div>
 
-          {/* JOBB-ALSÓ KÉP – mobilon a kártya alatt, desktopon jobb-alsó kvadráns, finom overlap */}
           <figure
             className={[
               "relative overflow-hidden rounded-2xl ring-1 ring-breaker-bay-200/50 shadow-[0_18px_60px_-26px_rgba(3,57,63,0.2)]",
