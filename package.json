@@ -1,0 +1,27 @@
+{
+  "name": "strapi-next-launchpad-example",
+  "version": "1.0.0",
+  "description": "Next.js Launchpad Example powered by Strapi",
+  "type": "module",
+  "scripts": {
+    "next": "npm run dev --prefix ../next/",
+    "strapi": "npm run dev --prefix ../strapi/",
+    "setup:next": "cd next && npm install && node --loader ts-node/esm ../scripts/copy-env.mts ./",
+    "setup:strapi": "cd strapi && npm install && node --loader ts-node/esm ../scripts/copy-env.mts ./",
+    "setup": "npm install && npm run setup:next && npm run setup:strapi",
+    "dev": "npx concurrently \"cd strapi && npm run develop\" \"npx wait-on http://localhost:1337 && cd next && npm run dev\"",
+    "seed": "cd strapi && npx strapi import -f ./data/export_20250116105447.tar.gz --force",
+    "export": "cd strapi && npx strapi export --no-encrypt -f ./data/export_20250116105447",
+    "repo:upstream": "git fetch upstream && git merge upstream/main"
+  },
+  "dependencies": {
+    "@types/node": "^22.5.2",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.0.0",
+    "wait-on": "^8.0.1"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "ts-node": "^10.9.2"
+  }
+}
