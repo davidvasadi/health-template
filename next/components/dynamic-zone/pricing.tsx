@@ -32,6 +32,7 @@ export type Plan = {
   number?: string;
   featured?: boolean;
   CTA?: CTA;
+  badgeLabel?: string; // <-- adminban opcionális; csak akkor jelenítjük meg, ha NEM üres
 };
 
 export type PricingProps = {
@@ -214,8 +215,17 @@ const Card: React.FC<{ plan: Plan; ctaVariant?: "A" | "B" }> = ({ plan, ctaVaria
   const hasPrice = typeof plan.price === "number" && !Number.isNaN(plan.price);
   const priceStr = hasPrice ? plan.price!.toLocaleString("hu-HU") : "";
 
+  // 🔑 Badge megjelenítés: CSAK akkor, ha az adminban a badgeLabel NEM üres (trim után)
+  const badgeText = (plan.badgeLabel ?? "").trim();
+
   return (
-    <motion.article whileHover={{ y: -4 }} whileFocus={{ y: -2 }} className={cn("group relative transition outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/40", t.card)} tabIndex={0} aria-label={`${plan.name} csomag`}>
+    <motion.article
+      whileHover={{ y: -4 }}
+      whileFocus={{ y: -2 }}
+      className={cn("group relative transition outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/40", t.card)}
+      tabIndex={0}
+      aria-label={`${plan.name} csomag`}
+    >
       <div className="p-5 md:p-6">
         <header className="flex items-start justify-between gap-4">
           <div>
@@ -223,8 +233,11 @@ const Card: React.FC<{ plan: Plan; ctaVariant?: "A" | "B" }> = ({ plan, ctaVaria
             {plan.description ? <p className="mt-1 text-sm text-neutral-600">{plan.description}</p> : null}
           </div>
 
-          {isFeatured && (
-            <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset", t.badge)}>Népszerű</span>
+          {/* ✅ Badge csak akkor jelenjen meg, ha van nem üres badgeLabel */}
+          {badgeText && (
+            <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset", t.badge)}>
+              {badgeText}
+            </span>
           )}
         </header>
 

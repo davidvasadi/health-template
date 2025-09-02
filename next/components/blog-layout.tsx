@@ -52,7 +52,7 @@ export function BlogLayout({
 
       <div className="mx-auto max-w-3xl">
         <header className="mt-8">
-          <h1 className="text-neutral-900 text-3xl md:text-5xl font-bold tracking-tight">
+          <h1 className="text-neutral-900 text-3xl md:text-5xl font-semibold tracking-tight">
             {article.title}
           </h1>
           <p className="mt-3 text-neutral-500 text-sm">
@@ -62,7 +62,7 @@ export function BlogLayout({
             {article.categories?.map((c, i) => (
               <span
                 key={c.name + i}
-                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
+                className="text-[11px] font-normal uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
               >
                 {c.name}
               </span>

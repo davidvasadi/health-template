@@ -1,6 +1,6 @@
-# LaunchPad - Official Strapi Demo
+# Health Template - Official Chiropractor Website
 
-![LaunchPad](./LaunchPad.jpg)
+![LaunchPad](./HealthTemp.png)
 
 Welcome aboard **LaunchPad**, the official Strapi demo application, where we launch your content into the stratosphere at the speed of _"we-can't-even-measure-it!"_.
 This repository contains the following:

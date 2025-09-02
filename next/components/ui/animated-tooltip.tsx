@@ -1,205 +1,208 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
-import { motion, useMotionValue, MotionConfig } from "framer-motion";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { MotionConfig, motion, useMotionValue } from "framer-motion";
 import { StrapiImage } from "@/components/ui/strapi-image";
 
+// ————————————————————————————————————————————————————————————
+// Típusok
+// ————————————————————————————————————————————————————————————
 type Item = {
   id: number;
   firstname: string;
   lastname: string;
-  job?: string;
+  job?: string; // lehet rövid vagy hosszú leírás is
   image: { url: string; alternativeText?: string } | any;
 };
 
-type Props = {
-  items: Item[];
-  autoplay?: boolean;
-  autoplayMs?: number;
-  neighbors?: 1 | 2;
+export type AnimatedTooltipProps = {
+  items: Item[];          // kötelező: kártyák adatai
+  autoplay?: boolean;     // automatikus lapozás engedélyezése
+  autoplayMs?: number;    // automatikus lapozás időzítése (ms)
+  className?: string;     // külső wrapper extra class
+  accentHex?: string;     // fókusz/dot szín (pl. márkaszín)
 };
 
-const mod = (n: number, m: number) => ((n % m) + m) % m;
-const circularOffset = (from: number, to: number, len: number) => {
-  const raw = to - from;
-  const wrapped = ((raw + len / 2) % len) - len / 2;
-  return wrapped;
-};
+// ————————————————————————————————————————————————————————————
+// Beállítások
+// ————————————————————————————————————————————————————————————
+const spring = { type: "spring", stiffness: 260, damping: 28, mass: 0.9 } as const;
 
-export const AnimatedTooltip: React.FC<Props> = ({
+// ————————————————————————————————————————————————————————————
+// Single‑card carousel — SZÖVEG A KÉPEN BELÜL BALRA, DOTS ALATTA KÖZÉPEN
+//  • Egyszerre pontosan 1 kép látszik
+//  • Egérrel / touch‑csal balra‑jobbra húzható
+//  • Alsó, sötét áttetsző információs sáv a képen BELÜL, balra igazítva
+//  • A pager pöttyök a TARTALOM ALATT, a képen belül KÖZÉPRE igazítva
+// ————————————————————————————————————————————————————————————
+export const AnimatedTooltip: React.FC<AnimatedTooltipProps> = ({
   items,
   autoplay = true,
-  autoplayMs = 3600,
-  neighbors = 1,
+  autoplayMs = 3800,
+  className,
+  accentHex = "#0A84FF",
 }) => {
-  // ⬇️ hooks MINDIG lefutnak
+  // 1) Adatok védelme — üres vagy hibás tömb esetén ne rendereljünk
   const data = useMemo(() => (Array.isArray(items) ? items.filter(Boolean) : []), [items]);
-  const hasData = data.length > 0;
+  if (!data.length) return null;
 
+  // 2) Állapotok — aktuális index + autoplay szüneteltető flag
   const [index, setIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const [paused, setPaused] = useState(false);
 
-  // Mobil detektálás
+  // 3) Autoplay — interakció közben szünetel
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const up = () => setIsMobile(mq.matches);
-    up();
-    mq.addEventListener?.("change", up);
-    return () => mq.removeEventListener?.("change", up);
-  }, []);
-
-  // Autoplay
-  useEffect(() => {
-    if (!autoplay || data.length <= 1) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % data.length), autoplayMs);
+    if (!autoplay || paused || data.length <= 1) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % data.length), Math.max(1600, autoplayMs));
     return () => clearInterval(t);
-  }, [autoplay, autoplayMs, data.length]);
+  }, [autoplay, autoplayMs, paused, data.length]);
 
-  // Drag (hook: useMotionValue) – mindig meghívjuk
+  // 4) Drag — a kártya vízszintesen húzható (egér + touch)
   const dragX = useMotionValue(0);
-  const dragThreshold = 80;
-  const onDragEnd = (_: any, info: { offset: { x: number } }) => {
-    if (info.offset.x < -dragThreshold) setIndex((i) => (i + 1) % data.length);
-    else if (info.offset.x > dragThreshold) setIndex((i) => (i - 1 + data.length) % data.length);
+  const onDragStart = () => setPaused(true);
+  const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const dx = info.offset.x;
+    const vx = info.velocity.x;
+    const threshold = 64; // elhúzási küszöb
+    if (dx < -threshold || vx < -500) setIndex((i) => (i + 1) % data.length);
+    else if (dx > threshold || vx > 500) setIndex((i) => (i - 1 + data.length) % data.length);
+    dragX.set(0); // visszapattan középre
+    setPaused(false);
   };
 
-  const effNeighbors = isMobile ? 1 : neighbors;
+  // 5) Reszponzív méretezés — a kártya mérete a container szélességétől függ
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [cardSize, setCardSize] = useState<{ w: number; h: number }>({ w: 720, h: 460 });
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      const maxW = Math.min(w, 960);
+      const isMobile = w < 640;
+      const isTablet = w >= 640 && w < 1024;
+      // szélesség: a containerhez igazítva (sapkával)
+      const cw = isMobile
+        ? Math.round(w * 0.94)
+        : isTablet
+          ? Math.round(Math.min(maxW, 860))
+          : Math.round(Math.min(maxW, 820));
+      // magasság: tablet magasabb, desktop laposabb
+      const ratio = isMobile ? 1.15 : isTablet ? 0.74 : 0.58;
+      const ch = Math.round(cw * ratio);
+      setCardSize({ w: cw, h: ch });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const slots = useMemo(() => {
-    if (!hasData) return [];
-    const arr: number[] = [];
-    for (let o = -effNeighbors; o <= effNeighbors; o++) arr.push(mod(index + o, data.length));
-    return arr;
-  }, [index, data.length, effNeighbors, hasData]);
-
-  // ⬇️ „early return” CSAK A VÉGÉN
-  if (!hasData) return null;
+  // 6) Aktuális elem — overlay szöveghez és alt-hoz
+  const current = data[index];
+  const name = `${current?.firstname ?? ""} ${current?.lastname ?? ""}`.trim();
+  const alt = current?.image?.alternativeText || name || "image";
 
   return (
-    <MotionConfig transition={{ type: "spring", stiffness: 230, damping: 26, mass: 0.9 }}>
-      <div className="relative w-full">
-        <div className="relative mx-auto w-full max-w-6xl">
-          <div className="relative h-[68vh] md:h-[54vh] [contain:layout_paint_style]">
-            <div
-              className="absolute inset-0 perspective-[1100px] flex items-center justify-center z-20"
-              aria-roledescription="coverflow"
-              style={{ touchAction: "pan-y" }}
+    <MotionConfig transition={spring}>
+      <section className={"relative w-full " + (className ?? "")} aria-roledescription="carousel">
+        {/* Tiszta háttér — a fotó kapja a fókuszt */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-white" />
+
+        {/* STAGE: Kártya középen, benne a balra igazított tartalom + alatta középen pöttyök */}
+        <div ref={stageRef} className="relative mx-auto w-full max-w-md px-4">
+          <div className="relative flex justify-center py-6">
+            {/* Egyetlen, drag‑elhető kártya */}
+            <motion.div
+              className="relative overflow-hidden rounded-3xl shadow-[0_20px_60px_-24px_rgba(0,0,0,0.35)] bg-white/0 select-none"
+              style={{ width: cardSize.w, height: cardSize.h, x: dragX }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.08}
+              dragMomentum={false}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onPointerEnter={() => setPaused(true)}
+              onPointerLeave={() => setPaused(false)}
             >
-              {slots.map((i) => {
-                const item = data[i];
-                const alt =
-                  item?.image?.alternativeText ||
-                  `${item?.firstname ?? ""} ${item?.lastname ?? ""}`.trim() ||
-                  "image";
+              {/* Fotó */}
+              <StrapiImage
+                src={current?.image?.url}
+                alt={alt}
+                width={1600}
+                height={1000}
+                className="h-full w-full object-cover"
+                decoding="async"
+                loading="eager"
+                draggable={false}
+              />
 
-                const offset = circularOffset(index, i, data.length);
-                const isCenter = offset === 0;
+              {/* Finom felső highlight (sheen) — keret helyett */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/12 via-transparent to-transparent" />
 
-                const baseX = (isMobile ? 180 : 220) * offset;
-                const rotY =
-                  isMobile
-                    ? -20 * Math.sign(offset) * Math.min(Math.abs(offset), 1)
-                    : -34 * Math.sign(offset) * Math.min(Math.abs(offset), 1);
-                const scaleSide = isMobile ? 0.9 : 0.88;
-                const scale = isCenter ? 1 : scaleSide;
-                const z = (effNeighbors - Math.abs(offset)) * 10;
-
-                const sideFxMobile = isCenter ? "" : "opacity-80";
-                const sideFxDesktop = isCenter ? "" : "saturate-[0.95] brightness-[0.98]";
-
-                return (
-                  <motion.div
-                    key={item?.id ?? i}
-                    className="absolute transform-gpu"
-                    style={{ zIndex: 100 + z, transformStyle: "preserve-3d" }}
-                    initial={{ opacity: 0.01, x: baseX, rotateY: rotY, scale }}
-                    animate={{ opacity: 1, x: baseX, rotateY: rotY, scale }}
-                    exit={{ opacity: 0 }}
-                    whileHover={isCenter ? { scale: 1.015 } : {}}
-                  >
-                    <motion.div
-                      className={[
-                        "w-[88vw] max-w-[560px] aspect-[4/5]",
-                        "md:w-[48vw] md:max-w-[500px] md:aspect-[16/10]",
-                        "relative rounded-2xl overflow-hidden bg-neutral-900 ring-1 ring-neutral-300/40 shadow-lg select-none transform-gpu",
-                        isMobile ? sideFxMobile : sideFxDesktop,
-                      ].join(" ")}
-                      drag={isCenter ? "x" : false}
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragMomentum={false}
-                      dragElastic={0.12}
-                      onDragEnd={onDragEnd}
-                      style={{ x: isCenter ? dragX : undefined }}
-                      role="button"
-                      aria-label={isCenter ? "Lapozás: húzd balra/jobbra" : `Ugrás ehhez: ${item.firstname} ${item.lastname}`}
-                      onClick={() => {
-                        if (!isCenter) setIndex(i);
-                      }}
-                    >
-                      <div
-                        className="relative h-full w-full rounded-inherit overflow-hidden transform-gpu"
-                        style={{
-                          WebkitMaskImage: "-webkit-radial-gradient(white, black)",
-                        }}
-                      >
-                        <StrapiImage
-                          src={item?.image?.url}
-                          alt={alt}
-                          width={isCenter ? 1400 : 1000}
-                          height={isCenter ? (isMobile ? 1400 : 900) : (isMobile ? 1100 : 700)}
-                          className="h-full w-full object-cover rounded-[inherit]"
-                          decoding="async"
-                          loading={isCenter ? "eager" : "lazy"}
-                          draggable={false}
-                        />
-                      </div>
-
-                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-white/10" />
-                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-black/10 via-transparent to-black/30" />
-
-                      <div className="absolute left-3 right-3 bottom-3 flex justify-start">
-                        <div className="inline-flex max-w-[92%] items-center gap-2 rounded-xl bg-white/80 px-3 py-1.5 text-neutral-900 backdrop-blur-[2px] shadow-sm">
-                          <span className="inline-flex items-center gap-2 text-[13px] md:text-sm font-semibold">
-                            <span className="inline-block h-2 w-2 rounded-full bg-breaker-bay-600" />
-                            {item.firstname} {item.lastname}
-                          </span>
-                          {item?.job && <span className="text-xs opacity-80">• {item.job}</span>}
+              {/* ——————————————————————————————————
+                  OVERLAY BLOKK A KÉPEN BELÜL
+                  • Balra igazított tartalom
+                  • Alatta pöttyök középen
+                 —————————————————————————————————— */}
+              <motion.div
+                initial={{ y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 34, mass: 0.9 }}
+                className="absolute inset-x-0 bottom-0"
+              >
+                <div className="rounded-t-3xl bg-black/60 text-white backdrop-blur-sm ring-1 ring-white/15">
+                  {/* Tartalom (balra) */}
+                  <div className="px-4 md:px-5 pt-3 md:pt-4">
+                    <h3 className="text-left text-[16px] md:text-[18px] font-semibold leading-snug tracking-[-0.01em] whitespace-normal break-words">
+                      {name || ""}
+                    </h3>
+                    {current?.job && (
+                      <div className="mt-1 flex items-start gap-2">
+                        {/* bal oldali breaker-bay pötty (Tailwind szín: bg-breaker-bay-600) */}
+                        <span className="mt-[6px] inline-block h-2 w-2 rounded-full bg-breaker-bay-600" aria-hidden />
+                        {/* a leírás görgethető, ha hosszú */}
+                        <div className="max-h-[40svh] overflow-y-auto pr-1">
+                          <p className="text-left text-[13px] md:text-[14px] leading-snug text-white/85 whitespace-pre-wrap break-words">
+                            {current.job}
+                          </p>
                         </div>
                       </div>
-                    </motion.div>
-                  </motion.div>
-                );
-              })}
-            </div>
+                    )}
+                  </div>
 
-            {data.length > 1 && (
-              <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
-                {data.map((_, i) => {
-                  const active = i === index;
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => setIndex(i)}
-                      aria-label={`Ugrás a ${i + 1}. elemre`}
-                      className={["h-1.5 rounded-full transition-all", active ? "w-6 bg-neutral-900" : "w-1.5 bg-neutral-300 hover:bg-neutral-400"].join(" ")}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            <button
-              className="absolute inset-y-0 left-0 w-1/2 md:w-1/4 z-40"
-              aria-label="Előző"
-              onClick={() => setIndex((i) => (i - 1 + data.length) % data.length)}
-            />
-            <button
-              className="absolute inset-y-0 right-0 w-1/2 md:w-1/4 z-40"
-              aria-label="Következő"
-              onClick={() => setIndex((i) => (i + 1) % data.length)}
-            />
+                  {/* Pöttyök (középen, a tartalom alatt, még az overlaysávon belül) */}
+                  {data.length > 1 && (
+                    <div className="px-4 pb-3 md:pb-4">
+                      <div className="flex justify-center">
+                        <div className="flex items-center gap-2 rounded-full bg-white/10 px-2.5 py-1.5 backdrop-blur-sm ring-1 ring-white/15">
+                          {data.map((_, iDot) => {
+                            const active = iDot === index;
+                            return (
+                              <button
+                                key={iDot}
+                                onClick={() => setIndex(iDot)}
+                                aria-label={`Ugrás a ${iDot + 1}. elemre`}
+                                className="group relative h-4 w-4 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                              >
+                                <span
+                                  className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full transition-all ${active ? "bg-white scale-100" : "bg-white/60 scale-75 group-hover:scale-90"}`}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
+
+          {/* SR live region — képernyőolvasónak frissül a cím/pozíció */}
+          <p aria-live="polite" className="sr-only">{`${name}${current?.job ? ", " + current.job : ""}`}</p>
         </div>
-      </div>
+      </section>
     </MotionConfig>
   );
 };
+
+export default AnimatedTooltip;
