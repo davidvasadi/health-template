@@ -2,81 +2,144 @@
 
 import React from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useSlugContext } from "@/app/context/SlugContext";
 import { cn } from "@/lib/utils";
 
-const PaletteVars = () => (
-<style jsx global>{`
-    :root{
-      --breaker-50:#effefd;
-      --breaker-100:#c7fffa;
-      --breaker-200:#90fff6;
-      --breaker-300:#51f7f0;
-      --breaker-400:#1de4e2;
-      --breaker-500:#04c8c8;
-      --breaker-600:#009fa3;
-      --breaker-700:#057c80;
-      --breaker-800:#0a6165;
-      --breaker-900:#0d5154;
-      --breaker-950:#002e33;
-    }
-`}</style>
-);
-
-
 export function LocaleSwitcher({ currentLocale }: { currentLocale: string }) {
   const { state } = useSlugContext();
-  const { localizedSlugs } = state;
+  const { localizedSlugs } = state as { localizedSlugs: Record<string, string> };
 
-  const pathname = usePathname(); // Current path
-  const segments = pathname.split("/"); // Split path into segments
+  const pathname = usePathname() || "";
+  const segments = pathname.split("/");
 
-  // Generate localized path for each locale
+  // --- LOGIKA VÁLTOZATLAN ---
   const generateLocalizedPath = (locale: string): string => {
-    if (!pathname) return `/${locale}`; // Default to root path for the locale
-
-    // Handle homepage (e.g., "/en" -> "/fr")
-    if (segments.length <= 2) {
-      return `/${locale}`;
-    }
-
-    // Handle dynamic paths (e.g., "/en/blog/[slug]")
+    if (!pathname) return `/${locale}`;
+    if (segments.length <= 2) return `/${locale}`;
     if (localizedSlugs[locale]) {
-      segments[1] = locale; // Replace the locale
-      segments[segments.length - 1] = localizedSlugs[locale]; // Replace slug if available
+      segments[1] = locale;
+      segments[segments.length - 1] = localizedSlugs[locale];
       return segments.join("/");
     }
-
-    // Fallback to replace only the locale
     segments[1] = locale;
     return segments.join("/");
   };
+  // --- /LOGIKA VÁLTOZATLAN ---
+
+  const [open, setOpen] = React.useState(false);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+
+  const PANEL_WIDTH = 35; // px – kért szélesség
+  const [pos, setPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const updatePos = React.useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const margin = 8;
+    const left = Math.max(margin, Math.min(rect.right - PANEL_WIDTH, window.innerWidth - PANEL_WIDTH - margin));
+    const top = Math.min(rect.bottom + 6, window.innerHeight - margin);
+    setPos({ top, left });
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    updatePos();
+    const onScroll = () => setOpen(false);
+    const onResize = () => updatePos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open, updatePos]);
+
+  React.useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!btnRef.current) return;
+      const target = e.target as Node;
+      if (btnRef.current.contains(target)) return;
+      const panel = document.getElementById("locale-panel");
+      if (panel && panel.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const label = currentLocale; // kisbetűs
 
   return (
-    <div className="flex gap-2 p-1 rounded-md">
-      {!pathname.includes("/products/") && Object.keys(localizedSlugs).map((locale) => (
-        <Link key={locale} href={generateLocalizedPath(locale)}>
-          <div
-         className={cn(
-  // base
-  "flex cursor-pointer items-center justify-center text-sm leading-[110%] w-8 py-1 rounded-md transition duration-200",
-  "text-breaker-bay-950",
-  // hover (palette)
-  "hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90",
-  // finom belső vonal hoverkor (600-as árnyalat, border helyett)
-  "hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]",
-  // active (aktuális nyelv)
-  locale === currentLocale
-    ? "bg-breaker-bay-950 text-breaker-bay-50 shadow-[inset_0_1px_0_rgba(0,159,163,0.55)]"
-    : ""
-)}
+    <>
+      {/* Trigger – 60px széles, sötét alap */}
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={cn(
+          "w-[35px] h-7 rounded-md text-xs font-medium",
+          "flex items-center justify-center",
+          "bg-breaker-bay-950 text-breaker-bay-50",
+          "hover:bg-breaker-bay-900 transition-colors"
+        )}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        {label}
+      </button>
 
-          >
-            {locale}
-          </div>
-        </Link>
-      ))}
-    </div>
+      {/* Dropdown a body-ban – 60px széles, üveges sötét panel */}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          !pathname.includes("/products/") ? (
+            <div
+              id="locale-panel"
+              role="menu"
+              aria-label="Choose language"
+              style={{ position: "fixed", top: pos.top, left: pos.left, width: PANEL_WIDTH, zIndex: 9999 }}
+              className={cn(
+                "rounded-md p-1",
+                "backdrop-blur-md bg-breaker-bay-950/90",
+                "shadow-[0_16px_40px_-18px_rgba(0,159,163,0.30)]",
+                "animate-[dropdown_120ms_ease-out]"
+              )}
+              onClick={() => setOpen(false)}
+            >
+              {Object.keys(localizedSlugs).map((locale) => {
+                const href = generateLocalizedPath(locale);
+                const active = locale === currentLocale;
+                return (
+                  <Link key={locale} href={href} prefetch={false} role="menuitem" className="block">
+                    <div
+                      className={cn(
+                        "h-7 w-full rounded-[6px] px-0.5 text-xs",
+                        "flex items-center justify-center",
+                        active
+                          ? "bg-breaker-bay-900 text-breaker-bay-50"
+                          : "text-breaker-bay-50/90 hover:bg-breaker-bay-900/70 hover:text-breaker-bay-50",
+                        "transition-colors"
+                      )}
+                    >
+                      {locale}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null,
+          document.body
+        )}
+    </>
   );
 }
+
+/* opcionális anim (globals.css):
+@keyframes dropdown {
+  0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+*/

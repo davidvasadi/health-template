@@ -20,6 +20,7 @@ export function Featured({
   products: Product[];
   locale: string;
 }) {
+  // ⬇️ hooks MINDIG lefutnak (nincs early return a tetején)
   const hasProducts = products?.length > 0;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -36,7 +37,7 @@ export function Featured({
   const navVars = { ["--nav-h" as any]: "120px" } as CSSProperties;
 
   useEffect(() => {
-    if (!hasProducts) return;
+    if (!hasProducts) return; // ⬅️ feltételt a hook *belső* logikájában kezeljük
 
     const prefersReduce =
       typeof window !== "undefined" &&
@@ -154,6 +155,7 @@ export function Featured({
     return () => ctx.revert();
   }, [products.length, hasProducts]);
 
+  // ⬇️ „early return” CSAK A VÉGÉN
   if (!hasProducts) return null;
 
   return (
@@ -163,85 +165,76 @@ export function Featured({
       className="relative w-full h-svh overflow-hidden bg-breaker-bay-50"
     >
       {/* SLIDES */}
-      {products.map((p, i) => {
-        // csak a gomb SZÖVEGE Strapi-ból (fallback: "Tudnivalók")
-        const btnText: string = (p as any)?.button?.text ?? "Tudnivalók";
+      {products.map((p, i) => (
+        <section key={p.id ?? i} className="bb-slide fixed inset-0">
+          <div className="bb-slide-outer w-full h-full overflow-hidden">
+            <div className="bb-slide-inner w-full h-full overflow-hidden">
+              <div className="bb-slide-content absolute inset-0 flex items-start justify-center">
+                <div className={`absolute inset-0 z-[1] ${slideBg[i % slideBg.length]}`} />
+                <div
+                  className={`absolute inset-0 z-[1] ${
+                    i === 0 ? "opacity-[0.02]" : "opacity-[0.05]"
+                  } [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`}
+                />
 
-        return (
-          <section key={p.id ?? i} className="bb-slide fixed inset-0">
-            <div className="bb-slide-outer w-full h-full overflow-hidden">
-              <div className="bb-slide-inner w-full h-full overflow-hidden">
-                <div className="bb-slide-content absolute inset-0 flex items-start justify-center">
-                  <div className={`absolute inset-0 z-[1] ${slideBg[i % slideBg.length]}`} />
-                  <div
-                    className={`absolute inset-0 z-[1] ${
-                      i === 0 ? "opacity-[0.02]" : "opacity-[0.05]"
-                    } [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`}
-                  />
+                <div
+                  className="relative z-[2] mx-auto w-[100vw] max-w-[1200px] grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
+                  style={{
+                    marginTop:
+                      "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
+                    height:
+                      "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
+                  }}
+                >
+                  <h2 className="bb-heading col-span-12 row-start-1 row-end-2 self-end text-[clamp(1.35rem,5vw,3.25rem)] font-semibold text-breaker-bay-950 tracking-tight">
+                    {p.name}
+                  </h2>
 
-                  <div
-                    className="relative z-[2] mx-auto w-[100vw] max-w-[1200px] grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
-                    style={{
-                      marginTop:
-                        "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
-                      height:
-                        "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
-                    }}
+                  <Link
+                    href={`/${locale}/products/${p.slug}` as never}
+                    aria-label={`${p.name} details`}
+                    className="
+                      bb-card
+                      col-span-12 md:col-span-6
+                      row-start-2 md:row-start-2
+                      row-end-7 md:row-end-7
+                      rounded-2xl
+                      bg-white/40 backdrop-blur-2xl
+                      ring-1 ring-white/40
+                      shadow-[0_16px_48px_-18px_rgba(3,57,63,0.25)]
+                      p-4 md:p-5 flex flex-col gap-3
+                      transition hover:bg-white/50
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500
+                    "
                   >
-                    <h2 className="bb-heading col-span-12 row-start-1 row-end-2 self-end text-[clamp(1.35rem,5vw,3.25rem)] font-semibold text-breaker-bay-950 tracking-tight">
-                      {p.name}
-                    </h2>
-
-                    {/* KATTINTHATÓ KÁRTYA – link marad a slugra */}
-                    <Link
-                      href={`/${locale}/products/${p.slug}` as never}
-                      aria-label={`${p.name} details`}
-                      className="
-                        bb-card
-                        col-span-12 md:col-span-6
-                        row-start-2 md:row-start-2
-                        row-end-7 md:row-end-7
-                        rounded-2xl
-                        bg-white/40 backdrop-blur-2xl
-                        ring-1 ring-white/40
-                        shadow-[0_16px_48px_-18px_rgba(3,57,63,0.25)]
-                        p-4 md:p-5 flex flex-col gap-3
-                        transition hover:bg-white/50
-                        focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500
-                      "
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <span className="text-breaker-bay-950 text-base md:text-lg font-semibold tracking-tight">
-                          {p.name}
-                        </span>
-                        <span className="inline-flex items-center rounded-full border border-breaker-bay-300/60 bg-breaker-bay-600 text-white px-3 py-1 text-xs md:text-sm font-semibold shadow-sm">
-                          HUF {formatNumber(p.price)}
-                        </span>
-                      </div>
-
-                      {p.description ? (
-                        <p className="text-neutral-800/90 text-sm md:text-base leading-relaxed">
-                          {truncate(p.description, 200)}
-                        </p>
-                      ) : null}
-
-                      {/* GOMB – CSAK A SZÖVEG DINAMIKUS */}
-                      <div className="pt-1">
-                        <span className="inline-flex items-center gap-2 rounded-xl bg-breaker-bay-700 text-white px-3.5 py-2 text-sm font-medium hover:bg-breaker-bay-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400 focus-visible:ring-offset-white transition">
-                          {btnText}
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M5 12h14M13 5l7 7-7 7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </span>
-                      </div>
-                    </Link>
-                  </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-breaker-bay-950 text-base md:text-lg font-semibold tracking-tight">
+                        {p.name}
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-breaker-bay-300/60 bg-breaker-bay-600 text-white px-3 py-1 text-xs md:text-sm font-semibold shadow-sm">
+                        HUF {formatNumber(p.price)}
+                      </span>
+                    </div>
+                    {p.description ? (
+                      <p className="text-neutral-800/90 text-sm md:text-base leading-relaxed">
+                        {truncate(p.description, 200)}
+                      </p>
+                    ) : null}
+                    <div className="pt-1">
+                      <span className="inline-flex items-center gap-2 rounded-xl bg-breaker-bay-700 text-white px-3.5 py-2 text-sm font-medium hover:bg-breaker-bay-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400 focus-visible:ring-offset-white  transition">
+                        Tudnivalók
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M5 12h14M13 5l7 7-7 7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </div>
-          </section>
-        );
-      })}
+          </div>
+        </section>
+      ))}
 
       {/* OVERLAY képek */}
       <section className="fixed inset-0 z-20 pointer-events-none">

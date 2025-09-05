@@ -49,7 +49,7 @@ export default async function Products({
     filters: {
       locale: params.locale,            // ← locale a FILTERS alatt
     },
-    populate: { images: { populate: '*' } }, // ha kell kép, ráteheted
+    populate: { images: { populate: '*' },  }, // ha kell kép, ráteheted
   }, false);
 
   const localizedSlugs = productPage.localizations?.reduce(
