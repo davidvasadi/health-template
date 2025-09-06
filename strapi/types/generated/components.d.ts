@@ -86,6 +86,7 @@ export interface DynamicZoneCta extends Struct.ComponentSchema {
     CTAs: Schema.Attribute.Component<'shared.button', true>;
     heading: Schema.Attribute.String;
     sub_heading: Schema.Attribute.String;
+    trust_chips: Schema.Attribute.Component<'shared.trust-chip', true>;
   };
 }
 
@@ -488,6 +489,19 @@ export interface SharedSteps extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedTrustChip extends Struct.ComponentSchema {
+  collectionName: 'components_shared_trust_chips';
+  info: {
+    displayName: 'Trust chip';
+  };
+  attributes: {
+    text: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 80;
+      }>;
+  };
+}
+
 export interface SharedUser extends Struct.ComponentSchema {
   collectionName: 'components_shared_users';
   info: {
@@ -537,6 +551,7 @@ declare module '@strapi/strapi' {
       'shared.seo': SharedSeo;
       'shared.social-media-icon-links': SharedSocialMediaIconLinks;
       'shared.steps': SharedSteps;
+      'shared.trust-chip': SharedTrustChip;
       'shared.user': SharedUser;
     }
   }

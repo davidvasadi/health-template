@@ -185,7 +185,7 @@ function resolveCtaVariant(cta: any, index: number): CtaVariant {
 }
 
 function ctaBaseClass() {
-  return "rounded-xl px-4 py-2 md:px-5 md:py-2.5 text-sm md:text-base transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  return "rounded-lg px-4 py-2 md:px-5 md:py-2.5 text-sm md:text-base transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 }
 
 function ctaClassByVariant(_v: CtaVariant) {
@@ -374,7 +374,7 @@ export const Hero = ({
 
   return (
     <MotionSection
-      className="relative h-screen isolate overflow-hidden"
+      className="relative min-h-svh isolate overflow-hidden"
       variants={sectionVariants}
       initial={reducedMotion ? undefined : (hasEnteredOnce ? false : "hidden")}
       animate={reducedMotion ? undefined : "show"}
@@ -396,14 +396,14 @@ export const Hero = ({
       <SoftOverlay visible={sceneReady && showScene} reducedMotion={!!reducedMotion} />
 
       {/* KÖZÉP – üvegkártya */}
-      <div className="absolute inset-0 z-30 grid place-items-center px-6">
-        <div className="relative w-[min(92vw,960px)] rounded-[28px] px-8 py-8 md:px-12 md:py-12 text-center">
+      <div className="relative z-30 flex items-center justify-center px-6 min-h-svh">
+        <div className="relative w-full max-w-[960px] rounded-[28px] px-8 py-8 md:px-12 md:py-12 text-center">
           <div
             className="absolute inset-0 rounded-[28px] -z-20"
             style={{ background: "rgba(255,255,255,0.10)", backdropFilter: "blur(7px) saturate(170%)", WebkitBackdropFilter: "blur(40px) saturate(170%)", boxShadow: "0 10px 26px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.22)" }}
             aria-hidden
           />
-          <div className="absolute inset-0 rounded-[28px] -z-10 pointer-events-none" style={{ background: "radial-gradient(56% 56% at 50% 50%, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.03) 64%, rgba(0,0,0,0.0) 78%)" }} aria-hidden />
+          <div className="absolute inset-0 rounded-[28px] -z-10 pointer-events-none" style={{ background: `radial-gradient(56% 56% at 50% 50%, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.03) 64%, rgba(0,0,0,0.0) 78%)` }} aria-hidden />
 
           <MotionDiv
             variants={cardVariants}

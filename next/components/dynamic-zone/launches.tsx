@@ -1,5 +1,5 @@
 "use client";
-import { motion, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import React, { useRef, useState } from "react";
 import { FeatureIconContainer } from "./features/feature-icon-container";
 import { Heading } from "../elements/heading";
@@ -114,6 +114,102 @@ function BackgroundFlavor({ progress }: { progress: any }) {
   );
 }
 
+/* =========================================================================================
+   MOBILOS "STICKY SCROLL" (EGYSZERRE 1 ELEM)
+   — Mission number KÜLÖN BLOKK (külön motion), 2× gyorsabb
+   — Title + Description EGYÜTT, külön motion, NEM sokkal a number után
+   — Ikon a TITLE mellett (nem a mission mellett)
+   — Kisebb szekció-magasság → kisebb hézag a blokkok között
+   ========================================================================================= */
+function MobileStickySection({
+  title, description, missionNumber
+}: { title: string; description: string; missionNumber?: string | number }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Stabil mobil offset → 0..1 progress a szekción belül
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 92%", "end 8%"]
+  });
+
+  /* ── TELJES SZÉTVÁLASZTÁS
+     A mission number és a cím+leírás KÜLÖN motion.div-ben vannak, külön transformmal.
+     Így fizikailag sem "mozognak együtt".
+  ─────────────────────────────────────────────────────────── */
+
+  // 1) Mission number — 2× gyors: keskenyebb reveal-sáv + nagyobb parallax
+  const numOpacity   = useTransform(scrollYProgress, [0.08, 0.18], [0, 1]); // gyors felbukkanás
+  const numRevealY   = useTransform(scrollYProgress, [0.08, 0.18], [30, 0]);
+  const numParallaxY = useTransform(scrollYProgress, [0, 1], [0, -60]);      // nagyobb pálya → gyorsabb érzés
+  const numY         = useTransform([numRevealY, numParallaxY], ([reveal, parallax]: number[]) => reveal + parallax);
+
+  // 2) Title + Description — együtt, lassabb: szélesebb sáv + kisebb parallax
+  const tdOpacity  = useTransform(scrollYProgress, [0.20, 0.44], [0, 1]);   // kicsivel a number után indul
+  const tdRevealY  = useTransform(scrollYProgress, [0.20, 0.44], [22, 0]);
+  const tdParallax = useTransform(scrollYProgress, [0, 1], [0, -24]);       // fele akkora pálya
+  const tdY        = useTransform([tdRevealY, tdParallax], ([reveal, parallax]: number[]) => reveal + parallax);
+
+  return (
+    <div ref={ref} className="relative min-h-[120svh]">
+      {/* sticky belső: egyszerre 1 elem a képernyőn */}
+      <div className="sticky top-0 h-[100svh] flex flex-col justify-center">
+        <div className="w-full px-6">
+          {/* ── 1) MISSION NUMBER (külön blokk, külön motion) */}
+          <motion.div
+            style={reduce ? undefined : { opacity: numOpacity, y: numY, willChange: "transform,opacity" }}
+            className="mb-3"
+          >
+            {/* csak a number – ikon NINCS itt */}
+            {missionNumber != null && (
+              <p className="num-gradient text-4xl font-extrabold tracking-tight leading-none">
+                {missionNumber}
+              </p>
+            )}
+          </motion.div>
+
+          {/* ── 2) TITLE + DESCRIPTION (egy blokk, együtt érkeznek) */}
+          <motion.div
+            style={reduce ? undefined : { opacity: tdOpacity, y: tdY, willChange: "transform,opacity" }}
+          >
+            <div className="flex items-center gap-3">
+              {/* 👉 ikon a TITLE mellett */}
+              <div className="chip chip-breathe h-10 w-10 rounded-xl flex items-center justify-center">
+                <IconRocket className="h-5 w-5 text-[color:var(--breaker-700)]" />
+              </div>
+              <h3 className="text-xl font-semibold text-[color:var(--breaker-950)]">
+                {title}
+              </h3>
+            </div>
+            <p className="mt-4 text-[15px] leading-relaxed text-[color:var(--breaker-900)]/90">
+              {description}
+            </p>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileStickyScroll({
+  items
+}: {
+  items: Array<{ title: string; description: string; missionNumber?: string | number }>;
+}) {
+  return (
+    <div className="md:hidden">
+      {items.map((it, i) => (
+        <MobileStickySection
+          key={i}
+          title={it.title}
+          description={it.description}
+          missionNumber={it.missionNumber}
+        />
+      ))}
+    </div>
+  );
+}
+
 export const Launches = ({
   heading, sub_heading, launches
 }: { heading: string; sub_heading: string; launches: any[] }) => {
@@ -148,6 +244,15 @@ export const Launches = ({
     setGradient(backgrounds[idx % backgrounds.length]);
   });
 
+  // mobilhoz előkészített array (title/description/missionNumber)
+  const mobileItems = launches.map((entry: any, idx: number) => ({
+    title:
+      entry.title ?? entry.heading ?? entry.name ?? `Mission ${entry.mission_number ?? idx + 1}`,
+    description:
+      entry.description ?? entry.subheading ?? entry.text ?? "",
+    missionNumber: entry.mission_number,
+  }));
+
   return (
     <motion.section
       ref={ref}
@@ -173,7 +278,14 @@ export const Launches = ({
 
       {/* timeline – FEKETE/FEHÉR felülírása a scope-on belül */}
       <div className="relative z-10 sticky-dark">
-        <StickyScroll content={launchesWithDecoration} />
+        {/* DESKTOP / TABLET: eredeti StickyScroll viselkedés */}
+        <div className="hidden md:block">
+          <StickyScroll content={launchesWithDecoration} />
+        </div>
+
+        {/* MOBIL: UGYANAZ A "STICKY" ÉLMÉNY — egyszerre 1 elem
+            1) mission number (külön, 2× gyors) → 2) title + description (EGYSZERRE, ikon a title mellett) */}
+        <MobileStickyScroll items={mobileItems} />
       </div>
     </motion.section>
   );

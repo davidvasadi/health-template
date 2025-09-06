@@ -84,8 +84,8 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         "btn-glass rounded-xl px-3 py-2 leading-none font-medium select-none",
         "transition-transform duration-200 will-change-transform hover:-translate-y-0.5",
         "backdrop-blur-lg backdrop-saturate-150",
-        i === 0 && "bg-breaker-bay-100/20 text-breaker-bay-900 dark:text-breaker-bay-50",
-        i === 1 && "bg-breaker-bay-300/20 text-breaker-bay-950 dark:text-breaker-bay-50",
+        i === 0 && "bg-breaker-bay-100/20 text-breaker-bay-900 ",
+        i === 1 && "bg-breaker-bay-300/20 text-breaker-bay-950 ",
         i > 1 && "bg-white/10 text-breaker-bay-800 dark:text-breaker-bay-200"
       ),
     []
@@ -116,7 +116,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
           "flex items-center justify-between",
           "mx-5 mt-[max(env(safe-area-inset-top),10px)] px-3 py-2",
           "rounded-xl",
-          "text-breaker-bay-950 dark:text-breaker-bay-50",
+          "text-breaker-bay-950",
           "transition-[background,backdrop-filter] duration-300"
         )}
       >
@@ -222,7 +222,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                     className={cn(
                       "p-2 rounded-md",
                       "focus:outline-none focus:ring-2 focus:ring-breaker-bay-400/40",
-                      "text-breaker-bay-950 dark:text-breaker-bay-50"
+                      "text-breaker-bay-950 "
                     )}
                   >
                     <IoIosClose className="h-8 w-8" />
@@ -249,7 +249,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                                 "px-4 py-2 font-medium transition",
                                 active
                                   ? "bg-breaker-bay-950 text-breaker-bay-50 shadow-[inset_0_1px_0_rgba(0,159,163,0.55)]"
-                                  : "text-breaker-bay-950 dark:text-breaker-bay-50 hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90 hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]"
+                                  : "text-breaker-bay-950  hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90 hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]"
                               )}
                             >
                               {c.text}
@@ -271,7 +271,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                         "px-4 py-2 font-medium transition",
                         active
                           ? "bg-breaker-bay-950 text-breaker-bay-50 shadow-[inset_0_1px_0_rgba(0,159,163,0.55)]"
-                          : "text-breaker-bay-950 dark:text-breaker-bay-50 hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90 hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]"
+                          : "text-breaker-bay-950  hover:bg-breaker-bay-950 hover:text-breaker-bay-50/90 hover:shadow-[inset_0_1px_0_rgba(0,159,163,0.45)]"
                       )}
                     >
                       {navItem.text}

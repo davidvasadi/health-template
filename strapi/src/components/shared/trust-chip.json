@@ -1,0 +1,14 @@
+{
+  "collectionName": "components_shared_trust_chips",
+  "info": {
+    "displayName": "Trust chip"
+  },
+  "options": {},
+  "attributes": {
+    "text": {
+      "type": "string",
+      "maxLength": 80
+    }
+  },
+  "config": {}
+}
