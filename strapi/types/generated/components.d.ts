@@ -133,6 +133,7 @@ export interface DynamicZoneFormNextToSection extends Struct.ComponentSchema {
   attributes: {
     form: Schema.Attribute.Component<'shared.form', false>;
     heading: Schema.Attribute.String;
+    Location: Schema.Attribute.Component<'shared.location', false>;
     section: Schema.Attribute.Component<'shared.section', false>;
     social_media_icon_links: Schema.Attribute.Component<
       'shared.social-media-icon-links',
@@ -415,12 +416,34 @@ export interface SharedLink extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedLocation extends Struct.ComponentSchema {
+  collectionName: 'components_shared_locations';
+  info: {
+    displayName: 'Location';
+  };
+  attributes: {
+    city: Schema.Attribute.String;
+    country: Schema.Attribute.Enumeration<['HU', 'EN', 'DE']>;
+    isActive: Schema.Attribute.Boolean;
+    mapsUrl: Schema.Attribute.String;
+    mapsUrl_label: Schema.Attribute.String;
+    name: Schema.Attribute.String;
+    opening_hours: Schema.Attribute.Component<'shared.opening-hour', true>;
+    opening_title: Schema.Attribute.String;
+    phone: Schema.Attribute.String;
+    phone_label: Schema.Attribute.String;
+    postalCode: Schema.Attribute.String;
+    streetAddress: Schema.Attribute.String;
+  };
+}
+
 export interface SharedOpeningHour extends Struct.ComponentSchema {
   collectionName: 'components_shared_opening_hours';
   info: {
     displayName: 'OpeningHour';
   };
   attributes: {
+    isClosed: Schema.Attribute.Boolean;
     label: Schema.Attribute.String;
     value: Schema.Attribute.String;
   };
@@ -560,6 +583,7 @@ declare module '@strapi/strapi' {
       'shared.form': SharedForm;
       'shared.launches': SharedLaunches;
       'shared.link': SharedLink;
+      'shared.location': SharedLocation;
       'shared.opening-hour': SharedOpeningHour;
       'shared.perks': SharedPerks;
       'shared.section': SharedSection;

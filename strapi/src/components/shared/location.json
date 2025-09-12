@@ -1,0 +1,53 @@
+{
+  "collectionName": "components_shared_locations",
+  "info": {
+    "displayName": "Location"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "streetAddress": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "postalCode": {
+      "type": "string"
+    },
+    "country": {
+      "type": "enumeration",
+      "enum": [
+        "HU",
+        "EN",
+        "DE"
+      ]
+    },
+    "phone_label": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "mapsUrl_label": {
+      "type": "string"
+    },
+    "mapsUrl": {
+      "type": "string"
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "opening_title": {
+      "type": "string"
+    },
+    "opening_hours": {
+      "type": "component",
+      "component": "shared.opening-hour",
+      "repeatable": true
+    }
+  },
+  "config": {}
+}

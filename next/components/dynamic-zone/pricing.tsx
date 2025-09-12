@@ -6,7 +6,6 @@ import {
   useScroll,
   useTransform,
   useMotionValue,
-  useSpring,
   useReducedMotion,
 } from "framer-motion";
 import Link from "next/link";
@@ -23,7 +22,14 @@ import { usePathname } from "next/navigation";
  * Types
  *************************/
 export type PerkLike = { text: string } | Record<string, string>;
-export type CTA = { text: string; href?: string; URL?: string; variant?: "simple" | "outline" | "primary" | "muted" };
+export type CTA = {
+  text: string;
+  href?: string;
+  URL?: string;
+  variant?: "simple" | "outline" | "primary" | "muted";
+  target?: string | boolean;
+  newTab?: boolean;
+};
 export type Plan = {
   name: string;
   price?: number | null;
@@ -53,18 +59,13 @@ const getPerkText = (item: PerkLike) =>
     : "";
 
 /*************************
- * CTA Helpers (Hero-style)
+ * CTA Helpers
  *************************/
-function resolveCtaVariant(cta: any, index: number) {
-  const raw = String(cta?.variant || cta?.type || "").toLowerCase();
-  if (["primary", "accent", "ghost"].includes(raw)) return raw;
-  return index % 3 === 0 ? "primary" : index % 3 === 1 ? "accent" : "ghost";
-}
-
 function ctaHref(locale: string, cta?: CTA) {
   if (!cta) return "#";
   const path = String(cta?.href || cta?.URL || "");
   if (!path) return "#";
+  if (/^https?:\/\//i.test(path)) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `/${locale}${normalized}`;
 }
@@ -73,9 +74,9 @@ function ctaHref(locale: string, cta?: CTA) {
  * Labels
  *************************/
 const Labels = {
-  en: { perSession: "Session", value: "€" },
+  en: { perSession: "Session", value: "HUF" },
   hu: { perSession: "Alkalom", value: "HUF" },
-  de: { perSession: "Einheit", value: "€" },
+  de: { perSession: "Einheit", value: "HUF" },
 };
 
 /*************************
@@ -176,7 +177,21 @@ const Card: React.FC<{ plan: Plan; label: typeof Labels["en"]; locale: string; i
   const priceStr = hasPrice ? plan.price!.toLocaleString("hu-HU") : "";
   const badgeText = (plan.badgeLabel ?? "").trim();
 
-  const ctaVariant = resolveCtaVariant(plan.CTA, index);
+  // Eredeti variant viselkedés megtartva
+  const variantProp = plan.CTA?.variant || "primary";
+
+  // href és külső detektálás
+  const resolvedHref = ctaHref(locale, plan.CTA);
+  const rawPath = String(plan.CTA?.href || plan.CTA?.URL || "");
+  const isExternal = /^https?:\/\//i.test(rawPath);
+
+  // explicit új fül logika (CTA.target/string/newTab)
+  const explicitTarget = plan.CTA?.target;
+  const explicitNewTab = (plan.CTA && ((plan.CTA as any).newTab === true)) || false;
+  const openInNewTab =
+    explicitTarget === "_blank" || explicitTarget === true || explicitNewTab || isExternal;
+
+  const relAttr = openInNewTab ? "noopener" : undefined;
 
   return (
     <motion.article whileHover={{ y: -4 }} whileFocus={{ y: -2 }} className={cn("group relative transition outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/40", t.card)} tabIndex={0} aria-label={`${plan.name} csomag`}>
@@ -201,16 +216,27 @@ const Card: React.FC<{ plan: Plan; label: typeof Labels["en"]; locale: string; i
           )}
         </div>
 
-       <Button
-  as={Link}
-  href={plan.CTA?.href || "#"}
-  variant={plan.CTA?.variant || "primary"} // ← itt vesszük a Strapi-ben beállított variánst
-  className="w-full mt-6"
-  aria-label={`Válaszd: ${plan.name}`}
->
-  {plan.CTA?.text || "Foglalás"}
-</Button>
-
+        {/*
+          Itt a fontos változtatás:
+          - ha openInNewTab -> <a href target rel> köré tesszük a Button-t
+          - különben -> <Link href> köré tesszük a Button-t
+          Ez elkerüli, hogy target/rel propokat adjunk át a Link-nek vagy a Button as propjának.
+        */}
+        <div className="mt-6">
+          {openInNewTab ? (
+            <a href={resolvedHref} target="_blank" rel={relAttr} className="w-full block">
+              <Button variant={variantProp as any} className="w-full">
+                {plan.CTA?.text || "Foglalás"}
+              </Button>
+            </a>
+          ) : (
+            <Link href={resolvedHref} className="w-full block">
+              <Button variant={variantProp as any} className="w-full">
+                {plan.CTA?.text || "Foglalás"}
+              </Button>
+            </Link>
+          )}
+        </div>
 
         <div className="mt-6">
           <PerkList perks={plan.perks} />
