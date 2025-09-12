@@ -409,6 +409,20 @@ export interface SharedLink extends Struct.ComponentSchema {
     >;
     text: Schema.Attribute.String;
     URL: Schema.Attribute.String;
+    variant: Schema.Attribute.Enumeration<
+      ['simple', 'outline', 'primary', 'muted']
+    >;
+  };
+}
+
+export interface SharedOpeningHour extends Struct.ComponentSchema {
+  collectionName: 'components_shared_opening_hours';
+  info: {
+    displayName: 'OpeningHour';
+  };
+  attributes: {
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
   };
 }
 
@@ -546,6 +560,7 @@ declare module '@strapi/strapi' {
       'shared.form': SharedForm;
       'shared.launches': SharedLaunches;
       'shared.link': SharedLink;
+      'shared.opening-hour': SharedOpeningHour;
       'shared.perks': SharedPerks;
       'shared.section': SharedSection;
       'shared.seo': SharedSeo;

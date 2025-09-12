@@ -176,12 +176,13 @@ function SoftOverlay({ visible, reducedMotion }: { visible: boolean; reducedMoti
 /* =========================================================================================
    CTA segédek
    ========================================================================================= */
-type CtaVariant = "primary" | "accent" | "ghost";
+/* CTA segédek */
+type CtaVariant = "primary" | "accent" | "muted" | "simple";
 
 function resolveCtaVariant(cta: any, index: number): CtaVariant {
   const raw = String(cta?.variant || cta?.type || "").toLowerCase();
-  if (["primary", "accent", "ghost"].includes(raw)) return raw as CtaVariant;
-  return index % 3 === 0 ? "primary" : index % 3 === 1 ? "accent" : "ghost";
+  if (["primary", "accent", "muted", "simple"].includes(raw)) return raw as CtaVariant;
+  return index % 4 === 0 ? "primary" : index % 4 === 1 ? "accent" : index % 4 === 2 ? "muted" : "simple";
 }
 
 function ctaBaseClass() {
@@ -189,37 +190,57 @@ function ctaBaseClass() {
 }
 
 function ctaClassByVariant(_v: CtaVariant) {
-  return "focus-visible:ring-neutral-800";
+  return "focus-visible:ring-neutral-800 hover:-translate-y-1 hover:shadow-lg";
 }
 
 function ctaStyleByVariant(v: CtaVariant): React.CSSProperties {
-  if (v === "primary") {
-    return {
-      background: "linear-gradient(180deg, rgba(4,200,200,0.28) 0%, rgba(29,228,226,0.18) 100%)",
-      color: "var(--breaker-950)",
-      backdropFilter: "blur(16px) saturate(170%)",
-      WebkitBackdropFilter: "blur(16px) saturate(170%)",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.30), 0 14px 28px rgba(0,0,0,0.14)",
-    };
-  }
-  if (v === "accent") {
-    return {
-      background: "linear-gradient(180deg, rgba(144,255,246,0.20) 0%, rgba(199,255,250,0.12) 100%)",
-      color: "var(--breaker-900)",
-      backdropFilter: "blur(14px) saturate(160%)",
-      WebkitBackdropFilter: "blur(14px) saturate(160%)",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 22px rgba(0,0,0,0.10)",
-    };
-  }
-  return {
-    background: "rgba(255,255,255,0.06)",
-    color: "var(--breaker-800)",
-    border: "1px solid rgba(17,17,17,0.12)",
-    backdropFilter: "blur(10px) saturate(140%)",
-    WebkitBackdropFilter: "blur(10px) saturate(140%)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
+  const base: React.CSSProperties = {
+    borderRadius: "0.5rem", // max lg
+    padding: "0.5rem 1.25rem",
+    fontSize: "0.95rem",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.25s ease-in-out",
+    backdropFilter: "blur(12px) saturate(150%)",
+    WebkitBackdropFilter: "blur(12px) saturate(150%)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 6px 12px rgba(0,0,0,0.08)",
   };
+
+  switch (v) {
+    case "primary":
+      return {
+        ...base,
+        background: "linear-gradient(180deg, rgba(4,200,200,0.35) 0%, rgba(29,228,226,0.20) 100%)",
+        color: "var(--breaker-950)",
+        border: "none",
+      };
+    case "accent":
+      return {
+        ...base,
+        background: "linear-gradient(180deg, rgba(144,255,246,0.25) 0%, rgba(199,255,250,0.12) 100%)",
+        color: "var(--breaker-900)",
+        border: "none",
+      };
+    case "muted":
+      return {
+        ...base,
+        background: "rgba(255,255,255,0.06)",
+        color: "var(--breaker-800)",
+        border: "1px solid rgba(255,255,255,0.18)",
+      };
+    case "simple":
+      return {
+        ...base,
+        background: "rgba(255,255,255,0.12)",
+        color: "var(--breaker-950)",
+        border: "1px solid rgba(255,255,255,0.20)",
+      };
+    default:
+      return base;
+  }
 }
+
+
 
 function pickPrimaryCta(CTAs: any[], primaryCtaPath?: string) {
   if (!CTAs?.length) return undefined;

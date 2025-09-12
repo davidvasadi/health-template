@@ -20,6 +20,15 @@
         "_parent",
         "_top"
       ]
+    },
+    "variant": {
+      "type": "enumeration",
+      "enum": [
+        "simple",
+        "outline",
+        "primary",
+        "muted"
+      ]
     }
   }
 }

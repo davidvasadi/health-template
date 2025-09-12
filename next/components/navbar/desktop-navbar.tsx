@@ -59,10 +59,10 @@ const NavCSS = () => (
     }
 
     /* CTA-k – Hero-val egyező üveg stílusok (border nélkül) */
-    .btn-xl {
+    .btn-2sm {
       position: relative;
       border-radius: 0.75rem; /* rounded-xl */
-      padding-inline: 14px;
+      padding-inline: 10px;
       padding-block: 10px;
       line-height: 1;
       transition: transform .18s ease, filter .18s ease, background-color .18s ease, color .18s ease, backdrop-filter .18s ease;
@@ -270,7 +270,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
               key={item.text}
               as={Link}
               href={`/${locale}${item.URL}`}
-              className={cn("btn-lg btn-glass", ctaClass(index))}
+              className={cn("btn-xl btn-glass", ctaClass(index))}
               {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
             >
               {item.text}

@@ -11,6 +11,28 @@ import { motion } from "framer-motion";
 
 const spring = { type: "spring" as const, stiffness: 520, damping: 30, mass: 0.7 };
 
+function BackLinkSimple({ locale }: { locale: string }) {
+  const labels: Record<string, string> = {
+    hu: "Vissza",
+    en: "Back",
+    de: "Zurück",
+  };
+
+  const label = labels[locale] ?? labels.en; // fallback angolra
+  const href = `/${locale}/blog`;
+
+  return (
+    <div className="flex items-center gap-2 px-2 py-4">
+      <Link href={href} className="flex items-center gap-2 group" aria-label={label}>
+        <IconArrowLeft className="h-4 w-4 text-neutral-900 group-hover:text-breaker-bay-700 transition-colors" />
+        <span className="text-sm text-neutral-900 group-hover:text-breaker-bay-700 transition-colors">
+          {label}
+        </span>
+      </Link>
+    </div>
+  );
+}
+
 export function BlogLayout({
   article,
   locale,
@@ -22,14 +44,8 @@ export function BlogLayout({
 }) {
   return (
     <Container className="mt-12 md:mt-16 lg:mt-24">
-      <div className="flex items-center gap-2 px-2 py-4">
-        <Link href={`/${locale}/blog`} className="flex items-center gap-2 group">
-          <IconArrowLeft className="h-4 w-4 text-neutral-900 group-hover:text-breaker-bay-700 transition-colors" />
-          <span className="text-sm text-neutral-900 group-hover:text-breaker-bay-700 transition-colors">
-            Vissza · Back
-          </span>
-        </Link>
-      </div>
+      {/* egyszerű, lokalizált vissza link */}
+      <BackLinkSimple locale={locale} />
 
       <motion.div
         initial={{ opacity: 0, y: 18 }}
@@ -56,7 +72,7 @@ export function BlogLayout({
             {article.title}
           </h1>
           <p className="mt-3 text-neutral-500 text-sm">
-            {format(new Date(article.publishedAt), "MMMM dd, yyyy")}
+            {article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}
           </p>
           <div className="mt-3 flex gap-2 flex-wrap">
             {article.categories?.map((c, i) => (

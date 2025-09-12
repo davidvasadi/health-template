@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { BlogCardVertical } from "../blog-card";
+import { BlogCard } from "../blog-card";
 
 export const RelatedArticles = ({ heading, sub_heading, articles, locale }: { heading: string; sub_heading: string; articles: any[], locale: string }) => {
   return (
@@ -10,7 +10,7 @@ export const RelatedArticles = ({ heading, sub_heading, articles, locale }: { he
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
         {articles.map((article) => (
-          <BlogCardVertical key={article.title} article={article} locale={locale} />
+          <BlogCard key={article.title} article={article} locale={locale} />
         ))}
       </div>
     </div>

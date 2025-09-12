@@ -1,0 +1,16 @@
+{
+  "collectionName": "components_shared_opening_hours",
+  "info": {
+    "displayName": "OpeningHour"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string"
+    }
+  },
+  "config": {}
+}

@@ -10,27 +10,83 @@ import { truncate } from "@/lib/utils";
 
 const spring = { type: "spring" as const, stiffness: 520, damping: 30, mass: 0.7 };
 
-export const BlogPostRows: React.FC<{ articles: Article[] }> = ({ articles }) => {
+type SupportedLocale = "hu" | "en" | "de";
+
+// Egyszerű locale resolver
+function resolveLocale(raw?: string | null): SupportedLocale {
+  if (!raw && typeof window !== "undefined") {
+    const htmlLang = document.documentElement.lang;
+    raw = htmlLang || window.location.pathname.split("/")[1] || "";
+  }
+  const lower = (raw || "").toString().toLowerCase();
+  if (lower.startsWith("hu")) return "hu";
+  if (lower.startsWith("de")) return "de";
+  return "en";
+}
+
+export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = ({
+  articles,
+  locale: localeProp,
+}) => {
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState<Article[]>(articles);
-  const searcher = useMemo(() => new FuzzySearch(articles, ["title"], { caseSensitive: false }), [articles]);
-  useEffect(() => { setResults(searcher.search(search)); }, [search, searcher]);
+  const [results, setResults] = useState<Article[]>(articles || []);
+
+  // Csak client-side váltjuk a feliratokat, hogy ne legyen hydration error
+  const [clientReady, setClientReady] = useState(false);
+  useEffect(() => setClientReady(true), []);
+
+  const locale = resolveLocale(localeProp);
+
+  const LABELS: Record<SupportedLocale, { heading: string; placeholder: string; noResults: string }> = {
+    en: {
+      heading: "More posts",
+      placeholder: "Search articles…",
+      noResults: "No results found",
+    },
+    hu: {
+      heading: "További bejegyzések",
+      placeholder: "Cikkek keresése…",
+      noResults: "Nincs találat",
+    },
+    de: {
+      heading: "Weitere Beiträge",
+      placeholder: "Artikel suchen…",
+      noResults: "Keine Ergebnisse",
+    },
+  };
+
+  const t = clientReady ? LABELS[locale] : LABELS.en;
+
+  const searcher = useMemo(() => new FuzzySearch(articles || [], ["title"], { caseSensitive: false }), [articles]);
+
+  useEffect(() => {
+    if (!search) {
+      setResults(articles || []);
+      return;
+    }
+    try {
+      setResults(searcher.search(search));
+    } catch (err) {
+      setResults([]);
+    }
+  }, [search, searcher, articles]);
 
   return (
     <section className="w-full py-12 md:py-16">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">More posts</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">{t.heading}</h2>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search articles…"
+          placeholder={t.placeholder}
+          aria-label={t.placeholder}
           className="text-sm w-full md:w-96 p-2 rounded-lg bg-white border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-breaker-bay-500 text-neutral-900 placeholder-neutral-400"
         />
       </div>
 
       {results.length === 0 ? (
         <p className="text-neutral-500 text-center p-6 rounded-xl bg-white ring-1 ring-neutral-200">
-          No results found
+          {t.noResults}
         </p>
       ) : (
         <motion.ul
@@ -53,9 +109,11 @@ export const BlogPostRows: React.FC<{ articles: Article[] }> = ({ articles }) =>
                   <p className="text-neutral-900 text-base md:text-lg font-medium hover:text-breaker-bay-700 transition-colors">
                     {a.title}
                   </p>
-                  <p className="text-neutral-600 text-sm mt-1 max-w-2xl">{truncate(a.description, 100)}</p>
+                  <p className="text-neutral-600 text-sm mt-1 max-w-2xl">
+                    {a.description ? truncate(a.description, 100) : ""}
+                  </p>
                   <div className="mt-3 flex items-center gap-2 text-neutral-500 text-xs">
-                    <span>{format(new Date(a.publishedAt), "MMMM dd, yyyy")}</span>
+                    <span>{a.publishedAt ? format(new Date(a.publishedAt), "MMMM dd, yyyy") : ""}</span>
                     <span className="h-1 w-1 rounded-full bg-neutral-300" />
                     <span className="flex flex-wrap gap-1">
                       {a.categories?.map((c, idx) => (

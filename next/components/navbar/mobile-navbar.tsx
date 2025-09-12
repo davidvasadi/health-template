@@ -161,7 +161,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
             aria-controls="mobile-menu"
             onClick={() => setOpen(true)}
             className={cn(
-              "p-2 rounded-md",
+              "py-2 rounded-lg",
               "focus:outline-none focus:ring-2 focus:ring-breaker-bay-400/40",
               "text-current"
             )}
