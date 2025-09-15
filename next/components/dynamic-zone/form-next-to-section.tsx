@@ -13,20 +13,24 @@ import {
   IconRoute,
   IconShieldCheck,
 } from "@tabler/icons-react";
-import { AnimatedTooltip } from "@/components/ui/animated-tooltip"; // ha nincs ilyen komponens, töröld ezt az importot és a használatát
+import { AnimatedTooltip } from "@/components/ui/animated-tooltip"; // ⬅️ HA nincs ez a komponens a projektedben, kommentezd ki az importot és a használatát is!
 import { Button } from "../elements/button";
 
-/*************************************************
- * FormNextToSection — FINAL
- * - Új, letisztított szerkezet + egyszerű kommentek
- * - CSAK a social blokk van visszarakva a RÉGI, statikus verzióra
- * - A többi: az egyszerűsített (új) megoldás marad
- *************************************************/
+/* ──────────────────────────────────────────────────────────────────────────────
+   FormNextToSection — VÉGLEGES (dinamikus social a Strapi-ból)
 
-/**************
- * Típusok
- **************/
+   ✔ A social ikon/linkek a Strapi által adott struktúrából jönnek (propból VAGY section-ből).
+   ✔ Külső hivatkozásokhoz <a> taget használunk (NEM <Link>!), így NEM nyúlunk az URL-hez.
+   ✔ A mapsUrl is változtatás nélkül megy ki (ahogy a Strapi adja).
+   ✔ A működéshez NEM kell kódot módosítanod a Strapi formátuma miatt: több fajta shape-et kezelünk.
+   ────────────────────────────────────────────────────────────────────────────── */
+
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║ TÍPUSOK                                                                  ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+
 type FormInput = {
+  // ⬇️ űrlap mező típusok; a Strapi "inputs" feldobhat bármit — ezért hagyunk "string"-et is
   type: "text" | "email" | "tel" | "textarea" | "submit" | string;
   name?: string;
   placeholder?: string;
@@ -41,38 +45,63 @@ export type LocationType = {
   postalCode?: string;
   country?: string;
   phone?: string;
-  mapsUrl?: string;
+  mapsUrl?: string;             // ⬅️ Ezt VÁLTOZTATÁS NÉLKÜL használjuk (külső <a> tag)
   opening_hours?: OpeningHour[];
   opening_title?: string;
   phone_label?: string;
   mapsUrl_label?: string;
 };
 
-/**************
- * Komponens
- **************/
+/** 
+ * SOCIAL (Strapi) — tapasztalat alapján:
+ * - "link" lehet objektum VAGY tömb
+ * - az URL kulcs lehet: URL / url / href
+ * - lehet wrapper "attributes" alatt is
+ * - a label lehet az elem "label"-je, a link "text"-je stb.
+ */
+export type SocialLink = {
+  icon?: string;   // opcionális, most nem használjuk, de később jól jöhet
+  label?: string;
+  link?:
+    | { text?: string; url?: string; URL?: string; href?: string; target?: "_self" | "_blank"; variant?: "primary" | "secondary" | "link" }
+    | Array<{ text?: string; url?: string; URL?: string; href?: string; target?: "_self" | "_blank"; variant?: "primary" | "secondary" | "link" }>;
+  attributes?: {
+    link?:
+      | { text?: string; url?: string; URL?: string; href?: string; target?: "_self" | "_blank"; variant?: "primary" | "secondary" | "link" }
+      | Array<{ text?: string; url?: string; URL?: string; href?: string; target?: "_self" | "_blank"; variant?: "primary" | "secondary" | "link" }>;
+  };
+};
+
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║ KOMPONENS                                                                ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+
 export function FormNextToSection({
   heading,
   sub_heading,
   form,
   section,
   Location,
+  social_media_icon_links, // ⬅️ ha propként adod át; ha nem, a section-ből olvassuk ki
 }: {
   heading: string;
   sub_heading: string;
   form: { inputs?: FormInput[] } | any;
   section?: any;
   Location?: LocationType | null;
+  social_media_icon_links?: SocialLink[] | SocialLink | null;
 }) {
-  // Motion
+  /* ── Animáció beállítások ─────────────────────────────────────────────── */
   const prefersReducedMotion = useReducedMotion();
-  const ease = [0.22, 1, 0.36, 1] as const;
+  const ease = [0.22, 1, 0.36, 1] as const; // egységes easing görbe
+
+  // Egyszerű "fade-up" variáns (általános belépő animáció)
   const fadeUp = {
     hidden: { opacity: 0, y: 12 },
     show: { opacity: 1, y: 0, transition: { duration: 0.45, ease } },
   } as const;
 
-  // CSAK a socialhoz: a régi kód animációi
+  // Social-ikonokhoz: a régi kód animációi (staggerelt belépés)
   const container = {
     hidden: { opacity: 0, x: -36 },
     show: { opacity: 1, x: 0, transition: { duration: 0.6, staggerChildren: 0.1, delayChildren: 0.2, ease } },
@@ -82,14 +111,17 @@ export function FormNextToSection({
     show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4, ease } },
   } as const;
 
-  // Képforrás
+  /* ── Képforrás meghatározás ─────────────────────────────────────────────
+     - Elfogadunk egyszerű stringet (section.image)
+     - VAGY tömböt (section.images[0])                                          */
   const imgSrc: string | null = useMemo(() => {
     if (typeof section?.image === "string" && section.image) return section.image;
     if (Array.isArray(section?.images) && section.images[0]) return section.images[0];
     return null;
   }, [section]);
 
-  // Lokáció normalizálás (új)
+  /* ── Location normalizálás ──────────────────────────────────────────────
+     FIGYELEM: a mapsUrl-hez NEM nyúlunk hozzá — pont úgy megy ki, ahogy a Strapi adja */
   const loc = useMemo(() => {
     if (!Location) return null;
     return {
@@ -107,11 +139,14 @@ export function FormNextToSection({
     };
   }, [Location]);
 
-  // Egyszerű parallax/tilt (új)
+  /* ── Egyszerű parallax / tilt a mockup képhez ───────────────────────────
+     - Nem túl agresszív: kis rotáció és skálázás
+     - Egér mozgásra reagál; touch-on nem szükséges extra logika              */
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [rx, setRx] = useState(0);
   const [ry, setRy] = useState(0);
   const [scale, setScale] = useState(1);
+
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
@@ -120,46 +155,125 @@ export function FormNextToSection({
     setRx(-(py - 0.5) * 12);
     setScale(1.01);
   };
-  const onLeave = () => { setRx(0); setRy(0); setScale(1); };
+  const onLeave = () => {
+    setRx(0);
+    setRy(0);
+    setScale(1);
+  };
 
-  // RÉGI: statikus social ikonok (változatlan logika)
-  const socials = [
-    {
-      title: "instagram",
-      href: "https://instagram.com/strapijs",
-      icon: (
-        <IconBrandInstagram className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />
-      ),
-    },
-    {
-      title: "tiktok",
-      href: "https://tiktok.com/strapi",
-      icon: (
-        <IconBrandTiktok className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />
-      ),
-    },
-    {
-      title: "facebook",
-      href: "https://facebook.hu/strapi",
-      icon: (
-        <IconBrandFacebook className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />
-      ),
-    },
-  ] as const;
+  /* ╔══════════════════════════════════════════════════════════════════════╗
+     ║ SOCIAL — Strapi-ból DINAMIKUSAN                                      ║
+     ║ - Forrás: prop social_media_icon_links VAGY section.social_...       ║
+     ║ - A link lehet objektum vagy tömb; az URL kulcs lehet URL/url/href   ║
+     ║ - A platformot (instagram/tiktok/facebook) név vagy URL alapján is   ║
+     ║   felismerjük, és Tabler ikont rendelünk hozzá.                      ║
+     ╚══════════════════════════════════════════════════════════════════════╝ */
+
+  // Belső segéd típus (a sokféle Strapi alakhoz)
+  type LinkLike = { text?: string; url?: string; URL?: string; href?: string; target?: string; label?: string; title?: string };
+
+  // Kis util: ha valami lehet tömb vagy elem, ebből mindig tömb lesz
+  const toArray = <T,>(v: T | T[] | null | undefined): T[] => (Array.isArray(v) ? v : v ? [v] : []);
+
+  // Platform detektálás: label-ből vagy URL-ből (bővíthető, lásd: TODO)
+  const detectPlatform = (label?: string, href?: string) => {
+    const t = (label || "").toLowerCase();
+    const h = (href || "").toLowerCase();
+    if (t.includes("instagram") || h.includes("instagram.com")) return "instagram";
+    if (t.includes("tiktok") || h.includes("tiktok.com")) return "tiktok";
+    if (t.includes("facebook") || h.includes("facebook.com") || h.includes("fb.com")) return "facebook";
+    return "unknown"; // ⬅️ Nem ismert: monogram fallback
+  };
+
+  // Ikon kiválasztás (Tabler Icons). Bővítheted: linkedin, youtube, stb.
+  const iconFor = (platform: string) => {
+    if (platform === "instagram") return <IconBrandInstagram className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />;
+    if (platform === "tiktok")    return <IconBrandTiktok    className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />;
+    if (platform === "facebook")  return <IconBrandFacebook  className="h-5 w-5 text-breaker-bay-700 group-hover:text-breaker-bay-900 transition-colors" />;
+    return null; // ⬅️ ismeretlen: betű-monogram lesz a rendernél
+  };
+
+  // A Strapi-ból érkező social mező lelapítása egységes tömbbé
+  const socials = useMemo(() => {
+    // 1) forrás kiválasztása: prop > section
+    const src = (social_media_icon_links ?? section?.social_media_icon_links) as SocialLink[] | SocialLink | undefined | null;
+    const items = toArray(src);
+
+    // 2) ide gyűjtjük az egységesített linkeket
+    const flatLinks: { label?: string; href: string; target?: string }[] = [];
+
+    // 3) bejárjuk a tételeket
+    items.forEach((item) => {
+      if (!item) return;
+
+      // Preferált: item.link (objektum vagy tömb) — attributes alatt is lehet
+      const linkField = (item as any).link ?? (item as any)?.attributes?.link;
+      const links = toArray<LinkLike>(linkField);
+
+      // Edge-case: ha valamiért közvetlenül az item-en van URL
+      if (links.length === 0 && (item as any).url) {
+        const href = ((item as any).URL ?? (item as any).url ?? (item as any).href) as string;
+        if (href) flatLinks.push({ label: (item as any).label, href, target: (item as any).target });
+      }
+
+      // Normál eset: object(ek)ből kivesszük a szükséges mezőket
+      links.forEach((l) => {
+        const href = (l.URL ?? l.url ?? l.href) || "";
+        const label = (l.text ?? (item as any).label) || "";
+        if (!href) return; // URL nélkül nincs link
+        flatLinks.push({ label, href, target: l.target });
+      });
+    });
+
+    // 4) deduplikálás + ikon hozzárendelés
+    const seen = new Set<string>();
+    const out = flatLinks
+      .filter((l) => !!l.href)
+      .map((l) => {
+        const platform = detectPlatform(l.label, l.href);
+        return {
+          key: `${(l.label || platform || "link").toLowerCase()}|${l.href}`, // dedupe kulcs
+          label: l.label || platform || "link",
+          href: l.href,                        // ⬅️ PONTOSAN a Strapi által adott URL — nincs „mókolás”
+          target: l.target || "_blank",        // default target
+          icon: iconFor(platform),             // Tabler ikon vagy null
+        };
+      })
+      .filter((x) => {
+        if (seen.has(x.key)) return false;
+        seen.add(x.key);
+        return true;
+      });
+
+    // DEBUG TIPP (fejlesztéskor hasznos): ha nem jön semmi, nézd meg a shape-et
+    // if (process.env.NODE_ENV !== "production" && out.length === 0) {
+    //   // eslint-disable-next-line no-console
+    //   console.debug("[FormNextToSection] social raw →", src);
+    // }
+
+    return out;
+  }, [social_media_icon_links, section?.social_media_icon_links]);
+
+  /* ╔══════════════════════════════════════════════════════════════════════╗
+     ║ RENDER                                                                ║
+     ╚══════════════════════════════════════════════════════════════════════╝ */
 
   return (
     <MotionConfig reducedMotion={prefersReducedMotion ? "always" : "never"}>
       <div
         className="relative bg-white"
-        style={{
-          // @ts-ignore — custom CSS változók
-          "--nav-h": "72px",
-          // @ts-ignore
-          "--content-top": "calc(var(--nav-h) + 2.5rem)",
-        }}
+        style={
+          {
+            /* CSS változók: a sticky jobbos oszlop és a layout ezért igazodik a navigáció magasságához */
+            // @ts-ignore
+            "--nav-h": "72px",
+            // @ts-ignore
+            "--content-top": "calc(var(--nav-h) + 2.5rem)",
+          } as React.CSSProperties
+        }
       >
         <div className="w-full min-h-screen grid grid-cols-1 md:grid-cols-2 gap-6 md:pt-[var(--content-top)]">
-          {/* BAL: űrlap kártya (új) */}
+          {/* ───────────────────────────── BAL: űrlap kártya ───────────────────────────── */}
           <section className="order-2 md:order-1 flex w-full justify-center items-start px-4 md:px-8 lg:px-16 pt-28 md:pt-0 pb-12">
             <AnimatePresence initial={false}>
               <motion.div
@@ -170,7 +284,7 @@ export function FormNextToSection({
                 exit="hidden"
                 className="self-start mx-auto w-full max-w-md rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-[0_10px_30px_-10px_rgba(16,24,40,0.15)] ring-1 ring-neutral-200/60"
               >
-                {/* Fejléc */}
+                {/* ── Cím + alcím + (opcionális) hely chip ─────────────────────────── */}
                 <div>
                   <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight text-breaker-bay-950">{heading}</h1>
                   <p className="mt-3 text-neutral-700 text-base leading-relaxed">{sub_heading}</p>
@@ -182,11 +296,13 @@ export function FormNextToSection({
                   )}
                 </div>
 
-                {/* Dinamikus űrlap mezők */}
+                {/* ── Dinamikus űrlap mezők (Strapi "inputs") ────────────────────────
+                    TIPP: Ha kell validálás/küldés, ezt a blokkot egészítsd ki onSubmit-tel. */}
                 <div className="pt-6">
                   <form className="space-y-4" noValidate>
                     {(form?.inputs as FormInput[] | undefined)?.map((input, idx) => {
                       const id = input?.name || `field-${idx}`;
+
                       if (input.type === "textarea") {
                         return (
                           <div key={id}>
@@ -200,6 +316,7 @@ export function FormNextToSection({
                           </div>
                         );
                       }
+
                       if (input.type === "submit") {
                         return (
                           <div key={id} className="pt-2">
@@ -209,6 +326,8 @@ export function FormNextToSection({
                           </div>
                         );
                       }
+
+                      // Alap input: text / email / tel / bármi más string
                       return (
                         <div key={id}>
                           <label htmlFor={id} className="block text-sm font-medium text-neutral-800">{input.name}</label>
@@ -224,32 +343,42 @@ export function FormNextToSection({
                   </form>
                 </div>
 
-                {/* SOCIAL: Régi, statikus sor + régi animáció */}
-                <motion.div
-                  variants={container}
-                  className="flex items-center justify-center gap-4 pt-6"
-                  aria-label="Közösségi média linkek"
-                >
-                  {socials.map((social) => (
-                    <motion.div
-                      key={social.title}
-                      className="group"
-                      variants={socialItem}
-                      whileHover={{ y: prefersReducedMotion ? 0 : -2 }}
-                    >
-                      <Link
-                        href={social.href}
-                        target="_blank"
-                        aria-label={social.title}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1 ring-neutral-200/70 bg-white/80 backdrop-blur-sm hover:ring-breaker-bay-300"
+                {/* ── SOCIAL: Strapi-ból (dinamikus) ──────────────────────────────────
+                    - Ha nincs adat, ez a blokk nem jelenik meg. */}
+                {socials.length > 0 && (
+                  <motion.div
+                    variants={container}
+                    className="flex items-center justify-center gap-4 pt-6"
+                    aria-label="Közösségi média linkek"
+                  >
+                    {socials.map((s) => (
+                      <motion.div
+                        key={s.key}
+                        className="group"
+                        variants={socialItem}
+                        whileHover={{ y: prefersReducedMotion ? 0 : -2 }}
                       >
-                        {social.icon}
-                      </Link>
-                    </motion.div>
-                  ))}
-                </motion.div>
+                        {/* FONTOS: külső link → <a>, NEM <Link> (így az URL-hez nem nyúlunk) */}
+                        <a
+                          href={s.href}
+                          target={s.target || "_blank"}
+                          rel={s.target === "_blank" ? "noopener noreferrer" : undefined}
+                          aria-label={s.label}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1 ring-neutral-200/70 bg-white/80 backdrop-blur-sm hover:ring-breaker-bay-300"
+                        >
+                          {s.icon ?? (
+                            // Fallback ikon: monogram (két betű)
+                            <span className="text-[11px] font-medium">
+                              {(s.label || "?").slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </a>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
 
-                {/* Adatvédelem */}
+                {/* ── Adatvédelem / lábjegyzet ─────────────────────────────────────── */}
                 <div className="mt-3 flex items-center justify-center gap-2 text-xs text-neutral-600">
                   <IconShieldCheck className="h-4 w-4 text-neutral-700" aria-hidden />
                   <span>
@@ -264,19 +393,21 @@ export function FormNextToSection({
             </AnimatePresence>
           </section>
 
-          {/* JOBB: tartalom/visual (új) */}
+          {/* ───────────────────────────── JOBB: vizuális oszlop ───────────────────────────── */}
           <aside className="order-1 md:order-2 w-full px-4 md:px-8 lg:px-16 pt-28 md:pt-0 pb-12 md:sticky md:self-start md:top-[var(--content-top)] z-20">
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="w-full max-w-xl mx-auto text-center">
+              {/* Opcionális tooltip (csapat/avatárok). HA nincs komponens, kommentezd ki. */}
               {Array.isArray(section?.users) && section.users.length > 0 && (
                 <div className="flex justify-center mb-5">
                   <AnimatedTooltip items={section.users} />
                 </div>
               )}
+
               <h2 className="font-semibold text-breaker-bay-800">EST 2021</h2>
               <h3 className="text-2xl md:text-3xl font-bold text-breaker-bay-900">{section?.heading}</h3>
               <p className="mt-3 text-base md:text-lg text-neutral-700 leading-relaxed">{section?.sub_heading}</p>
 
-              {/* Lokáció kártya (új) */}
+              {/* ── Lokáció kártya (mapsUrl-t változatlanul használjuk) ───────────── */}
               {loc && (
                 <div className="mt-5 text-left">
                   <div className="rounded-2xl ring-1 ring-neutral-200/70 bg-white/80 backdrop-blur-sm p-4">
@@ -292,30 +423,35 @@ export function FormNextToSection({
                           {loc.postalCode} {loc.city}
                           {loc.country ? `, ${loc.country}` : ""}
                         </address>
+
+                        {/* Hívás + Útvonalterv gombok */}
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           {loc.phone && (
                             <a
-                              href={`tel:${loc.phone.replace(/\s+/g, "")}`}
+                              href={`tel:${loc.phone.replace(/\s+/g, "")}`} // ⬅️ telefonszámot "tel:" sémával tesszük kattinthatóvá
                               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ring-1 ring-neutral-200 bg-white text-neutral-800 hover:text-breaker-bay-900 hover:ring-breaker-bay-300"
                             >
                               <IconPhone className="h-4 w-4 text-neutral-800" />
                               <span className="font-medium">{loc.phone_label}</span>
                             </a>
                           )}
+
                           {loc.mapsUrl && (
-                            <Link
-                              href={loc.mapsUrl}
+                            <a
+                              href={loc.mapsUrl}                 // ⬅️ PONTOS Strapi URL (ha "www..." → tedd https://-re a Strapi-ban!)
                               target="_blank"
+                              rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ring-1 ring-neutral-200 bg-white text-neutral-800 hover:text-breaker-bay-900 hover:ring-breaker-bay-300"
                             >
                               <IconRoute className="h-4 w-4 text-neutral-800" />
                               <span className="font-medium">{loc.mapsUrl_label}</span>
-                            </Link>
+                            </a>
                           )}
                         </div>
                       </div>
                     </div>
 
+                    {/* Nyitvatartás lista */}
                     {Array.isArray(loc.opening_hours) && loc.opening_hours.length > 0 && (
                       <div className="mt-4 rounded-xl bg-neutral-50 p-3">
                         <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
@@ -336,10 +472,11 @@ export function FormNextToSection({
                 </div>
               )}
 
-              {/* Kép (új, egyszerű parallax) */}
+              {/* ── Mockup kép (parallax/tilt) ───────────────────────────────────── */}
               {imgSrc && (
                 <div className="mt-6">
                   {prefersReducedMotion ? (
+                    // Accessibility: ha a user csökkentett mozgást kér, csak fade-in
                     <div className="relative h-[340px] md:h-[440px] lg:h-[540px] w-full overflow-hidden rounded-[2rem] ring-1 ring-neutral-200 bg-neutral-50">
                       <motion.img
                         key={imgSrc}
@@ -353,6 +490,7 @@ export function FormNextToSection({
                       />
                     </div>
                   ) : (
+                    // Parallax/tilt konténer
                     <div
                       ref={wrapRef}
                       onMouseMove={onMove}
@@ -360,7 +498,7 @@ export function FormNextToSection({
                       className="relative h-[340px] md:h-[440px] lg:h-[540px] w-full select-none"
                       style={{ perspective: 1200 }}
                     >
-                      {/* Blur háttér */}
+                      {/* Elmosott hátterű "glow" a mockup mögött */}
                       <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden rounded-[2rem]">
                         <div
                           className="absolute inset-[-8%] blur-2xl scale-110 opacity-70"
@@ -373,7 +511,8 @@ export function FormNextToSection({
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/60" />
                       </div>
-                      {/* "Eszköz" keret */}
+
+                      {/* "Eszköz" keret: finom 3D-hatás */}
                       <motion.div
                         className="relative mx-auto h-full w-[92%] md:w-[88%] rounded-[32px] ring-1 ring-white/40 bg-white/10 backdrop-blur-xl shadow-[0_30px_120px_-32px_rgba(0,0,0,0.55)] overflow-hidden"
                         style={{ transformStyle: "preserve-3d" }}
@@ -392,6 +531,7 @@ export function FormNextToSection({
                             draggable={false}
                             style={{ transform: "translateZ(1px)", filter: "saturate(1.04) contrast(1.03) brightness(1.01)" }}
                           />
+                          {/* Alsó sötétítés, hogy a kép "ül" az alapon */}
                           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/45 to-transparent" />
                         </div>
                       </motion.div>
@@ -406,3 +546,14 @@ export function FormNextToSection({
     </MotionConfig>
   );
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   TODO / BŐVÍTÉSI PONTOK:
+   - detectPlatform + iconFor: egészítsd ki LinkedIn, YouTube stb. támogatással.
+     (Tabler ikonok: IconBrandLinkedin, IconBrandYoutube, stb.)
+   - Form submit/validálás: add onSubmit-et a <form>-hoz, és kezeld a mezőket state-ben.
+   - Ha a Strapi más shape-et ad socialra, nézd meg a konzolban (lásd a kommentelt debug sort),
+     és illeszd be a fenti "lapítási" logikába.
+   - mapsUrl: ha a Strapi "www..."-val adja, javasolt "https://..."-ra átírni a Strapi-ban.
+     (Itt szándékosan nem "javítjuk ki" — kérésed szerint nem nyúlunk az URL-hez.)
+   ────────────────────────────────────────────────────────────────────────────── */
