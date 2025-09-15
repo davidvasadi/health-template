@@ -10,9 +10,6 @@
     },
     "value": {
       "type": "string"
-    },
-    "isClosed": {
-      "type": "boolean"
     }
   },
   "config": {}

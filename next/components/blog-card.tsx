@@ -22,45 +22,86 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
   const readLabel = Labels[locale]?.read || Labels.en.read;
 
   return (
-    <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={spring}>
+    <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={spring} className="h-full">
       <Link
         href={`/${locale}/blog/${article.slug}`}
-        className="grid grid-cols-1 md:grid-cols-2 rounded-3xl overflow-hidden bg-white ring-1 ring-neutral-200 hover:ring-neutral-300 transition-shadow shadow-sm hover:shadow-lg"
+        className="
+          group grid grid-cols-1 md:grid-rows-2 rounded-3xl overflow-hidden
+          bg-white ring-1 ring-neutral-200 hover:ring-neutral-300
+          transition-shadow shadow-sm hover:shadow-lg
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/50
+        "
       >
-        <div className="relative">
+        {/* KÉP — mobilon 16:10 (padding-top), md+-on oszlop teljes magasságát kitölti */}
+        <div className="relative bg-neutral-100 md:h-full md:min-h-[300px] lg:min-h-[340px]">
+          {/* mobil/tablet arány (plugin nélkül) */}
+          <div className="block md:hidden" aria-hidden style={{ paddingTop: "62.5%" }} />
           {article.image ? (
-            <BlurImage
-              src={strapiImage(article.image.url)}
-              alt={article.title}
-              width={1200}
-              height={900}
-              className="h-full w-full object-cover transition-transform duration-400 hover:scale-[1.03]"
-            />
+            <>
+              <BlurImage
+                src={strapiImage(article.image.url)}
+                alt={article.title}
+                width={1600}
+                height={1000}
+                className="
+                  absolute inset-0 h-full w-full object-cover
+                  transition-transform duration-300 group-hover:scale-[1.02]
+                "
+              />
+              {/* finom alsó gradient a felirathoz/fókuszhoz */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent md:hidden" />
+            </>
           ) : (
-            <div className="h-full min-h-56 bg-neutral-100" />
+            <div className="absolute inset-0 bg-neutral-100" />
           )}
         </div>
 
-        <div className="p-5 md:p-7">
-          <div className="mb-2 flex gap-2 flex-wrap">
+        {/* TARTALOM — 3 sáv: chips / (cím+leírás) / meta mindig alul */}
+        <div className="p-5 md:p-7 grid grid-rows-[auto_1fr_auto] gap-3 h-full">
+          {/* kategória chipek */}
+          <div className="flex gap-1.5 flex-wrap">
             {article.categories?.map((c, i) => (
               <span
                 key={c.name + i}
-                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-1"
+                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-0.5 ring-1 ring-neutral-200"
               >
                 {c.name}
               </span>
             ))}
           </div>
 
-          <h3 className="text-neutral-900 text-2xl font-bold tracking-tight">
-            <Balancer>{article.title}</Balancer>
-          </h3>
+          {/* cím + leírás (inline clamp → nincs plugin függés) */}
+          <div className="min-w-0">
+            <h3
+              className="text-neutral-900 text-xl md:text-2xl font-bold tracking-tight leading-snug group-hover:text-breaker-bay-700 transition-colors"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical" as any,
+                overflow: "hidden",
+              }}
+            >
+              <Balancer>{article.title}</Balancer>
+            </h3>
 
-          <p className="mt-2 text-neutral-600">{truncate(article.description, 200)}</p>
+            {article.description ? (
+              <p
+                className="mt-2 text-neutral-600 text-sm md:text-base leading-relaxed"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical" as any,
+                  overflow: "hidden",
+                }}
+              >
+                {truncate(article.description, 220)}
+              </p>
+            ) : null}
+          </div>
 
-          <div className="mt-4 flex items-center gap-2 text-neutral-500 text-xs">
-            <span>{format(new Date(article.publishedAt), "MMMM dd, yyyy")}</span>
+          {/* meta */}
+          <div className="mt-1 flex items-center gap-2 text-neutral-500 text-xs md:text-sm">
+            <span>{article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}</span>
             <span className="h-1 w-1 rounded-full bg-neutral-300" />
             <span className="relative inline-block">
               <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-700 transition-all duration-300 group-hover:w-full" />

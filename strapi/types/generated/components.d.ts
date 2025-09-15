@@ -443,7 +443,6 @@ export interface SharedOpeningHour extends Struct.ComponentSchema {
     displayName: 'OpeningHour';
   };
   attributes: {
-    isClosed: Schema.Attribute.Boolean;
     label: Schema.Attribute.String;
     value: Schema.Attribute.String;
   };

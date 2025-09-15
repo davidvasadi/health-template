@@ -8,7 +8,7 @@ export const RelatedArticles = ({ heading, sub_heading, articles, locale }: { he
       <h2 className="text-2xl font-bold text-breaker-bay-950 mb-10">
         {heading}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {articles.map((article) => (
           <BlogCard key={article.title} article={article} locale={locale} />
         ))}
