@@ -99,7 +99,7 @@ export function FormNextToSection({
       postalCode: Location.postalCode ?? "",
       country: Location.country ?? "",
       phone: Location.phone ?? "",
-      mapsUrl: Location.mapsUrl ?? "#",
+      mapsUrl: Location.mapsUrl,
       opening_hours: Array.isArray(Location.opening_hours) ? Location.opening_hours : [],
       opening_title: Location.opening_title ?? "Nyitvatartás",
       phone_label: Location.phone_label ?? "Hívás",
