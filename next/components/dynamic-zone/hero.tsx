@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Float, Preload, PerformanceMonitor, useProgress } from "@react-three/drei";
-
+import Image from "next/image";
 import { Heading } from "../elements/heading";
 import { Subheading } from "../elements/subheading";
 import { Button } from "../elements/button";
@@ -37,6 +37,28 @@ function useScrollProgress() {
   }, []);
   return ref;
 }
+
+
+/* =========================================================================================
+   Strapi kép segéd
+   ========================================================================================= */
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
+
+function strapiImgUrl(img: any): string | undefined {
+  if (!img) return undefined;
+  // REST: { data: { attributes } }, GraphQL: { ...attributes }, vagy direkt object
+  const a = img?.data?.attributes ?? img?.attributes ?? img;
+  const u = a?.formats?.medium?.url ?? a?.url;
+  if (!u) return undefined;
+  return u.startsWith("http") ? u : `${STRAPI_URL}${u}`;
+}
+
+function strapiImgAlt(img: any, fallback = "Profilkép") {
+  const a = img?.data?.attributes ?? img?.attributes ?? img;
+  return a?.alternativeText || fallback;
+}
+
+
 
 /* =========================================================================================
    3D — Vertebra + SpineGroup
@@ -329,6 +351,7 @@ export const Hero = ({
   nextSlotDate,
   primaryCtaPath,
   businessHours,
+  profile_image,
 }: {
   heading: string;
   sub_heading: string;
@@ -338,6 +361,7 @@ export const Hero = ({
   nextSlotDate?: Date | string | number;
   primaryCtaPath?: string;
   businessHours?: BusinessHours;
+  profile_image?: any;
 }) => {
   const reducedMotion = useReducedMotion();
 
@@ -380,6 +404,8 @@ export const Hero = ({
     return computeNextSlot(new Date(), hours);
   }, [explicitNext, businessHours]);
   const nextSlotLabel = useMemo(() => formatSlotLabel(nextSlot, locale), [nextSlot, locale]);
+  const profileUrl = useMemo(() => strapiImgUrl(profile_image), [profile_image]);
+  const profileAlt = useMemo(() => strapiImgAlt(profile_image), [profile_image]);
 
   // CTAs
   const primaryCTA = useMemo(() => pickPrimaryCta(CTAs, primaryCtaPath), [CTAs, primaryCtaPath]);
@@ -443,6 +469,30 @@ export const Hero = ({
                 aria-hidden
               />
             )}
+{/* Avatar – külön sor, jobb felső sarokban, helyet foglal */}
+{profileUrl && (
+  <div className=" flex justify-end">
+    <div
+      className="relative h-10 w-10 md:h-12 md:w-12 rounded-full overflow-hidden ring-1 ring-white/60 shadow-lg"
+      style={{
+        background: "rgba(255,255,255,0.18)",
+        backdropFilter: "blur(10px) saturate(150%)",
+        WebkitBackdropFilter: "blur(10px) saturate(150%)",
+      }}
+    >
+      <Image
+        src={profileUrl}
+        alt={profileAlt}
+        fill
+        sizes="64px"
+        className="object-cover"
+        priority={!hasEnteredOnce}
+        fetchPriority={!hasEnteredOnce ? ('high' as any) : ('auto' as any)}
+      />
+    </div>
+  </div>
+)}
+
 
             <Heading as="h1" className="font-semibold leading-tight text-balance text-current bg-none mx-auto max-w-[22ch]" style={{ fontSize: "clamp(2rem, 6vw, 4.5rem)", color: "var(--breaker-900)" }}>
               {hasSpace ? (<>{first} <Cover>{last}</Cover></>) : (<Cover>{heading}</Cover>)}

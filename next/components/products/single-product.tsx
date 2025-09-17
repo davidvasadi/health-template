@@ -9,6 +9,7 @@ import { cn, formatNumber } from "@/lib/utils";
 import { strapiImage } from "@/lib/strapi/strapiImage";
 import { Link } from "next-view-transitions";
 import { Button } from "../elements/button";
+import { usePathname } from "next/navigation";
 
 const spring = { type: "spring" as const, stiffness: 520, damping: 32, mass: 0.7 };
 const REVERSE_GALLERY = false;
@@ -40,7 +41,7 @@ function localizeHref(url?: string, locale?: string) {
 
 /* ── CTA kinyerése: product.button → dynamic_zone → fallback ──────────────── */
 function extractCTA(product: any, locale?: string): ExtractedCTA {
-  // 1) KÖZVETLEN 'button' komponens (ahogy a screenshoton)
+  // 1) KÖZVETLEN 'button' komponens
   if (product?.button) {
     const href = localizeHref(product.button.URL, locale);
     const text = product.button.text || "Foglalás";
@@ -49,7 +50,7 @@ function extractCTA(product: any, locale?: string): ExtractedCTA {
     return { href, text, target, variant };
   }
 
-  // 2) dynamic_zone (ha mégis ott lenne)
+  // 2) dynamic_zone (ha ott lenne)
   const dz = product?.dynamic_zone;
   if (Array.isArray(dz)) {
     const btn =
@@ -69,7 +70,20 @@ function extractCTA(product: any, locale?: string): ExtractedCTA {
   return { href: localizeHref(fb, locale), text: "Foglalás", target: "_self", variant: "primary" };
 }
 
+/* ── CSAK a két felirat lokális fordítása ─────────────────────────────────── */
+const Labels = {
+  en: { availableFor: "Available for", categories: "Categories" },
+  hu: { availableFor: "Elérhető",      categories: "Kategóriák" },
+  de: { availableFor: "Verfügbar für", categories: "Kategorien" },
+} as const;
+
 export const SingleProduct = ({ product, locale }: { product: Product; locale?: string }) => {
+  const pathname = usePathname();
+  const activeLocale =
+    (locale as keyof typeof Labels) ??
+    (pathname?.startsWith("/hu") ? "hu" : pathname?.startsWith("/de") ? "de" : "en");
+  const t = Labels[activeLocale] || Labels.en;
+
   /* Galéria normalizálás */
   const images = useMemo(() => {
     const raw = (product.images ?? []).filter(Boolean) as unknown as StrapiImg[];
@@ -96,7 +110,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
   const contentEnter = { initial: { opacity: 0, y: 22 }, animate: { opacity: 1, y: 0 } };
 
   /* Dinamikus CTA a Strapi-ból */
-  const cta = useMemo(() => extractCTA(product, locale), [product, locale]);
+  const cta = useMemo(() => extractCTA(product, activeLocale), [product, activeLocale]);
 
   return (
     <section className="rounded-3xl border border-neutral-200 bg-white p-5 md:p-8 shadow-sm">
@@ -147,7 +161,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
         <motion.div initial={contentEnter.initial} animate={contentEnter.animate} transition={spring} className="flex flex-col">
           <h1 className="text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight">{product.name}</h1>
 
-          <p className="md:hidden mt-3 mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 backdrop-blur border border-neutral-200 px-4 py-1 text-xs font-semibold text-neutral-900 shadow-sm">
+          <p className="md:hidden mt-3 mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 backdrop-blur border border-neutral-200 px-4 py-1 text-xs font-semibold text-neutral-900">
             <span className="rounded-full bg-breaker-bay-700 text-white px-2 py-1">HUF {formatNumber(product.price)}</span>
           </p>
 
@@ -165,7 +179,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
 
           {!!product.plans?.length && (
             <>
-              <h3 className="text-sm font-medium text-neutral-700 mb-2">Available for</h3>
+              <h3 className="text-sm font-medium text-neutral-700 mb-2">{t.availableFor}</h3>
               <ul className="flex gap-2 flex-wrap mb-6">
                 {product.plans.map((plan, idx) => (
                   <li key={`plan-${idx}`} className="bg-neutral-50 text-sm text-neutral-900 px-3 py-1 rounded-full border border-neutral-200">
@@ -178,7 +192,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
 
           {!!product.categories?.length && (
             <>
-              <h3 className="text-sm font-medium text-neutral-700 mb-2">Categories</h3>
+              <h3 className="text-sm font-medium text-neutral-700 mb-2">{t.categories}</h3>
               <ul className="flex gap-2 flex-wrap mb-6">
                 {product.categories.map((category, idx) => (
                   <li key={`category-${idx}`} className="bg-neutral-50 text-sm text-neutral-900 px-3 py-1 rounded-full border border-neutral-200">
@@ -192,9 +206,9 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
           {/* DINAMIKUS CTA A STRAPI-BÓL */}
           <div className="mt-auto pt-2">
             <Button
-              as={Link}                             // ⬅⬅ fontos!
-              href={cta.href as never}              // ⬅ href most már oké
-              {...(cta.target === "_blank" ? { target: "_blank" as const } : {})} // csak ha _blank
+              as={Link}
+              href={cta.href as never}
+              {...(cta.target === "_blank" ? { target: "_blank" as const } : {})}
               aria-label={cta.text}
               className="group inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white px-5 py-3 font-medium shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition"
             >

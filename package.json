@@ -1,7 +1,7 @@
 {
-  "name": "strapi-next-launchpad-example",
+  "name": "strapi-next-health-template",
   "version": "1.0.0",
-  "description": "Next.js Launchpad Example powered by Strapi",
+  "description": "Next.js Health Template by Strapi",
   "type": "module",
   "scripts": {
     "next": "npm run dev --prefix ../next/",
