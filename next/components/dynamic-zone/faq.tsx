@@ -71,7 +71,7 @@ export const FAQ = ({
 
   return (
     <section className="bg-white">
-      <Container className="flex flex-col items-center pb-20">
+      <Container className="flex flex-col items-center pb-20 pt-10">
         {/* Fejléc */}
         <div className="w-full max-w-5xl pt-10 md:pt-28">
           <div className="text-center">

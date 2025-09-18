@@ -81,7 +81,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
   const ctaClass = useMemo(
     () => (i: number) =>
       cn(
-        "btn-glass rounded-xl px-3 py-2 leading-none font-medium select-none",
+        "btn-glass rounded-lg px-3 py-2 leading-none font-medium select-none",
         "transition-transform duration-200 will-change-transform hover:-translate-y-0.5",
         "backdrop-blur-lg backdrop-saturate-150",
         i === 0 && "bg-breaker-bay-100/20 text-breaker-bay-900 ",
@@ -161,7 +161,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
             aria-controls="mobile-menu"
             onClick={() => setOpen(true)}
             className={cn(
-              "py-2 rounded-lg",
+              "py-2 rounded-md",
               "focus:outline-none focus:ring-2 focus:ring-breaker-bay-400/40",
               "text-current"
             )}
@@ -204,7 +204,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
               animate="animate"
               exit="exit"
               className={cn(
-                "w-full mx-3 rounded-2xl p-4 pointer-events-auto",
+                "w-full mx-3 rounded-lg p-4 pointer-events-auto",
                 "bg-white/10 backdrop-blur-2xl backdrop-saturate-150",
                 "ring-1 ring-white/15"
               )}

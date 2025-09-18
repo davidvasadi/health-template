@@ -7,6 +7,7 @@ import { Navbar } from '@/components/navbar'
 import { CartProvider } from '@/context/cart-context'
 import { ViewTransitions } from 'next-view-transitions'
 import fetchContentType from '@/lib/strapi/fetchContentType'
+import CookieBanner from '@/components/consent/cookie-banner' // ⬅️ ADD
 
 const inter = Inter({
   subsets: ['latin'],
@@ -14,7 +15,6 @@ const inter = Inter({
   weight: ['400','500','600','700','800','900'],
 })
 
-// Default Global SEO for pages without them
 export async function generateMetadata({
   params,
 }: {
@@ -37,7 +37,6 @@ export default async function LocaleLayout({
 }) {
   const pageData = await fetchContentType('global', { filters: { locale } }, true)
 
-  // NINCS <html> és NINCS <body> itt!
   return (
     <ViewTransitions>
       <CartProvider>
@@ -45,6 +44,9 @@ export default async function LocaleLayout({
           <Navbar data={pageData.navbar} locale={locale} />
           {children}
           <Footer data={pageData.footer} locale={locale} />
+
+          {/* ⬇️ COOKIE BANNER A VÉGÉN, hogy kapjon locale-t */}
+          <CookieBanner locale={locale as 'hu' | 'en' | 'de'} privacyHref={`/${locale}/privacy`} />
         </div>
       </CartProvider>
     </ViewTransitions>

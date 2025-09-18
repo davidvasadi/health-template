@@ -523,6 +523,7 @@ export const Hero = ({
               </div>
             )}
           </MotionDiv>
+          
         </div>
       </div>
 
