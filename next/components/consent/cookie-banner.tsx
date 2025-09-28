@@ -1,3 +1,4 @@
+// components/consent/cookie-banner.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -33,12 +34,14 @@ const T = {
   },
 } as const;
 
+type Locale = "hu" | "en" | "de";
+
 export default function CookieBanner({
   locale = "hu",
   privacyHref = `/${locale}/privacy`,
   corner = "right", // 'right' | 'left'
 }: {
-  locale?: "hu" | "en" | "de";
+  locale?: Locale;
   privacyHref?: string;
   corner?: "right" | "left";
 }) {
@@ -46,18 +49,26 @@ export default function CookieBanner({
   const t = T[locale] ?? T.hu;
 
   useEffect(() => {
-    const saved = localStorage.getItem(KEY);
-    if (!saved) {
+    try {
+      const saved =
+        typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
+      if (!saved) {
+        setOpen(true);
+      } else {
+        consentUpdate(saved === "granted");
+      }
+    } catch {
       setOpen(true);
-    } else {
-      consentUpdate(saved === "granted");
     }
   }, []);
 
   if (!open) return null;
 
   const decide = (granted: boolean) => {
-    localStorage.setItem(KEY, granted ? "granted" : "denied");
+    try {
+      localStorage.setItem(KEY, granted ? "granted" : "denied");
+    } catch {}
+    // frissítjük a consentet; ha granted, ez küld 1 page_view-t
     consentUpdate(granted);
     setOpen(false);
   };
@@ -72,9 +83,7 @@ export default function CookieBanner({
       aria-live="polite"
     >
       <div className="w-[min(92vw,360px)] rounded-xl border border-neutral-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 shadow-[0_12px_30px_-10px_rgba(0,0,0,0.2)]">
-        {/* felső sor: ikon, rövid szöveg, X */}
         <div className="flex items-start gap-3 p-3">
-          {/* cookie ikon */}
           <div className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md bg-neutral-100 ring-1 ring-neutral-200">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
               <path
@@ -96,7 +105,6 @@ export default function CookieBanner({
             </p>
           </div>
 
-          {/* X = “csak szükségesek” */}
           <button
             type="button"
             aria-label={t.close}
@@ -114,7 +122,6 @@ export default function CookieBanner({
           </button>
         </div>
 
-        {/* gombok */}
         <div className="flex items-center justify-end gap-2 px-3 pb-3">
           <button
             type="button"

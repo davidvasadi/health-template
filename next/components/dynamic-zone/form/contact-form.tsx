@@ -87,7 +87,7 @@ const L = {
 /** --- Component --- */
 export function ContactForm({
   inputs = [],
-  action = "/api/contact",
+  action = "/contact",
   onSuccess,
   onError,
   hiddenFields,

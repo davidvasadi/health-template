@@ -151,9 +151,9 @@ function MobileStickySection({
   const tdY        = useTransform([tdRevealY, tdParallax], ([reveal, parallax]: number[]) => reveal + parallax);
 
   return (
-    <div ref={ref} className="relative min-h-[120svh]">
+    <div ref={ref} className="relative min-h-[60svh]">
       {/* sticky belső: egyszerre 1 elem a képernyőn */}
-      <div className="sticky top-0 h-[100svh] flex flex-col justify-center">
+      <div className="sticky top-0 h-[60svh] flex flex-col justify-center">
         <div className="w-full px-6">
           {/* ── 1) MISSION NUMBER (külön blokk, külön motion) */}
           <motion.div
@@ -256,7 +256,7 @@ export const Launches = ({
   return (
     <motion.section
       ref={ref}
-      className="relative w-full h-full pt-20 md:pt-40 "
+      className="relative w-full h-full pt-20 md:pt-10 "
       animate={{ background: gradient }}
       transition={{ duration: 0.5 }}
     >

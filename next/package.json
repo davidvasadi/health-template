@@ -48,6 +48,7 @@
     "three": "^0.179.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.5.4",
     "@types/negotiator": "^0.6.3",
     "@types/node": "^20",
     "@types/qs": "^6.9.16",
