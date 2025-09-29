@@ -6,8 +6,8 @@ import "./globals.css";
 import { SlugProvider } from "./context/SlugContext";
 import GAViews from "@/lib/analytics/ga-views";
 import { Suspense } from "react";
-
 export const viewport: Viewport = {
+  
   themeColor: "#FAFAFA",
 };
 
@@ -97,12 +97,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body suppressHydrationWarning>
-        <SlugProvider>{children}</SlugProvider>
-
-        {/* GAViews CSAK Suspense-ben → nem csapódik el a /_not-found prerender */}
+        <SlugProvider>
+          {children}
         <Suspense fallback={null}>
           <GAViews />
         </Suspense>
+          </SlugProvider>
+
+        {/* GAViews CSAK Suspense-ben → nem csapódik el a /_not-found prerender */}
       </body>
     </html>
   );

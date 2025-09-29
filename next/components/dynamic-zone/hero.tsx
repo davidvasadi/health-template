@@ -1,7 +1,7 @@
 "use client";
 
 // =========================================================
-// HERO (Refactor v1) — Funkció változatlan, kód tisztítva
+// HERO (Refactor v1 + URL fix + Faster 3D first paint)
 // =========================================================
 
 // --- React & Next ---
@@ -15,10 +15,9 @@ const MotionSection = motion.section as unknown as React.ComponentType<any>;
 const MotionDiv = motion.div as unknown as React.ComponentType<any>;
 
 // --- 3D (three + r3f + drei) ---
-// Megmarad a funkció, de a szekciót olvashatóbbra rendeztük
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Float, Preload, PerformanceMonitor, useProgress } from "@react-three/drei";
+import { Environment, Float, PerformanceMonitor /* Preload kikapcs */, useProgress } from "@react-three/drei";
 
 // --- UI elemek ---
 import { Heading } from "../elements/heading";
@@ -38,7 +37,7 @@ type CtaVariant = "primary" | "accent" | "muted" | "simple";
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
 const DEFAULT_HOURS: BusinessHours = { days: [1, 2, 3, 4, 5], open: "09:00", close: "18:00", slotMinutes: 30 };
 
-// Háttér gradiens rétegek (többször használt stringek kiemelve)
+// Háttér gradiens rétegek
 const BG_GRADIENT_A =
   "radial-gradient(820px 520px at 18% 26%, rgba(81,247,240,0.14) 0%, rgba(255,255,255,0.10) 36%, transparent 60%)," +
   "radial-gradient(880px 540px at 82% 32%, rgba(29,228,226,0.12) 0%, rgba(255,255,255,0.08) 34%, transparent 62%)";
@@ -51,7 +50,7 @@ const sectionVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition
 const bgVariants = { hidden: { y: 28, opacity: 0 }, show: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } } } as const;
 const cardVariants = { hidden: { y: -22, opacity: 0 }, show: { y: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } } } as const;
 
-// CTA stílus segédek (változatlan működés, csak rendbe rakva)
+// CTA stílus segédek
 const CTA_BASE_CLASS =
   "rounded-lg px-4 py-2 md:px-5 md:py-2.5 text-sm md:text-base transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const CTA_CLASS_BY_VARIANT = "focus-visible:ring-neutral-800 hover:-translate-y-1 hover:shadow-lg";
@@ -153,8 +152,30 @@ function formatSlotLabel(d: Date, locale: string) {
 }
 
 // =============================================
-// Segédfüggvények — CTA
+// Segédfüggvények — CTA (URL FIX: külső/belső/anchor + elgépelés)
 // =============================================
+
+// Elgépelős "https:/" → "https://"
+function sanitizeUrl(u: string) {
+  return String(u || "")
+    .replace(/^https:\//i, "https://")
+    .replace(/^http:\//i, "http://")
+    .trim();
+}
+
+// Külső / spec. protokoll felismerése
+function isExternalUrl(u: string) {
+  const s = u.toLowerCase();
+  return (
+    s.startsWith("http://") ||
+    s.startsWith("https://") ||
+    s.startsWith("//") ||
+    s.startsWith("mailto:") ||
+    s.startsWith("tel:") ||
+    s.startsWith("sms:")
+  );
+}
+
 function resolveCtaVariant(cta: any, index: number): CtaVariant {
   const raw = String(cta?.variant || cta?.type || "").toLowerCase();
   if (["primary", "accent", "muted", "simple"].includes(raw)) return raw as CtaVariant;
@@ -206,32 +227,64 @@ function pickPrimaryCta(CTAs: any[], primaryCtaPath?: string) {
   return CTAs[0];
 }
 
+// LOCALE prefixelés csak belső utakra; külsőt és #anchor-t nem piszkáljuk
 function ctaHref(locale: string, cta: any) {
-  const path = String(cta?.URL || "");
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `/${locale}${normalized}`;
+  const raw = sanitizeUrl(cta?.URL ?? "");
+  if (!raw) return "#";
+
+  if (isExternalUrl(raw)) return raw; // külső link: érintetlen
+  if (raw.startsWith("#")) return raw; // anchor: érintetlen
+
+  const path = raw.startsWith("/") ? raw : `/${raw}`;
+  const pref = `/${locale}`;
+
+  // már locale-ozott
+  if (path === pref || path.startsWith(`${pref}/`)) return path;
+
+  return `${pref}${path}`;
 }
 
 // =============================================
-// 3D — Vertebra + SpineGroup + SpineScene (változatlan viselkedés)
+// 3D — Vertebra + SpineGroup + SpineScene (gyorsabb FP)
 // =============================================
-const Vertebra = React.memo(function Vertebra({ y, scale }: { y: number; scale: number }) {
+
+// Safari detekt (egyszerű UA alapú)
+function useIsSafari() {
+  const [isSafari, setIsSafari] = useState(false);
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const ua = navigator.userAgent;
+    const isSf = /Safari/i.test(ua) && !/Chrome|Chromium|Edg/i.test(ua);
+    setIsSafari(isSf);
+  }, []);
+  return isSafari;
+}
+
+const Vertebra = React.memo(function Vertebra({
+  y,
+  scale,
+  seg,
+}: {
+  y: number;
+  scale: number;
+  seg: { cyl: number; torusTubular: number; torusRadial: number; cone: number };
+}) {
   return (
     <group position={[0, y, 0]} scale={[scale, scale, scale]}>
       <mesh castShadow={false} receiveShadow={false}>
-        <cylinderGeometry args={[0.35, 0.4, 0.22, 48]} />
+        <cylinderGeometry args={[0.35, 0.4, 0.22, seg.cyl]} />
         <meshStandardMaterial metalness={0.18} roughness={0.35} color={"#c7fffa"} />
       </mesh>
       <mesh position={[0, 0.12, 0]}>
-        <torusGeometry args={[0.34, 0.04, 24, 60]} />
+        <torusGeometry args={[0.34, 0.04, seg.torusRadial, seg.torusTubular]} />
         <meshStandardMaterial emissive={"#04c8c8"} emissiveIntensity={0.42} color={"#51f7f0"} transparent opacity={0.92} />
       </mesh>
       <mesh position={[0, -0.12, 0]}>
-        <torusGeometry args={[0.34, 0.04, 24, 60]} />
+        <torusGeometry args={[0.34, 0.04, seg.torusRadial, seg.torusTubular]} />
         <meshStandardMaterial emissive={"#04c8c8"} emissiveIntensity={0.42} color={"#51f7f0"} transparent opacity={0.92} />
       </mesh>
       <mesh position={[0, 0, -0.35]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.08, 0.5, 24]} />
+        <coneGeometry args={[0.08, 0.5, seg.cone]} />
         <meshStandardMaterial color={"#90fff6"} metalness={0.1} roughness={0.5} />
       </mesh>
     </group>
@@ -241,6 +294,16 @@ const Vertebra = React.memo(function Vertebra({ y, scale }: { y: number; scale: 
 function SpineGroup() {
   const g = useRef<THREE.Group>(null!);
   const scroll = useScrollProgress();
+  const isSafari = useIsSafari();
+
+  // SPEED: kevesebb szegmens Safarin/mobilon (vizuálisan azonosnak hat)
+  const seg = useMemo(
+    () =>
+      isSafari
+        ? { cyl: 32, torusTubular: 40, torusRadial: 18, cone: 16 } // ↓
+        : { cyl: 48, torusTubular: 60, torusRadial: 24, cone: 24 },
+    [isSafari]
+  );
 
   // Fül váltáskor ne frissítsünk — de ne unmountoljuk
   const hiddenRef = useRef(false);
@@ -270,7 +333,7 @@ function SpineGroup() {
   });
 
   const vertebrae = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ y: i * 0.35 - 2, s: 0.95 - i * 0.02 })), []);
-  return <group ref={g}>{vertebrae.map((v, i) => <Vertebra key={i} y={v.y} scale={v.s} />)}</group>;
+  return <group ref={g}>{vertebrae.map((v, i) => <Vertebra key={i} y={v.y} scale={v.s} seg={seg} />)}</group>;
 }
 
 function SpineScene({
@@ -282,14 +345,8 @@ function SpineScene({
   dpr: number | [number, number];
   setDpr: (d: [number, number]) => void;
 }) {
-  const { progress } = useProgress();
-
-  useEffect(() => {
-    if (progress === 100) {
-      const id = requestAnimationFrame(() => onReady());
-      return () => cancelAnimationFrame(id);
-    }
-  }, [progress, onReady]);
+  // SPEED: nem várjuk meg a 100%-ot; az első frame-re ready-nek tekintjük
+  const createdOnce = useRef(false);
 
   return (
     <Canvas
@@ -308,19 +365,32 @@ function SpineScene({
       className="absolute inset-0 -z-10 pointer-events-none"
       onCreated={(state) => {
         state.gl.setClearColor(0x000000, 0);
+        if (!createdOnce.current) {
+          createdOnce.current = true;
+          // első frame után jelzünk, hogy jöhet a SoftOverlay stb.
+          requestAnimationFrame(onReady);
+        }
       }}
       frameloop="always"
     >
       {/* @ts-ignore */}
       <color attach="background" args={["transparent"]} />
       <Suspense fallback={null}>
-        <Environment preset="studio" />
+        {/* SPEED: kisebb PMREM felbontás → gyorsabb env feldolgozás, hasonló look */}
+        <Environment preset="studio" resolution={256} />
         <Float floatIntensity={0.3} rotationIntensity={0.12} speed={0.6}>
           <SpineGroup />
         </Float>
-        <PerformanceMonitor onDecline={() => setDpr([1, 1.25])} />
-        <Preload all />
+
+        {/* SPEED: a Preload all blokkolhatja az első képkockát → kivéve */}
+        {/* <Preload all /> */}
       </Suspense>
+
+      {/* DPR automata finomhangolás */}
+      <PerformanceMonitor
+        onDecline={() => setDpr([1, 1.25])}
+        onIncline={() => setDpr([1, 1.8])}
+      />
     </Canvas>
   );
 }
@@ -358,7 +428,7 @@ export const Hero = ({
   sub_heading: string;
   CTAs: any[];
   locale: string;
-  phone?: string; // jelenleg nem használt
+  phone?: string;
   nextSlotDate?: Date | string | number;
   primaryCtaPath?: string;
   businessHours?: BusinessHours;
@@ -366,16 +436,16 @@ export const Hero = ({
 }) => {
   const reducedMotion = useReducedMotion();
 
-  // Címsor feldarabolása (változatlan)
+  // Címsor feldarabolása
   const hasSpace = heading.includes(" ");
   const first = hasSpace ? heading.substring(0, heading.lastIndexOf(" ")) : heading;
   const last = hasSpace ? heading.split(" ").pop() : "";
 
-  // DPR
+  // SPEED: óvatosabb DPR indulás; majd PM emeli
   const [sceneReady, setSceneReady] = useState(false);
   const [dpr, setDpr] = useState<[number, number]>(() => {
-    if (typeof window === "undefined") return [1, 2];
-    const max = Math.min(2, window.devicePixelRatio || 1.5);
+    if (typeof window === "undefined") return [1, 1.5];
+    const max = Math.min(1.8, window.devicePixelRatio || 1.5);
     return [1, max];
   });
 
@@ -409,13 +479,11 @@ export const Hero = ({
   const profileUrl = useMemo(() => strapiImgUrl(profile_image), [profile_image]);
   const profileAlt = useMemo(() => strapiImgAlt(profile_image), [profile_image]);
 
-  // CTA-k (primaryCta későbbi „státuszkártyához” kellhet)
+  // CTA-k
   const primaryCTA = useMemo(() => pickPrimaryCta(CTAs, primaryCtaPath), [CTAs, primaryCtaPath]);
-  // const secondaryCTAs = useMemo(() => (primaryCTA ? CTAs.filter((c) => c !== primaryCTA) : CTAs), [CTAs, primaryCTA]);
-  // ↑ Nem használjuk jelenleg, ezért kikommentezve – a funkció NEM változik
 
-  // Egyszerre belépő variánsok
-  const showScene = !reducedMotion; // 3D csak ha nem kér kevesebb mozgást
+  // 3D csak ha nem kér kevesebb mozgást
+  const showScene = !reducedMotion;
 
   return (
     <MotionSection
@@ -424,7 +492,7 @@ export const Hero = ({
       initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
       animate={reducedMotion ? undefined : "show"}
     >
-      {/* HÁTTÉR: 3D Spine (változatlan viselkedés) */}
+      {/* HÁTTÉR: 3D Spine */}
       {showScene && (
         <MotionDiv
           className="absolute inset-0 -z-10"
@@ -442,7 +510,7 @@ export const Hero = ({
       {/* KÖZÉP – üvegkártya */}
       <div className="relative z-30 flex items-center justify-center px-6 min-h-svh">
         <div className="relative w-full max-w-[960px] rounded-[28px] px-8 py-8 md:px-12 md:py-12 text-center">
-          {/* Üveghatású háttér (backdrop + shadow) */}
+          {/* Üveghatású háttér */}
           <div
             className="absolute inset-0 rounded-[28px] -z-20"
             style={{
@@ -469,7 +537,7 @@ export const Hero = ({
             }
             className="relative"
           >
-            {/* Shimmer csík (változatlan, csak feltételben) */}
+            {/* Shimmer csík */}
             {!reducedMotion && (
               <MotionDiv
                 className="pointer-events-none absolute top-0 left-0 h-full w-1/3 rounded-[28px] will-change-transform"
@@ -481,7 +549,7 @@ export const Hero = ({
               />
             )}
 
-            {/* Avatar – jobb felső sarok, helyet foglal */}
+            {/* Avatar */}
             {profileUrl && (
               <div className="flex justify-end">
                 <div
@@ -527,16 +595,22 @@ export const Hero = ({
               {sub_heading}
             </Subheading>
 
-            {/* CTA-k */}
+            {/* CTA-k — külső/belső döntés + új ablak külsőknél */}
             {!!CTAs?.length && (
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
                 {CTAs.map((cta: any, i: number) => {
                   const v = resolveCtaVariant(cta, i);
+                  const href = ctaHref(locale, cta);
+                  const external = isExternalUrl(href);
+
+                  const As: any = external ? "a" : Link;
+
                   return (
                     <Button
                       key={cta?.id ?? i}
-                      as={Link}
-                      href={ctaHref(locale, cta)}
+                      as={As}
+                      href={href}
+                      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                       className={`${ctaBaseClass()} ${ctaClassByVariant(v)} hover:-translate-y-px`}
                       style={ctaStyleByVariant(v)}
                       aria-label={cta?.ariaLabel || cta?.text}
@@ -551,9 +625,8 @@ export const Hero = ({
         </div>
       </div>
 
-      {/* JOBB ALSÓ STÁTUSZKÁRTYA */}
+      {/* JOBB ALSÓ STÁTUSZKÁRTYA – meghagyva kommentben */}
       {/*
-      // Meghagyva a jövőre: ha vissza akarod hozni, a primaryCTA + nextSlotLabel készen áll
       {primaryCTA && (
         <MotionDiv
           initial={reducedMotion ? undefined : hasEnteredOnce ? false : { opacity: 0, y: 12 }}
@@ -594,8 +667,6 @@ export const Hero = ({
         </MotionDiv>
       )}
       */}
-
-      {/* ⛔️ Mobilos sticky micro-CTA — ELTÁVOLÍTVA  */}
     </MotionSection>
   );
 };

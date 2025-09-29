@@ -201,7 +201,7 @@ const L = Labels[locale];
       >
         <div className="w-full min-h-screen grid grid-cols-1 md:grid-cols-2 gap-6 md:pt-[var(--content-top)]">
           {/* BAL: űrlap kártya */}
-          <section className="order-2 md:order-1 flex w-full justify-center items-start px-4 md:px-8 lg:px-16 pt-28 md:pt-0 pb-12">
+          <section className="order-2 md:order-1 flex w-full justify-center items-start px-4 md:px-8 lg:px-16 pt-6 ">
             <AnimatePresence initial={false}>
               <motion.div
                 key="form"
