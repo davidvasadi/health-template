@@ -80,6 +80,15 @@ const t = {
 };
 
 /* ────────────────────────────────────────────────────────────────────────────
+   Csak a „/ alkalom” lokalizálása
+────────────────────────────────────────────────────────────────────────────── */
+const PER_SESSION_LABELS = {
+  hu: "/ alkalom",
+  en: "/ session",
+  de: "/ Sitzung",
+} as const;
+
+/* ────────────────────────────────────────────────────────────────────────────
    Animáció segédek
 ────────────────────────────────────────────────────────────────────────────── */
 const fadeUp = {
@@ -124,7 +133,7 @@ export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans })
 
           <motion.div variants={fadeUp} className="pt-10 lg:pt-12" style={{ y: yGrid }}>
             {/* 1 → 2 → 4 kártya */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto text-left">
               {plans.map((plan, i) => (
                 <motion.div
                   key={`${plan.name}-${i}`}
@@ -164,6 +173,10 @@ const Card: React.FC<{ plan: Plan; locale: string }> = ({ plan, locale }) => {
   // CTA vizuális variáns (a Button saját variant prop-jára)
   const btnVariant = (plan.CTA?.variant as any) || (isFeatured ? "primary" : "muted");
 
+  // csak a per-session felirat lokalizálása
+  const perSession =
+    PER_SESSION_LABELS[(["hu", "en", "de"] as const).includes(locale as any) ? (locale as "hu" | "en" | "de") : "hu"];
+
   return (
     <article
       className={cn(
@@ -191,7 +204,7 @@ const Card: React.FC<{ plan: Plan; locale: string }> = ({ plan, locale }) => {
           <>
             <span className={cn("text-base font-semibold", t.priceHUF)}>HUF</span>
             <span className={cn("text-3xl md:text-4xl font-bold tracking-tight", t.price)}>{priceStr}</span>
-            <span className={cn("text-sm md:text-base font-normal", t.per)}>/ alkalom</span>
+            <span className={cn("text-sm md:text-base font-normal", t.per)}>{perSession}</span>
           </>
         ) : (
           <span className={cn("text-2xl font-bold", t.price)}>{plan?.CTA?.text || "Foglalj időpontot"}</span>

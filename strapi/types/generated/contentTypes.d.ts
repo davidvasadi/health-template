@@ -743,6 +743,7 @@ export interface ApiPagePage extends Struct.CollectionTypeSchema {
         'dynamic-zone.form-next-to-section',
         'dynamic-zone.faq',
         'dynamic-zone.related-articles',
+        'dynamic-zone.related-products',
       ]
     > &
       Schema.Attribute.SetPluginOptions<{
@@ -967,6 +968,12 @@ export interface ApiProductPageProductPage extends Struct.SingleTypeSchema {
     >;
     publishedAt: Schema.Attribute.DateTime;
     seo: Schema.Attribute.Component<'shared.seo', false> &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    Slug: Schema.Attribute.UID<'heading'> &
       Schema.Attribute.SetPluginOptions<{
         i18n: {
           localized: true;
