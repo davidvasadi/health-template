@@ -1,22 +1,28 @@
+export const dynamic = 'force-dynamic'; // dinamikus Strapi fetch
+export const revalidate = 0;
+
 import { Metadata } from 'next';
-import PageContent from '@/lib/shared/PageContent';
+import { notFound } from 'next/navigation';
+
 import fetchContentType from '@/lib/strapi/fetchContentType';
+import PageContent from '@/lib/shared/PageContent';
 import { generateMetadataObject } from '@/lib/shared/metadata';
 
-// CSAK a privacy-ágban használjuk a ClientSlugHandler-t (a products listában bent van saját maga)
+// CSAK a privacy-ágban használjuk a ClientSlugHandler-t (a products listában saját maga van)
 import ClientSlugHandler from '../ClientSlugHandler';
 
-// PRIVACY
+// ------- PRIVACY -------
 import PrivacyPage, { generateMetadata as privacyMeta } from '../../privacy/page';
 const PRIVACY_UID = 'privacy-policy';
 
-// PRODUCTS LISTA (DELEGÁLÁS a listaoldalhoz)
+// ------- PRODUCTS LISTA -------
 import ProductsIndex, { generateMetadata as productsMeta } from '../products/page';
 const PRODUCTS_PAGE_UID = 'product-page';
 
+// Kisegítő: vágd le az elejéről/végéről a perjeleket
 const norm = (s?: string) => (s ?? '').replace(/^\/|\/$/g, '');
 
-// ---------- PRIVACY helpers (NINCS fields=, csak populate ha kell) ----------
+// ---------- PRIVACY helpers ----------
 async function getPrivacySlug(locale: string) {
   const rec: any = await fetchContentType(PRIVACY_UID, { locale }, true);
   return norm(rec?.slug || rec?.Slug || 'privacy');
@@ -37,10 +43,10 @@ async function getPrivacyLocalizedSlugs(locale: string) {
   return map;
 }
 
-// ---------- PRODUCTS LISTA helpers (NINCS fields=, csak populate ha kell) ----------
+// ---------- PRODUCTS helpers ----------
 async function getProductsBase(locale: string) {
   const rec: any = await fetchContentType(PRODUCTS_PAGE_UID, { locale }, true);
-  return norm(rec?.slug || rec?.Slug || 'products'); // HU: szolgaltatasok, EN: products
+  return norm(rec?.slug || rec?.Slug || 'products'); // HU: szolgaltatasok, EN: products, DE: leistungen ...
 }
 async function getProductsBaseLocalized(locale: string) {
   const rec: any = await fetchContentType(
@@ -58,63 +64,111 @@ async function getProductsBaseLocalized(locale: string) {
   return map;
 }
 
-// ---------- SEO ----------
+// ─────────────────────────────────────────────
+// SEO – speciális ágak (privacy/products) + fallback "pages"
+// ─────────────────────────────────────────────
 export async function generateMetadata({
   params,
-}: { params: { locale: string; slug: string } }): Promise<Metadata> {
-  const privacySlug = await getPrivacySlug(params.locale);
-  if (params.slug === privacySlug) {
-    return await privacyMeta({ params: { locale: params.locale } } as any);
-  }
+}: {
+  params: { locale: string; slug: string };
+}): Promise<Metadata> {
+  const { locale, slug } = params;
+  const s = norm(slug);
 
-  const productsBase = await getProductsBase(params.locale);
-  if (params.slug === productsBase) {
-    return await productsMeta({ params: { locale: params.locale } } as any);
-  }
+  try {
+    // 1) PRIVACY – bármely nyelvi slugra reagáljon
+    const privacyMap = await getPrivacyLocalizedSlugs(locale).catch(() => null);
+    if (privacyMap) {
+      const allPrivacySlugs = new Set(Object.values(privacyMap).map(norm));
+      if (allPrivacySlugs.has(s)) {
+        return await privacyMeta({ params: { locale } } as any);
+      }
+    }
 
-  // fallback: sima pages
-  const pageData = await fetchContentType(
-    'pages',
-    { filters: { slug: params.slug, locale: params.locale }, populate: 'seo.metaImage' },
-    true
-  );
-  return generateMetadataObject(pageData?.seo);
+    // 2) PRODUCTS – bármely nyelvi slugra reagáljon
+    const productsMap = await getProductsBaseLocalized(locale).catch(() => null);
+    if (productsMap) {
+      const allProductsSlugs = new Set(Object.values(productsMap).map(norm));
+      if (allProductsSlugs.has(s)) {
+        return await productsMeta({ params: { locale } } as any);
+      }
+    }
+
+    // 3) Fallback: sima Strapi "pages"
+    const pageData = await fetchContentType(
+      'pages',
+      { filters: { slug: s, locale }, populate: 'seo.metaImage' },
+      true
+    );
+
+    if (!pageData) return {}; // üres meta – a 404-et az oldal adja
+    return generateMetadataObject(pageData?.seo);
+  } catch {
+    return {};
+  }
 }
 
-// ---------- PAGE ----------
-export default async function Page({ params }: { params: { locale: string; slug: string } }) {
-  const privacySlug = await getPrivacySlug(params.locale);
-  if (params.slug === privacySlug) {
-    const localizedSlugs = await getPrivacyLocalizedSlugs(params.locale);
-    return (
-      <>
-        <ClientSlugHandler localizedSlugs={localizedSlugs} />
-        {await (PrivacyPage as any)({ params: { locale: params.locale } })}
-      </>
+// ─────────────────────────────────────────────
+// OLDAL – speciális ágak (privacy/products) + fallback "pages"
+// ─────────────────────────────────────────────
+export default async function Page({
+  params,
+}: {
+  params: { locale: string; slug: string };
+}) {
+  const { locale, slug } = params;
+  const s = norm(slug);
+
+  // 1) PRIVACY – bármely nyelvi slugnál működjön, és tegyünk ki locale-mapet
+  const privacyMap = await getPrivacyLocalizedSlugs(locale).catch(() => null);
+  if (privacyMap) {
+    const allPrivacySlugs = new Set(Object.values(privacyMap).map(norm));
+    if (allPrivacySlugs.has(s)) {
+      return (
+        <>
+          <ClientSlugHandler localizedSlugs={privacyMap} />
+          {await (PrivacyPage as any)({ params: { locale } })}
+        </>
+      );
+    }
+  }
+
+  // 2) PRODUCTS – bármely nyelvi slugnál működjön
+  //    A ProductsIndex komponens SAJÁT MAGA kirakja a ClientSlugHandler-t,
+  //    ezért itt nem tesszük ki még egyszer.
+  const productsMap = await getProductsBaseLocalized(locale).catch(() => null);
+  if (productsMap) {
+    const allProductsSlugs = new Set(Object.values(productsMap).map(norm));
+    if (allProductsSlugs.has(s)) {
+      return await (ProductsIndex as any)({ params: { locale } });
+    }
+  }
+
+  // 3) Fallback: sima Strapi "pages" (ha nincs ilyen oldal → 404)
+  let pageData: any = null;
+  try {
+    pageData = await fetchContentType(
+      'pages',
+      { filters: { slug: s, locale } },
+      true
     );
+  } catch {
+    pageData = null;
   }
 
-  const productsBase = await getProductsBase(params.locale);
-  if (params.slug === productsBase) {
-    // FIGYELEM: a ProductsIndex SAJÁT MAGA kirakja a ClientSlugHandler-t
-    return await (ProductsIndex as any)({ params: { locale: params.locale } });
+  if (!pageData) {
+    notFound();
   }
 
-  // fallback: sima pages
-  const pageData = await fetchContentType(
-    'pages',
-    { filters: { slug: params.slug, locale: params.locale } },
-    true
-  );
-
+  // localized slug map a ClientSlugHandler-hez (oldalváltás nyelvek közt)
   const localizedSlugs =
     pageData?.localizations?.reduce?.(
       (acc: Record<string, string>, l: any) => {
-        acc[l.locale] = l.slug;
+        if (l?.locale) acc[l.locale] = norm(l?.slug || l?.Slug || '');
         return acc;
       },
-      { [params.locale]: params.slug }
-    ) ?? { [params.locale]: params.slug };
+      { [locale]: s }
+    ) ?? { [locale]: s };
 
   return (
     <>

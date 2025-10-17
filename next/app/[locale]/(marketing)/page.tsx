@@ -1,4 +1,6 @@
+// app/[locale]/(marketing)/page.tsx
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import PageContent from '@/lib/shared/PageContent';
 import fetchContentType from '@/lib/strapi/fetchContentType';
@@ -10,47 +12,47 @@ export async function generateMetadata({
 }: {
   params: { locale: string };
 }): Promise<Metadata> {
-
-  const pageData = await fetchContentType(
-    'pages',
-    {
-      filters: {
-        slug: "homepage",
-        locale: params.locale,
-      },
-      populate: "seo.metaImage",
-    },
-    true
-  );
-
-  const seo = pageData?.seo;
-  const metadata = generateMetadataObject(seo);
-  return metadata;
+  try {
+    const pageData = await fetchContentType(
+      'pages',
+      { filters: { slug: 'homepage', locale: params.locale }, populate: 'seo.metaImage' },
+      true
+    );
+    return generateMetadataObject(pageData?.seo);
+  } catch {
+    return {};
+  }
 }
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
+  let pageData: any = null;
+  try {
+    pageData = await fetchContentType(
+      'pages',
+      { filters: { slug: 'homepage', locale: params.locale } },
+      true
+    );
+  } catch {
+    pageData = null;
+  }
 
-  const pageData = await fetchContentType(
-    'pages',
-    {
-      filters: {
-        slug: "homepage",
-        locale: params.locale,
+  if (!pageData) {
+    notFound();
+  }
+
+  const localizedSlugs =
+    pageData?.localizations?.reduce?.(
+      (acc: Record<string, string>, localization: any) => {
+        acc[localization.locale] = '';
+        return acc;
       },
-    },
-    true
-  );
+      { [params.locale]: '' }
+    ) ?? { [params.locale]: '' };
 
-  const localizedSlugs = pageData.localizations?.reduce(
-    (acc: Record<string, string>, localization: any) => {
-      acc[localization.locale] = "";
-      return acc;
-    },
-    { [params.locale]: "" }
+  return (
+    <>
+      <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      <PageContent pageData={pageData} />
+    </>
   );
-
-  return <>
-    <ClientSlugHandler localizedSlugs={localizedSlugs} />
-    <PageContent pageData={pageData} />
-  </>;
 }

@@ -1,22 +1,21 @@
 import { draftMode } from "next/headers";
 import qs from "qs";
-/**
- * Fetches data for a specified Strapi content type.
- *
- * @param {string} contentType - The type of content to fetch from Strapi.
- * @param {string} params - Query parameters to append to the API request.
- * @return {Promise<object>} The fetched data.
- */
 
+/**
+ * Strapi válasz típusok
+ */
 interface StrapiData {
   id: number;
-  [key: string]: any; // Allow for any additional fields
+  [key: string]: any;
 }
 
 interface StrapiResponse {
   data: StrapiData | StrapiData[];
 }
 
+/**
+ * Ha a Strapi egy tömböt ad vissza, az első elemet bontjuk ki
+ */
 export function spreadStrapiData(data: StrapiResponse): StrapiData | null {
   if (Array.isArray(data.data) && data.data.length > 0) {
     return data.data[0];
@@ -24,40 +23,75 @@ export function spreadStrapiData(data: StrapiResponse): StrapiData | null {
   if (!Array.isArray(data.data)) {
     return data.data;
   }
-  return null
+  return null;
 }
 
+/**
+ * Strapi lekérés – 404-re `null`-t ad, más hibára dob.
+ *
+ * @param contentType  API endpoint pl. "pages" vagy "global"
+ * @param params       query paraméterek pl. { filters: {...}, populate: "*" }
+ * @param spreadData   ha true → visszaadja csak a data[0]-t
+ */
 export default async function fetchContentType(
   contentType: string,
   params: Record<string, unknown> = {},
-  spreadData?: boolean,
-): Promise<any> {
-  const { isEnabled } = await draftMode()
+  spreadData?: boolean
+): Promise<any | null> {
+  const { isEnabled } = await draftMode();
 
   try {
-
     const queryParams = { ...params };
 
+    // Draft mód – ha preview-ból jövünk
     if (isEnabled) {
+      // Strapi v4-ben a "status=draft" nem mindig működik, de ha nálad igen, maradhat
       queryParams.status = "draft";
     }
 
-    // Construct the full URL for the API request
-    const url = new URL(`api/${contentType}`, process.env.NEXT_PUBLIC_API_URL);
+    // Alap URL fallback-el
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.NEXT_PUBLIC_STRAPI_URL ||
+      process.env.STRAPI_URL ||
+      "http://localhost:1337";
 
-    // Perform the fetch request with the provided query parameters
-    const response = await fetch(`${url.href}?${qs.stringify(queryParams)}`, {
-      method: 'GET',
-      cache: 'no-store',
+    // Tisztítsuk le a duplikált "/"
+    const normalizedBase = baseUrl.replace(/\/+$/, "");
+    const url = `${normalizedBase}/api/${contentType}`;
+
+    // Paraméterek összeállítása
+    const query = qs.stringify(queryParams, { encodeValuesOnly: true });
+
+    // Lekérés
+    const response = await fetch(`${url}?${query}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data from Strapi (url=${url.toString()}, status=${response.status})`);
+    // --- 🔹 404-es válasz: visszaadunk null-t, nem dobunk hibát ---
+    if (response.status === 404) {
+      console.warn(`[fetchContentType] 404: ${url}`);
+      return null;
     }
+
+    // --- 🔹 Egyéb hibákra dobjuk ---
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch data from Strapi (url=${url}, status=${response.status})`
+      );
+    }
+
+    // JSON dekódolás
     const jsonData: StrapiResponse = await response.json();
+
+    // Ha a hívó kérte → kicsomagoljuk
     return spreadData ? spreadStrapiData(jsonData) : jsonData;
   } catch (error) {
-    // Log any errors that occur during the fetch process
-    console.error('FetchContentTypeError', error);
+    console.error("❌ FetchContentTypeError:", error);
+    return null;
   }
 }

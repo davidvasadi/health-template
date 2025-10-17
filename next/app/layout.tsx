@@ -6,6 +6,7 @@ import "./globals.css";
 import { SlugProvider } from "./context/SlugContext";
 import GAViews from "@/lib/analytics/ga-views";
 import { Suspense } from "react";
+
 export const viewport: Viewport = {
   
   themeColor: "#FAFAFA",
