@@ -9,13 +9,13 @@ const packageJsonPath = path.join(__dirname, '../package.json');
 
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 
-if (packageJson.strapi && packageJson.strapi.uuid === 'LAUNCHPAD') {
+if (packageJson.strapi && packageJson.strapi.uuid === 'HEALTH-TEMPLATE') {
   const environment = process.env.NODE_ENV || 'development';
 
   if (environment === 'development') {
-    packageJson.strapi.uuid = `LAUNCHPAD-LOCAL-${uuidv4()}`;
+    packageJson.strapi.uuid = `HEALTH-TEMPLATE-LOCAL-${uuidv4()}`;
   } else if (environment === 'production') {
-    packageJson.strapi.uuid = `LAUNCHPAD-HOSTED-${uuidv4()}`;
+    packageJson.strapi.uuid = `HEALTH-TEMPLATE-HOSTED-${uuidv4()}`;
   } else {
   }
 
