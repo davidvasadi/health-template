@@ -5,15 +5,16 @@ export const runtime = "nodejs"; // SSR/Node környezet
 
 /** ──────────────────────────────────────────────────────────────
  *  Egyszerű IP alapú rate limit (memóriában, 1 perc / 5 kérés)
- *  Prodban tegyél elé reverse proxy (Nginx) X-Forwarded-For-ral
  *  ──────────────────────────────────────────────────────────── */
 const RATE = { windowMs: 60_000, max: 5 };
 const bucket = new Map<string, { count: number; ts: number }>();
 
 function ipFrom(req: NextRequest) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || req.headers.get("x-real-ip")
-    || "unknown";
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
 }
 function isLimited(ip: string) {
   const now = Date.now();
@@ -27,8 +28,7 @@ function isLimited(ip: string) {
 }
 
 /** ──────────────────────────────────────────────────────────────
- *  Kulcskinyerés: ékezetek és kis/nagybetűk normalizálása
- *  (pl. név/Név/name → name, üzenet/üzenet/message → message, stb.)
+ *  Kulcskinyerés: ékezet/kis-nagybetű normalizálás
  *  ──────────────────────────────────────────────────────────── */
 function pickBasic(data: Record<string, any>) {
   const norm = (s: string) =>
@@ -40,9 +40,7 @@ function pickBasic(data: Record<string, any>) {
 
   const name =
     lower.name || lower.nev || lower["full name"] || lower.fullname || null;
-
   const email = lower.email || lower.mail || null;
-
   const phone =
     lower.phone ||
     lower.telefon ||
@@ -50,19 +48,26 @@ function pickBasic(data: Record<string, any>) {
     lower.phonenumber ||
     lower.mobil ||
     null;
-
   const message =
-    lower.message || lower.uzenet || lower["uzenet"] || lower.megjegyzes || lower.notes || null;
+    lower.message ||
+    lower.uzenet ||
+    lower["uzenet"] ||
+    lower.megjegyzes ||
+    lower.notes ||
+    null;
 
   return { name, email, phone, message };
 }
 
 /** ──────────────────────────────────────────────────────────────
- *  Mentés Strapi-ba
- *  - Mindig STRING-et küldünk (sose null) → Strapi validáció OK
- *  - Alapértelmezett URL: lokális Strapi, hogy kikerüljük az Nginx-et
+ *  Mentés Strapi-ba (opcionális Bearer tokennel)
  *  ──────────────────────────────────────────────────────────── */
-async function saveToStrapi(fields: { name: any; email: any; phone: any; message: any }) {
+async function saveToStrapi(fields: {
+  name: any;
+  email: any;
+  phone: any;
+  message: any;
+}) {
   const base = (process.env.STRAPI_URL || "http://127.0.0.1:1337").replace(/\/$/, "");
   const endpoint = process.env.STRAPI_CONTACT_ENDPOINT || "/api/contacts";
 
@@ -74,16 +79,20 @@ async function saveToStrapi(fields: { name: any; email: any; phone: any; message
   };
 
   const url = `${base}${endpoint}`;
+
+  // ⬇️ Ha van STRAPI_TOKEN, küldjük Bearer-ként
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = process.env.STRAPI_TOKEN;
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ data }),
-    // keepalive: true  // ha szeretnéd, de nem kötelező
   });
 
   const text = await res.text().catch(() => "");
   if (!res.ok) {
-    // Részletes log, hogy azonnal lásd a gondot (status + body)
     console.error("[contact] Strapi error", res.status, url, text);
     throw new Error(`Strapi save failed ${res.status}`);
   }
@@ -102,22 +111,19 @@ export async function POST(req: NextRequest) {
 
     const data = await req.json().catch(() => ({}));
 
-    // Honeypot (botok ellen): ha töltve, „sikeres” választ adunk
+    // Honeypot
     if (data._hp) {
       return NextResponse.json({ ok: true, spam: true });
     }
 
     const { name, email, phone, message } = pickBasic(data);
 
-    // Minimum kontaktkövetelmény: email VAGY telefon legyen
     if (!email && !phone) {
       return NextResponse.json(
         { ok: false, error: "Adj meg emailt vagy telefonszámot." },
         { status: 400 }
       );
     }
-
-    // Tartalmi követelmény: legyen üzenet VAGY név
     if (!message && !name) {
       return NextResponse.json(
         { ok: false, error: "Hiányzik az üzenet vagy a név." },
@@ -125,7 +131,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Strapi mentés (sose küldjünk null-t)
     await saveToStrapi({
       name: name ?? "",
       email: email ?? "",
@@ -139,18 +144,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 500 });
   }
 }
-
-/** ──────────────────────────────────────────────────────────────
- *  (Opcionális) OPTIONS – ha valaha cross-originből hívnád
- *  Ugyanazon domainről nem kötelező.
- *  ──────────────────────────────────────────────────────────── */
-// export function OPTIONS() {
-//   return new NextResponse(null, {
-//     status: 204,
-//     headers: {
-//       "Access-Control-Allow-Origin": "*",
-//       "Access-Control-Allow-Methods": "POST, OPTIONS",
-//       "Access-Control-Allow-Headers": "Content-Type, Authorization",
-//     },
-//   });
-// }

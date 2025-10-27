@@ -1,5 +1,6 @@
-import { Metadata } from 'next';
+//app/[locale]/(marketing)/page.tsx
 
+import { Metadata } from 'next';
 import PageContent from '@/lib/shared/PageContent';
 import fetchContentType from '@/lib/strapi/fetchContentType';
 import { generateMetadataObject } from '@/lib/shared/metadata';
