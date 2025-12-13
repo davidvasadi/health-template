@@ -25,8 +25,11 @@ export async function generateMetadata({
   );
 
   const seo = pageData?.seo;
-  const metadata = generateMetadataObject(seo);
-  return metadata;
+return generateMetadataObject(seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/`,
+});
+
 }
 
 export default async function HomePage({ params }: { params: { locale: string } }) {

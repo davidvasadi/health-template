@@ -1,3 +1,4 @@
+// next/app/[locale]/(marketing)/products/page.tsx
 import { Metadata } from 'next';
 
 import { AmbientColor } from "@/components/decorations/ambient-color";
@@ -16,7 +17,10 @@ export async function generateMetadata({ params }: { params: { locale: string } 
     { filters: { locale: params.locale }, populate: "seo.metaImage" },
     true
   );
-  return generateMetadataObject(pageData?.seo);
+return generateMetadataObject(pageData?.seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/${pageData?.slug || "products"}`,
+});
 }
 
 export default async function Products({ params }: { params: { locale: string } }) {

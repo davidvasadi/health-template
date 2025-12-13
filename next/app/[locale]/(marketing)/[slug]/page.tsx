@@ -79,7 +79,10 @@ export async function generateMetadata({
     { filters: { slug: params.slug, locale: params.locale }, populate: 'seo.metaImage' },
     true
   );
-  return generateMetadataObject(pageData?.seo);
+return generateMetadataObject(pageData?.seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/${params.slug}`,
+});
 }
 
 // ---------- PAGE ----------

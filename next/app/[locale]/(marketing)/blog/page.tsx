@@ -1,3 +1,4 @@
+// next/app/[locale]/(marketing)/blog/page.tsx
 import { type Metadata } from "next";
 
 import { Container } from "@/components/container";
@@ -25,8 +26,11 @@ export async function generateMetadata({
   }, true)
 
   const seo = pageData?.seo;
-  const metadata = generateMetadataObject(seo);
-  return metadata;
+return generateMetadataObject(seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/blog`,
+});
+
 }
 
 export default async function Blog({

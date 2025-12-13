@@ -1,3 +1,4 @@
+// next/app/[locale]/(marketing)/products/[slug]/page.tsx
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Container } from "@/components/container";
@@ -17,7 +18,10 @@ export async function generateMetadata({
     { filters: { slug: params.slug, locale: params.locale }, populate: "seo.metaImage" },
     true
   );
-  return generateMetadataObject(pageData?.seo);
+return generateMetadataObject(pageData?.seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/${params.slug}`,
+});
 }
 
 export default async function SingleProductPage({ params }: { params: { slug: string; locale: string } }) {
