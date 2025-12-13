@@ -65,7 +65,7 @@ export async function generateMetadata({
 }: { params: { locale: string; slug: string } }): Promise<Metadata> {
   const privacySlug = await getPrivacySlug(params.locale);
   if (params.slug === privacySlug) {
-    return await privacyMeta({ params: { locale: params.locale } } as any);
+return await privacyMeta();
   }
 
   const productsBase = await getProductsBase(params.locale);
