@@ -13,6 +13,67 @@ gsap.registerPlugin(ScrollTrigger, Observer);
 
 const spring = { duration: 1, ease: "expo.inOut" as const };
 
+/** ── mini i18n a CTA-hoz ─────────────────────────────── */
+const UI_LABELS = {
+  hu: { details: "Tudnivalók" },
+  en: { details: "Details" },
+  de: { details: "Mehr erfahren" },
+} as const;
+
+function baseLocale(loc?: string) {
+  const code = (loc || "en").toLowerCase().split("-")[0] as keyof typeof UI_LABELS;
+  return UI_LABELS[code] ? code : "en";
+}
+
+/** ── erős mobil scroll lock (iOS-robosztus) ───────────── */
+function lockBodyScroll() {
+  if (typeof window === "undefined") return () => {};
+  const html = document.documentElement;
+  const body = document.body;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+
+  const prev = {
+    scrollY,
+    htmlOverflow: html.style.overflow,
+    htmlOverscroll: (html.style as any).overscrollBehavior,
+    bodyOverflow: body.style.overflow,
+    bodyPosition: body.style.position,
+    bodyTop: body.style.top,
+    bodyWidth: body.style.width,
+    bodyTouchAction: (body.style as any).touchAction,
+  };
+
+  // teljes tiltás és scroll chaining OFF
+  html.style.overflow = "hidden";
+  (html.style as any).overscrollBehavior = "none";
+  body.style.overflow = "hidden";
+  (body.style as any).touchAction = "none";
+
+  // klasszikus body-fix, hogy még viewport bounce se húzza fel a hátteret
+  body.style.position = "fixed";
+  body.style.top = `-${scrollY}px`;
+  body.style.width = "100%";
+
+  // globális preventDefault a gesztusokra (non-passive!)
+  const cancel = (e: Event) => e.preventDefault();
+  window.addEventListener("touchmove", cancel, { passive: false });
+  window.addEventListener("wheel", cancel, { passive: false });
+
+  // cleanup
+  return () => {
+    window.removeEventListener("touchmove", cancel as any);
+    window.removeEventListener("wheel", cancel as any);
+    body.style.position = prev.bodyPosition;
+    body.style.top = prev.bodyTop;
+    body.style.width = prev.bodyWidth;
+    html.style.overflow = prev.htmlOverflow;
+    (html.style as any).overscrollBehavior = prev.htmlOverscroll || "";
+    body.style.overflow = prev.bodyOverflow;
+    (body.style as any).touchAction = prev.bodyTouchAction || "";
+    window.scrollTo(0, prev.scrollY);
+  };
+}
+
 export function Featured({
   products = [],
   locale,
@@ -21,6 +82,7 @@ export function Featured({
   locale: string;
 }) {
   const hasProducts = products?.length > 0;
+  const L = UI_LABELS[baseLocale(locale)];
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -35,6 +97,13 @@ export function Featured({
 
   const navVars = { ["--nav-h" as any]: "120px" } as CSSProperties;
 
+  /** 🔒 TELJES scroll lock, amíg a komponens látható */
+  useEffect(() => {
+    if (!hasProducts) return;
+    const unlock = lockBodyScroll();
+    return unlock;
+  }, [hasProducts]);
+
   useEffect(() => {
     if (!hasProducts) return;
 
@@ -44,7 +113,6 @@ export function Featured({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const ctx = gsap.context(() => {
-      // Egyetlen halmaz – GSAP stabil
       const sections = gsap.utils.toArray<HTMLElement>(".bb-slide");
       const headings = sections.map((s) => s.querySelector<HTMLElement>(".bb-heading"));
       const images = gsap.utils.toArray<HTMLElement>(".bb-overlay-image");
@@ -59,7 +127,6 @@ export function Featured({
       gsap.set([...sections, ...images, ...headings], { zIndex: 0, autoAlpha: 0 });
       sections[0] && gsap.set(sections[0], { zIndex: 2, autoAlpha: 1 });
       images[0] && gsap.set(images[0], { zIndex: 2, autoAlpha: 1 });
-      // CÍM AZONNAL LÁTSZIK
       headings[0] && gsap.set(headings[0], { autoAlpha: 1 });
 
       gsap.set(outerWrappers, { xPercent: 100 });
@@ -68,7 +135,6 @@ export function Featured({
       innerWrappers[0] && gsap.set(innerWrappers[0], { xPercent: 0 });
 
       if (!prefersReduce) {
-        // csak a kártyát és az alsó elemeket animáljuk be finoman; a címet NEM rejtjük el
         const firstImage = images[0];
         const firstCard  = sections[0]?.querySelector<HTMLElement>(".bb-card");
         const counterWraps = countNodes().map(n => n.parentElement!).filter(Boolean);
@@ -78,12 +144,8 @@ export function Featured({
         if (bottomGroup.length) gsap.set(bottomGroup, { autoAlpha: 0, y: 28 });
 
         const intro = gsap.timeline();
-        if (firstCard) {
-          intro.to(firstCard, { autoAlpha: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0);
-        }
-        if (bottomGroup.length) {
-          intro.to(bottomGroup, { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out" }, 0.05);
-        }
+        if (firstCard) intro.to(firstCard, { autoAlpha: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0);
+        if (bottomGroup.length) intro.to(bottomGroup, { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out" }, 0.05);
       }
 
       function gotoSection(newIndex: number, direction: number) {
@@ -108,7 +170,6 @@ export function Featured({
           .fromTo(outerWrappers[newIndex]!, { xPercent: 100 * direction }, { xPercent: 0 }, 0)
           .fromTo(innerWrappers[newIndex]!, { xPercent: -100 * direction }, { xPercent: 0 }, 0);
 
-        // a címet nem rejtem el – csak enyhe parallax
         if (nextHeading) tl.fromTo(nextHeading, { xPercent: -20 * direction }, { xPercent: 0 }, 0);
 
         tl.fromTo(
@@ -123,9 +184,9 @@ export function Featured({
         setCurrentIndex(index);
       }
 
-      // ⬇️ SCOPED OBSERVER: csak a komponens gyökerén figyelünk, nem globálisan
+      // csak a gyökér elemre figyelünk + default scroll megakadályozása
       const obs = Observer.create({
-        target: rootRef.current, // << fontos!
+        target: rootRef.current,
         type: "wheel,touch,pointer",
         preventDefault: true,
         wheelSpeed: -1,
@@ -141,24 +202,33 @@ export function Featured({
       };
       document.addEventListener("keydown", onKey);
 
-      // ⬇️ A context cleanupja meghívja ezt a belső cleanupot is, amikor ctx.revert() fut
       return () => {
         document.removeEventListener("keydown", onKey);
         obs?.kill();
       };
     }, rootRef);
 
-    // ⬇️ EZ VOLT A HIÁNYZÓ LÉPÉS: takarítás unmountkor / route váltáskor
     return () => ctx.revert();
   }, [products.length, hasProducts]);
 
   if (!hasProducts) return null;
 
   return (
-    <div ref={rootRef} style={navVars} className="relative w-full h-svh overflow-hidden bg-breaker-bay-50">
-      {/* MOBIL SZÁMLÁLÓ – változatlan */}
-      <div className="md:hidden pointer-events-none fixed right-3 top-[calc(var(--nav-h,100px)+env(safe-area-inset-top,0px))] z-40" aria-hidden>
-        <span className="bb-count block leading-none text-[5rem] font-semibold tracking-tight text-breaker-bay-900/85">
+    <div
+      ref={rootRef}
+      style={navVars}
+      // ⛔️ scroll chaining off + touch default off
+      className="relative w-full h-svh overflow-hidden bg-breaker-bay-50 overscroll-none touch-none"
+    >
+      {/* MOBIL SZÁMLÁLÓ */}
+      <div
+        className="md:hidden pointer-events-none fixed right-3 top-[calc(var(--nav-h,100px)+env(safe-area-inset-top,0px)+6px)] z-20"
+        aria-hidden
+      >
+        <span
+          className="bb-count block leading-none font-semibold tracking-tight text-breaker-bay-900/70"
+          style={{ fontSize: "clamp(2.25rem, 12vw, 3.5rem)" }}
+        >
           {String(currentIndex + 1).padStart(2, "0")}
         </span>
       </div>
@@ -173,7 +243,7 @@ export function Featured({
                 <div className={`absolute inset-0 z-[1] ${slideBg[i % slideBg.length]}`} />
                 <div className={`absolute inset-0 z-[1] ${i === 0 ? "opacity-[0.02]" : "opacity-[0.05]"} [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`} />
 
-                {/* FRONT GRID – desktop layout javítva; mobilhoz nem nyúlunk */}
+                {/* FRONT GRID */}
                 <div
                   className="relative z-[30] mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
                   style={{
@@ -181,12 +251,12 @@ export function Featured({
                     height: "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
                   }}
                 >
-                  {/* SOR 1: Title fent + Desktop Count a jobb szélre, díszcsíkkal */}
+                  {/* SOR 1: Title */}
                   <div className="col-span-12 row-start-1 row-end-2 relative">
                     <h2
                       className="
                         bb-heading
-                        max-w-[86%] md:max-w-none
+                        max-w-[76%] md:max-w-none
                         break-words [hyphens:auto]
                         text-[clamp(1.05rem,6.2vw,2.2rem)] md:text-[clamp(1.6rem,5vw,3.25rem)]
                         leading-[1.05] font-semibold tracking-tight text-breaker-bay-950
@@ -196,7 +266,7 @@ export function Featured({
                       {p.name}
                     </h2>
 
-                    {/* Desktop COUNT – díszcsík a szám szélességére */}
+                    {/* Desktop COUNT */}
                     <div className="hidden md:block absolute right-0 bottom-0">
                       <div className="inline-block text-right">
                         <span className="bb-count block leading-none text-[5rem] font-semibold tracking-tight text-breaker-bay-900/85">
@@ -210,10 +280,10 @@ export function Featured({
                     </div>
                   </div>
 
-                  {/* CONTENT CARD – desktopon szélesebb (md:col-span-6), arányos; mobil változatlan */}
+                  {/* CONTENT CARD */}
                   <Link
                     href={`/${locale}/products/${p.slug}` as never}
-                    aria-label={`${p.name} details`}
+                    aria-label={`${p.name} – ${L.details}`}
                     className="
                       bb-card relative
                       col-span-12
@@ -228,23 +298,20 @@ export function Featured({
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500
                     "
                   >
-                    {/* 1) ÁR – breaker-bay-900 */}
                     <span className="inline-flex items-baseline gap-1.5 self-start rounded-2xl bg-breaker-bay-900 text-white ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.14),0_10px_30px_-16px_rgba(0,0,0,.6)] px-3.5 py-1.5 leading-none">
                       <span className="text-[10px] uppercase tracking-[0.12em] text-white/70">HUF</span>
                       <span className="text-[17px] font-semibold text-white">{formatNumber(p.price)}</span>
                     </span>
 
-                    {/* 2) SZÖVEG */}
                     {p.description ? (
                       <p className="text-neutral-900/90 text-[14px] md:text-base leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none">
                         {truncate(p.description, 180)}
                       </p>
                     ) : null}
 
-                    {/* 3) CTA */}
                     <div>
                       <span className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-breaker-bay-800 text-white ring-1 ring-white/10 shadow-[0_10px_24px_-14px_rgba(3,57,63,.5)] px-4 py-3 text-[14px] md:text-sm font-medium hover:bg-breaker-bay-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400 focus-visible:ring-offset-white transition">
-                        Tudnivalók
+                        {L.details}
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                           <path d="M5 12h14M13 5l7 7-7 7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -258,7 +325,7 @@ export function Featured({
         </section>
       ))}
 
-      {/* BACK LAYER – nagyobb kép, tényleg a tartalom mögött; sarka kilóg (translate + scale) */}
+      {/* BACK LAYER – nagy kép hátul */}
       <section className="fixed inset-0 z-10 pointer-events-none">
         <div
           className="relative mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"

@@ -7,6 +7,59 @@ import { FeatureIconContainer } from "./features/feature-icon-container";
 import { IconHelpHexagonFilled, IconLink, IconSearch } from "@tabler/icons-react";
 
 type FaqItem = { question: string; answer: string };
+type Locale = "hu" | "en" | "de";
+
+// --- egyszerű, beépített fordítások
+const MESSAGES: Record<Locale, {
+  searchPlaceholder: string;
+  openAll: string;
+  closeAll: string;
+  noResults: (q: string) => string;
+  copyLink: string;
+  copied: string;
+}> = {
+  hu: {
+    searchPlaceholder: "Keresés a kérdésekben",
+    openAll: "Összes megnyitása",
+    closeAll: "Összes bezárása",
+    noResults: (q) => `Nincs találat a(z) „${q}” kifejezésre.`,
+    copyLink: "Link másolása",
+    copied: "Link kimásolva a vágólapra.",
+  },
+  en: {
+    searchPlaceholder: "Search the questions",
+    openAll: "Open all",
+    closeAll: "Close all",
+    noResults: (q) => `No results for “${q}”.`,
+    copyLink: "Copy link",
+    copied: "Link copied to clipboard.",
+  },
+  de: {
+    searchPlaceholder: "In den Fragen suchen",
+    openAll: "Alle öffnen",
+    closeAll: "Alle schließen",
+    noResults: (q) => `Keine Ergebnisse für „${q}“.`,
+    copyLink: "Link kopieren",
+    copied: "Link in die Zwischenablage kopiert.",
+  },
+};
+
+// --- egyszerű locale-detektálás (URL prefix → <html lang> → 'hu')
+function useLocale(): Locale {
+  const [loc, setLoc] = useState<Locale>("hu");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const seg = window.location.pathname.split("/").filter(Boolean)[0]?.toLowerCase();
+    const byPath = (["hu", "en", "de"] as Locale[]).includes(seg as Locale) ? (seg as Locale) : null;
+    const byHtml =
+      (document.documentElement.lang?.slice(0, 2).toLowerCase() as Locale) || null;
+    const resolved =
+      (byPath as Locale) ||
+      ((["hu", "en", "de"] as Locale[]).includes(byHtml as Locale) ? (byHtml as Locale) : "hu");
+    setLoc(resolved);
+  }, []);
+  return loc;
+}
 
 export const FAQ = ({
   heading,
@@ -20,6 +73,9 @@ export const FAQ = ({
   const listRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const locale = useLocale();
+  const t = MESSAGES[locale];
 
   const slugify = (s: string) =>
     s.toLowerCase().trim().replace(/[\s\.:/]+/g, "-").replace(/[^\w-]/g, "").replace(/-+/g, "-");
@@ -95,7 +151,7 @@ export const FAQ = ({
               <IconSearch className="ml-2 h-4 w-4 text-neutral-600" />
               <input
                 type="search"
-                placeholder="Keresés a kérdésekben"
+                placeholder={t.searchPlaceholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="peer bg-transparent placeholder:text-neutral-400 focus:outline-none text-sm px-1 py-1.5 pr-2 text-neutral-900"
@@ -108,14 +164,14 @@ export const FAQ = ({
                 onClick={openAll}
                 className="rounded-md px-3 py-1.5 text-sm font-medium text-neutral-900 bg-white hover:bg-neutral-50 transition-colors ring-1 ring-inset ring-neutral-200"
               >
-                Összes megnyitása
+                {t.openAll}
               </button>
               <button
                 type="button"
                 onClick={closeAll}
                 className="rounded-md px-3 py-1.5 text-sm font-medium text-neutral-900 bg-white hover:bg-neutral-50 transition-colors ring-1 ring-inset ring-neutral-200"
               >
-                Összes bezárása
+                {t.closeAll}
               </button>
             </div>
           </div>
@@ -128,7 +184,7 @@ export const FAQ = ({
         <div ref={listRef} className="mt-8 w-full max-w-5xl space-y-3">
           {filtered.length === 0 && (
             <div className="rounded-xl border border-dashed border-neutral-200 bg-white text-neutral-600 px-4 py-6 text-center">
-              Nincs találat a(z) <span className="font-semibold text-neutral-800">{query}</span> kifejezésre.
+              {t.noResults(query)}
             </div>
           )}
 
@@ -141,7 +197,6 @@ export const FAQ = ({
                 className="group rounded-xl border border-neutral-200 bg-white shadow-sm open:bg-neutral-50 transition-colors"
               >
                 <summary className="list-none cursor-pointer select-none px-5 py-4 md:px-6 md:py-5 flex items-start gap-4">
-                  {/* Sorszám badge – breaker bay akcent */}
                   <span className="mt-0.5 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-breaker-bay-50 text-breaker-bay-600 text-xs font-semibold ring-1 ring-inset ring-breaker-bay-200">
                     {(i + 1).toString().padStart(2, "0")}
                   </span>
@@ -150,7 +205,7 @@ export const FAQ = ({
                     {faq.question}
                   </h4>
 
-                  {/* Link másolása – ikon akcent */}
+                  {/* Link másolása */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -158,8 +213,8 @@ export const FAQ = ({
                       copyLink(id);
                     }}
                     className="ml-2 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-neutral-700 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-50 transition-colors"
-                    title="Link másolása"
-                    aria-label="Link másolása"
+                    title={t.copyLink}
+                    aria-label={t.copyLink}
                   >
                     <IconLink className="h-4 w-4 text-breaker-bay-600" />
                   </button>
@@ -173,14 +228,13 @@ export const FAQ = ({
 
                 {copiedId === id && (
                   <div className="px-6 -mt-2 mb-1 text-xs text-neutral-600">
-                    Link kimásolva a vágólapra.
+                    {t.copied}
                   </div>
                 )}
 
                 <div className="faq-content grid transition-[grid-template-rows] duration-300 ease-out">
                   <div className="faq-inner overflow-hidden">
                     <div className="relative px-5 pb-5 md:px-6 md:pb-6">
-                      {/* Bal akcent sáv – breaker bay, vékony */}
                       <span
                         aria-hidden
                         className="absolute inset-y-2 left-0 w-[2px] rounded-r-md bg-breaker-bay-400/70"

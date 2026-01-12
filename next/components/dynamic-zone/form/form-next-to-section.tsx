@@ -82,19 +82,19 @@ const Labels = {
   hu: {
     dataPrivacy: "Adataidat bizalmasan kezeljük.",
     privacyLinkText: "Adatkezelési tájékoztató",
-    bookingNoObligation: "Az időpontfoglalás nem jár kötelezettséggel.",
+    // bookingNoObligation: "Az időpontfoglalás nem jár kötelezettséggel.",
     privacyHref: "/privacy",
   },
   en: {
     dataPrivacy: "We handle your data confidentially.",
     privacyLinkText: "Privacy Policy",
-    bookingNoObligation: "Booking an appointment carries no obligation.",
+    // bookingNoObligation: "Booking an appointment carries no obligation.",
     privacyHref: "/privacy",
   },
   de: {
     dataPrivacy: "Wir behandeln deine Daten vertraulich.",
     privacyLinkText: "Datenschutzerklärung",
-    bookingNoObligation: "Die Terminbuchung ist unverbindlich.",
+    // bookingNoObligation: "Die Terminbuchung ist unverbindlich.",
     privacyHref: "/privacy",
   },
 } as const;
@@ -201,7 +201,7 @@ const L = Labels[locale];
       >
         <div className="w-full min-h-screen grid grid-cols-1 md:grid-cols-2 gap-6 md:pt-[var(--content-top)]">
           {/* BAL: űrlap kártya */}
-          <section className="order-2 md:order-1 flex w-full justify-center items-start px-4 md:px-8 lg:px-16 pt-28 md:pt-0 pb-12">
+          <section className="order-2 md:order-1 flex w-full justify-center items-start px-4 md:px-8 lg:px-16 pt-6 ">
             <AnimatePresence initial={false}>
               <motion.div
                 key="form"
@@ -227,7 +227,7 @@ const L = Labels[locale];
                 <div className="pt-6">
                   <ContactForm
                     inputs={form?.inputs}
-                    action="/api/contact"
+                    action="/contact"
                     hiddenFields={{
                       __page: section?.heading || null,
                       __from: "FormNextToSection",
@@ -272,9 +272,9 @@ const L = Labels[locale];
   </span>
 </div>
 
-<p className="text-center text-xs text-neutral-600">
+{/* <p className="text-center text-xs text-neutral-600">
   {L.bookingNoObligation}
-</p>
+</p> */}
 </motion.div>
             </AnimatePresence>
           </section>

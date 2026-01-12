@@ -1,5 +1,6 @@
-import { Metadata } from 'next';
+//app/[locale]/(marketing)/page.tsx
 
+import { Metadata } from 'next';
 import PageContent from '@/lib/shared/PageContent';
 import fetchContentType from '@/lib/strapi/fetchContentType';
 import { generateMetadataObject } from '@/lib/shared/metadata';
@@ -24,8 +25,11 @@ export async function generateMetadata({
   );
 
   const seo = pageData?.seo;
-  const metadata = generateMetadataObject(seo);
-  return metadata;
+return generateMetadataObject(seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/`,
+});
+
 }
 
 export default async function HomePage({ params }: { params: { locale: string } }) {

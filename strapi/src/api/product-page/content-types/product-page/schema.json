@@ -15,6 +15,15 @@
     }
   },
   "attributes": {
+    "Slug": {
+      "type": "uid",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      },
+      "targetField": "heading"
+    },
     "seo": {
       "type": "component",
       "pluginOptions": {

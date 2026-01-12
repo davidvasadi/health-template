@@ -21,12 +21,11 @@ function normalizeLocale(raw?: string | null): SupportedLocale {
   return "en";
 }
 
-/** For App Router: prefer prop, else [locale] param, else first path seg */
-function getLocale(localeProp?: string): SupportedLocale {
-  // Hooks are safe here: this is a client component
+/** App Router: prefer prop, else [locale] param, else első path szegmens */
+function useLocale(localeProp?: string): SupportedLocale {
   const params = useParams() as Record<string, string | undefined>;
   const pathname = usePathname() || "";
-  const seg0 = pathname.split("/").filter(Boolean)[0]; // first segment
+  const seg0 = pathname.split("/").filter(Boolean)[0];
   return normalizeLocale(localeProp || params?.locale || seg0);
 }
 
@@ -37,17 +36,19 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Article[]>(articles || []);
 
-  // <<<— itt dől el minden: nincs több window/document, csak az útvonal/param
-  const locale = getLocale(localeProp);
+  // ✅ már custom hookként hívjuk
+  const locale = useLocale(localeProp);
 
-  const LABELS: Record<SupportedLocale, { heading: string; placeholder: string; noResults: string }> = {
+  const LABELS: Record<
+    SupportedLocale,
+    { heading: string; placeholder: string; noResults: string }
+  > = {
     en: { heading: "More posts", placeholder: "Search articles…", noResults: "No results found" },
     hu: { heading: "További bejegyzések", placeholder: "Cikkek keresése…", noResults: "Nincs találat" },
     de: { heading: "Weitere Beiträge", placeholder: "Artikel suchen…", noResults: "Keine Ergebnisse" },
   };
 
   const t = LABELS[locale];
-
   const dfLocale = locale === "hu" ? huDF : locale === "de" ? deDF : undefined;
 
   const searcher = useMemo(
@@ -70,7 +71,6 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
   return (
     <section className="w-full py-12 md:py-16">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        {/* Ha biztosra akarsz menni hydration ellen, tegyél rá suppressHydrationWarning-t */}
         <h2 className="text-2xl md:text-3xl font-bold text-neutral-900" suppressHydrationWarning>
           {t.heading}
         </h2>
@@ -85,7 +85,10 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
       </div>
 
       {results.length === 0 ? (
-        <p className="text-neutral-500 text-center p-6 rounded-xl bg-white ring-1 ring-neutral-200" suppressHydrationWarning>
+        <p
+          className="text-neutral-500 text-center p-6 rounded-xl bg-white ring-1 ring-neutral-200"
+          suppressHydrationWarning
+        >
           {t.noResults}
         </p>
       ) : (
@@ -101,7 +104,6 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
               variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: spring } }}
               className="group"
             >
-              {/* FONTOS: a locale szegmens kerüljön be az URL-be */}
               <Link
                 href={`/${locale}/blog/${a.slug}`}
                 className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-4 hover:bg-neutral-50 transition-colors"
@@ -138,3 +140,4 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
     </section>
   );
 };
+

@@ -1,3 +1,4 @@
+// next/app/[locale]/(marketing)/ClientSlugHandler.tsx
 "use client";
 
 import { useEffect } from "react";

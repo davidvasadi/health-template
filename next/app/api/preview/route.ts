@@ -33,7 +33,7 @@ export const GET = async (request: Request) => {
     slugToReturn = `/en/products${slug ? `/${slug}` : ''}`;
   }
 
-  const draft = await draftMode()
+  const draft = draftMode()
   if (status === 'draft') {
     draft.enable()
   } else {

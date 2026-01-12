@@ -1,3 +1,4 @@
+// next/app/[locale]/layout.tsx
 import React from 'react'
 import { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -25,7 +26,7 @@ export async function generateMetadata({
     { filters: { locale: params.locale }, populate: 'seo.metaImage' },
     true
   )
-  return generateMetadataObject(pageData?.seo)
+return generateMetadataObject(pageData?.seo, { locale: params.locale as any, pathname: `/${params.locale}/` })
 }
 
 export default async function LocaleLayout({

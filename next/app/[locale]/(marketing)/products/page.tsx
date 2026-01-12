@@ -1,83 +1,59 @@
+// next/app/[locale]/(marketing)/products/page.tsx
 import { Metadata } from 'next';
 
 import { AmbientColor } from "@/components/decorations/ambient-color";
 import { Container } from "@/components/container";
-import { FeatureIconContainer } from "@/components/dynamic-zone/features/feature-icon-container";
-import { Heading } from "@/components/elements/heading";
 import { Featured } from "@/components/products/featured";
 import { ProductItems } from "@/components/products/product-items";
-import { Subheading } from "@/components/elements/subheading";
-import { IconShoppingCartUp } from "@tabler/icons-react";
 import fetchContentType from "@/lib/strapi/fetchContentType";
 import { generateMetadataObject } from '@/lib/shared/metadata';
-
 import ClientSlugHandler from '../ClientSlugHandler';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { locale: string };
-}): Promise<Metadata> {
+const norm = (s?: string) => (s ?? '').replace(/^\/|\/$/g, '');
 
-  const pageData = await fetchContentType("product-page", {
-    filters: {
-      locale: params.locale,            // ← locale a FILTERS alatt (mint a blognál)
-    },
-    populate: "seo.metaImage",
-  }, true)
-
-  const seo = pageData?.seo;
-  const metadata = generateMetadataObject(seo);
-  return metadata;
+export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
+  const pageData = await fetchContentType(
+    "product-page",
+    { filters: { locale: params.locale }, populate: "seo.metaImage" },
+    true
+  );
+return generateMetadataObject(pageData?.seo, {
+  locale: params.locale as "hu" | "en" | "de",
+  pathname: `/${params.locale}/${pageData?.slug || "products"}`,
+});
 }
 
-export default async function Products({
-  params,
-}: {
-  params: { locale: string };
-}) {
-
-  // product-page lokalizáltan
-  const productPage = await fetchContentType('product-page', {
-    filters: {
-      locale: params.locale,            // ← locale a FILTERS alatt
-    },
-  }, true);
-
-  // products lokalizáltan (shape marad: { data: [...] })
-  const products = await fetchContentType('products', {
-    filters: {
-      locale: params.locale,            // ← locale a FILTERS alatt
-    },
-    populate: { images: { populate: '*' },  }, // ha kell kép, ráteheted
-  }, false);
-
-  const localizedSlugs = productPage.localizations?.reduce(
-    (acc: Record<string, string>, localization: any) => {
-      acc[localization.locale] = "products";
-      return acc;
-    },
-    { [params.locale]: "products" }
+export default async function Products({ params }: { params: { locale: string } }) {
+  // base slug + lokalizációk a NYELVVÁLTÓHOZ (NINCS fields=)
+  const productPage = await fetchContentType(
+    'product-page',
+    { filters: { locale: params.locale }, populate: { localizations: true } },
+    true
   );
 
-  const featured = products?.data.filter((product: { featured: boolean }) => product.featured);
+  // termékek listája
+  const products = await fetchContentType(
+    'products',
+    { filters: { locale: params.locale }, populate: { images: { populate: '*' } } },
+    false
+  );
+
+  // lokalizált base slugs
+  const localizedSlugs: Record<string, string> = {
+    [productPage?.locale || params.locale]: norm(productPage?.slug || productPage?.Slug || 'products'),
+  };
+  for (const loc of productPage?.localizations ?? []) {
+    const s = norm(loc?.slug || loc?.Slug);
+    if (s) localizedSlugs[loc.locale] = s;
+  }
+
+  const featured = products?.data?.filter((p: { featured: boolean }) => p.featured);
 
   return (
     <div className="relative overflow-hidden w-full">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
       <AmbientColor />
       <Container className="pt-40 pb-40">
-        {/* 
-        <FeatureIconContainer className="flex justify-center items-center overflow-hidden">
-          <IconShoppingCartUp className="h-6 w-6 text-breaker-bay-700" />
-        </FeatureIconContainer>
-        <Heading as="h1" className="pt-4 text-breaker-bay-950">
-          {productPage.heading}
-        </Heading>
-        <Subheading className="max-w-3xl mx-auto">
-          {productPage.sub_heading}
-        </Subheading>
-        */}
         <Featured products={featured} locale={params.locale} />
         <ProductItems products={products?.data} locale={params.locale} />
       </Container>
