@@ -1,4 +1,4 @@
-name: Deploy Strapi (health-template)
+name: deploy-backend
 
 on:
   push:
