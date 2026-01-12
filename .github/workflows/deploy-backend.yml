@@ -43,6 +43,24 @@ jobs:
           chmod 600 ~/.ssh/id_ci
           ssh-keyscan -p "${VPS_PORT}" -H "${VPS_HOST}" >> ~/.ssh/known_hosts
 
+      # ✅ DB backup: mindig felülírja az előzőt
+      - name: Backup Strapi sqlite DB on VPS (overwrite)
+        run: |
+          ssh -i ~/.ssh/id_ci -p ${VPS_PORT} -o IdentitiesOnly=yes ${VPS_USER}@${VPS_HOST} <<'EOF'
+          set -euo pipefail
+          DB="/var/www/health-template/strapi/.tmp/data.db"
+          BAK="/var/www/health-template/strapi/.tmp/data.db.bak"
+
+          # ha van DB, csinálunk róla egy felülírós mentést
+          if [ -f "$DB" ]; then
+            cp -a "$DB" "$BAK"
+            echo "✅ DB backup written to: $BAK"
+            ls -lah "$BAK" || true
+          else
+            echo "ℹ️ No DB found at $DB (skipping backup)"
+          fi
+          EOF
+
       - name: Upload Strapi source (keep uploads/db/env)
         run: |
           rsync -avz --delete \
@@ -63,11 +81,14 @@ jobs:
           node -v
           npm -v
 
-          # FONTOS: a DB a .tmp/data.db (sqlite) – a .tmp-t kihagytuk rsync-ből
+          # DB a .tmp/data.db (sqlite) – a .tmp-t kihagytuk rsync-ből
           npm ci
           npm run build
 
-          pm2 describe strapi >/dev/null 2>&1 && pm2 restart strapi --update-env || pm2 start "npm run start" --name strapi --cwd /var/www/health-template/strapi
+          pm2 describe strapi >/dev/null 2>&1 && \
+            pm2 restart strapi --update-env || \
+            pm2 start "npm run start" --name strapi --cwd /var/www/health-template/strapi
+
           pm2 save
           EOF
 
