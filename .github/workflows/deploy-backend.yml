@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - "strapi/**"
-      - ".github/workflows/deploy-strapi.yml"
+      - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
 
 concurrency:
