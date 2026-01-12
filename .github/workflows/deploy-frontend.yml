@@ -2,7 +2,7 @@ name: deploy-frontend
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "next/**"
       - ".github/workflows/deploy-frontend.yml"
@@ -19,11 +19,8 @@ env:
   VPS_HOST: ${{ secrets.VPS_HOST }}
   VPS_PORT: ${{ secrets.VPS_PORT }}
   VPS_USER: ${{ secrets.VPS_USER }}
-  VPS_KEY:  ${{ secrets.VPS_KEY }}
-
   REMOTE_PATH: /var/www/health-template/next
   PM2_NAME: next
-  NODE_VERSION: "20"
 
 jobs:
   deploy:
@@ -32,10 +29,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
       - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${VPS_KEY}" > ~/.ssh/id_ci
+          cat > ~/.ssh/id_ci <<'KEY'
+          ${{ secrets.VPS_KEY }}
+          KEY
           chmod 600 ~/.ssh/id_ci
           ssh-keyscan -p "${VPS_PORT}" -H "${VPS_HOST}" >> ~/.ssh/known_hosts
 

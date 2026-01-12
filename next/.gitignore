@@ -39,3 +39,7 @@ next-env.d.ts
 # env vars
 .env 
 .contentlayer
+
+#
+.env.dev.only
+middleware.ts.off
