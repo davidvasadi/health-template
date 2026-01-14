@@ -1,14 +1,15 @@
+"use client";
+
 import Image from "next/image";
-import { unstable_noStore as noStore } from "next/cache";
 import { ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 
 interface StrapiImageProps extends Omit<ComponentProps<typeof Image>, "src" | "alt"> {
   src: string;
   alt: string | null;
 
-  // videó finomhangolás (nem kell mindenhol átírni)
+  // videó finomhangolás
   poster?: string | null;
-  controls?: boolean; // ha valahol explicit akarod
+  controls?: boolean;
   muted?: boolean;
   loop?: boolean;
   playsInline?: boolean;
@@ -85,19 +86,27 @@ export function StrapiImage({
   pauseOnHide = true,
   ...rest
 }: Readonly<StrapiImageProps>) {
-  noStore();
-
+  // ✅ HOOKS mindig ugyanabban a sorrendben
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const mediaUrl = useMemo(() => getStrapiMedia(src), [src]);
-  if (!mediaUrl) return null;
+  const safeUrl = mediaUrl ?? ""; // hogy a memo/dep stabil legyen
 
-  const isVideo = isVideoUrl(mediaUrl);
-  const thumb = isLikelyThumb(className, (rest as any).width, (rest as any).height);
+  const isVideo = useMemo(() => (safeUrl ? isVideoUrl(safeUrl) : false), [safeUrl]);
+  const thumb = useMemo(
+    () => isLikelyThumb(className, (rest as any).width, (rest as any).height),
+    [className, (rest as any).width, (rest as any).height]
+  );
 
-  // main videónál: csak akkor tekintjük “elindítottnak”, ha a video tényleg play state-be kerül
+  // main videónál: csak akkor “játszik”, ha a video play event bekövetkezik
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // media váltáskor reseteljük a play-state-et
+  useEffect(() => {
+    setIsPlaying(false);
+  }, [safeUrl]);
+
+  // play/pause/ended figyelés (csak ha video)
   useEffect(() => {
     if (!isVideo) return;
 
@@ -117,11 +126,12 @@ export function StrapiImage({
       v.removeEventListener("pause", onPause);
       v.removeEventListener("ended", onEnded);
     };
-  }, [isVideo, mediaUrl]);
+  }, [isVideo, safeUrl]);
 
   // tab váltáskor pause
   useEffect(() => {
     if (!pauseOnHide || !isVideo) return;
+    if (typeof document === "undefined") return;
 
     const onVisibility = () => {
       if (document.hidden) {
@@ -138,40 +148,34 @@ export function StrapiImage({
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [pauseOnHide, isVideo]);
 
-  // media váltás / unmount: stop + reset
+  // media váltás / unmount: stop + reset (state nélkül a cleanupban)
   useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
     return () => {
-      const v = videoRef.current;
-      if (v) {
-        try {
-          v.pause();
-          v.currentTime = 0;
-        } catch {}
-      }
-      setIsPlaying(false);
+      try {
+        v.pause();
+        v.currentTime = 0;
+      } catch {}
     };
-  }, [mediaUrl]);
+  }, [safeUrl]);
+
+  // ✅ csak a hookok után térünk vissza
+  if (!mediaUrl) return null;
 
   if (!isVideo) {
-    return (
-      <Image
-        src={mediaUrl}
-        alt={alt ?? ""}
-        className={className}
-        {...rest}
-      />
-    );
+    return <Image src={mediaUrl} alt={alt ?? ""} className={className} {...rest} />;
   }
 
   const posterUrl = poster ? getStrapiMedia(poster) : null;
 
   // Thumbnail:
-  // - legyen passzív, sose legyen controls, sose induljon el kattintásra
+  // - passzív, nincs controls, nem indul kattintásra
   // Main:
-  // - controls csak akkor jelenjen meg, ha már elindult (vagy explicit bekapcsoltad)
+  // - controls csak akkor, ha elindult (vagy explicit controls)
   const showControls = controls ?? (!thumb && isPlaying);
 
-  // Külön play gomb: ez a “senior” megoldás a glitch ellen
   const handlePlayClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -181,30 +185,22 @@ export function StrapiImage({
 
     try {
       await v.play();
-      // isPlaying-et a "play" event fogja true-ra állítani
     } catch {
-      // ha autoplay policy miatt nem megy, legalább legyenek controls
-      // (itt hagyjuk, mert a user úgyis rákattint majd a natív play-re)
+      // autoplay policy miatt elbukhat – ilyenkor a user úgyis natív play-t nyom
     }
   };
 
-  // Wrapper: overflow-hidden, hogy overlay sose vágódjon le
   return (
     <span
       className={cx(
         "relative block overflow-hidden",
-        // ha a className ad roundot, ok; ha nem, adunk finomat
         !/\brounded-/.test(className ?? "") && "rounded-2xl",
         className
       )}
     >
       <video
         ref={videoRef}
-        className={cx(
-          "h-full w-full object-cover",
-          // thumbnailnél ne fogja meg a clicket (a parent gomb kezeli)
-          thumb && "pointer-events-none"
-        )}
+        className={cx("h-full w-full object-cover", thumb && "pointer-events-none")}
         controls={showControls}
         muted={muted ?? (thumb ? true : undefined)}
         loop={loop}
@@ -219,19 +215,16 @@ export function StrapiImage({
         <source src={mediaUrl} />
       </video>
 
-      {/* THUMB overlay: mindig látható, sose vágódik */}
+      {/* THUMB overlay */}
       {thumb && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 grid place-items-center"
-        >
+        <span aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
           <span className="rounded-full bg-black/40 p-2 shadow-sm">
             <PlayIcon size={18} />
           </span>
         </span>
       )}
 
-      {/* MAIN overlay: csak ha nem játszik – dedikált gombbal */}
+      {/* MAIN overlay */}
       {!thumb && !isPlaying && (
         <button
           type="button"
