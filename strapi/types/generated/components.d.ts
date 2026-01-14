@@ -61,6 +61,19 @@ export interface CardsSocialMediaCard extends Struct.ComponentSchema {
   };
 }
 
+export interface DynamicZoneAbout extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_abouts';
+  info: {
+    displayName: 'About';
+  };
+  attributes: {
+    heading: Schema.Attribute.Component<'shared.heading', false>;
+    list: Schema.Attribute.Component<'shared.list', false>;
+    logo: Schema.Attribute.Relation<'oneToOne', 'api::logo.logo'>;
+    teams: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
+  };
+}
+
 export interface DynamicZoneBrands extends Struct.ComponentSchema {
   collectionName: 'components_dynamic_zone_brands';
   info: {
@@ -387,6 +400,20 @@ export interface SharedForm extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedHeading extends Struct.ComponentSchema {
+  collectionName: 'components_shared_headings';
+  info: {
+    displayName: 'Heading';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    description: Schema.Attribute.String;
+    heading: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    sub_heading: Schema.Attribute.String;
+  };
+}
+
 export interface SharedLaunches extends Struct.ComponentSchema {
   collectionName: 'components_shared_launches';
   info: {
@@ -416,6 +443,19 @@ export interface SharedLink extends Struct.ComponentSchema {
     variant: Schema.Attribute.Enumeration<
       ['simple', 'outline', 'primary', 'muted']
     >;
+  };
+}
+
+export interface SharedList extends Struct.ComponentSchema {
+  collectionName: 'components_shared_lists';
+  info: {
+    displayName: 'List';
+  };
+  attributes: {
+    list_title: Schema.Attribute.String;
+    span: Schema.Attribute.Component<'shared.perks', true>;
+    story_description: Schema.Attribute.Text;
+    story_title: Schema.Attribute.String;
   };
 }
 
@@ -550,7 +590,7 @@ export interface SharedUser extends Struct.ComponentSchema {
   };
   attributes: {
     firstname: Schema.Attribute.String;
-    image: Schema.Attribute.Media<'images'>;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
     job: Schema.Attribute.String;
     lastname: Schema.Attribute.String;
   };
@@ -563,6 +603,7 @@ declare module '@strapi/strapi' {
       'cards.graph-card': CardsGraphCard;
       'cards.ray-card': CardsRayCard;
       'cards.social-media-card': CardsSocialMediaCard;
+      'dynamic-zone.about': DynamicZoneAbout;
       'dynamic-zone.brands': DynamicZoneBrands;
       'dynamic-zone.cta': DynamicZoneCta;
       'dynamic-zone.faq': DynamicZoneFaq;
@@ -583,8 +624,10 @@ declare module '@strapi/strapi' {
       'items.ray-items': ItemsRayItems;
       'shared.button': SharedButton;
       'shared.form': SharedForm;
+      'shared.heading': SharedHeading;
       'shared.launches': SharedLaunches;
       'shared.link': SharedLink;
+      'shared.list': SharedList;
       'shared.location': SharedLocation;
       'shared.opening-hour': SharedOpeningHour;
       'shared.perks': SharedPerks;

@@ -1,19 +1,20 @@
 {
-  "collectionName": "components_shared_users",
+  "collectionName": "components_shared_headings",
   "info": {
-    "displayName": "User",
-    "icon": "user",
-    "description": ""
+    "displayName": "Heading"
   },
   "options": {},
   "attributes": {
-    "firstname": {
+    "badge_label": {
       "type": "string"
     },
-    "lastname": {
+    "heading": {
       "type": "string"
     },
-    "job": {
+    "sub_heading": {
+      "type": "string"
+    },
+    "description": {
       "type": "string"
     },
     "image": {
@@ -26,5 +27,6 @@
         "audios"
       ]
     }
-  }
+  },
+  "config": {}
 }

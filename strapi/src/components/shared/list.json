@@ -1,0 +1,24 @@
+{
+  "collectionName": "components_shared_lists",
+  "info": {
+    "displayName": "List"
+  },
+  "options": {},
+  "attributes": {
+    "list_title": {
+      "type": "string"
+    },
+    "span": {
+      "type": "component",
+      "component": "shared.perks",
+      "repeatable": true
+    },
+    "story_title": {
+      "type": "string"
+    },
+    "story_description": {
+      "type": "text"
+    }
+  },
+  "config": {}
+}

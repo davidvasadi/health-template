@@ -800,6 +800,7 @@ export interface ApiPagePage extends Struct.CollectionTypeSchema {
         'dynamic-zone.form-next-to-section',
         'dynamic-zone.faq',
         'dynamic-zone.related-articles',
+        'dynamic-zone.about',
       ]
     > &
       Schema.Attribute.SetPluginOptions<{
@@ -853,6 +854,14 @@ export interface ApiPlanPlan extends Struct.CollectionTypeSchema {
           localized: true;
         };
       }>;
+    background: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios'
+    > &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
     badgeLabel: Schema.Attribute.String &
       Schema.Attribute.SetPluginOptions<{
         i18n: {
@@ -863,6 +872,12 @@ export interface ApiPlanPlan extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     CTA: Schema.Attribute.Component<'shared.button', false> &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    duration: Schema.Attribute.String &
       Schema.Attribute.SetPluginOptions<{
         i18n: {
           localized: true;
@@ -946,12 +961,6 @@ export interface ApiPrivacyPolicyPrivacyPolicy extends Struct.SingleTypeSchema {
       'api::privacy-policy.privacy-policy'
     >;
     publishedAt: Schema.Attribute.DateTime;
-    Seo: Schema.Attribute.Component<'shared.seo', true> &
-      Schema.Attribute.SetPluginOptions<{
-        i18n: {
-          localized: true;
-        };
-      }>;
     Slug: Schema.Attribute.UID;
     Text: Schema.Attribute.String &
       Schema.Attribute.SetPluginOptions<{
@@ -1171,6 +1180,79 @@ export interface ApiRedirectionRedirection extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
+  collectionName: 'teams';
+  info: {
+    displayName: 'Team';
+    pluralName: 'teams';
+    singularName: 'team';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  pluginOptions: {
+    i18n: {
+      localized: true;
+    };
+  };
+  attributes: {
+    avatar: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'> &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    button: Schema.Attribute.Component<'shared.button', true> &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    job: Schema.Attribute.String &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    locale: Schema.Attribute.String;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
+    long_description: Schema.Attribute.Blocks &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    media: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios',
+      true
+    > &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    name: Schema.Attribute.String &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    publishedAt: Schema.Attribute.DateTime;
+    short_description: Schema.Attribute.String &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: true;
+        };
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiTermsOfServiceTermsOfService
   extends Struct.SingleTypeSchema {
   collectionName: 'terms_of_services';
@@ -1209,12 +1291,6 @@ export interface ApiTermsOfServiceTermsOfService
       'api::terms-of-service.terms-of-service'
     >;
     publishedAt: Schema.Attribute.DateTime;
-    Seo: Schema.Attribute.Component<'shared.seo', true> &
-      Schema.Attribute.SetPluginOptions<{
-        i18n: {
-          localized: true;
-        };
-      }>;
     Slug: Schema.Attribute.UID<'Title'>;
     Title: Schema.Attribute.String &
       Schema.Attribute.SetPluginOptions<{
@@ -1795,6 +1871,7 @@ declare module '@strapi/strapi' {
       'api::product-page.product-page': ApiProductPageProductPage;
       'api::product.product': ApiProductProduct;
       'api::redirection.redirection': ApiRedirectionRedirection;
+      'api::team.team': ApiTeamTeam;
       'api::terms-of-service.terms-of-service': ApiTermsOfServiceTermsOfService;
       'api::testimonial.testimonial': ApiTestimonialTestimonial;
       'plugin::content-releases.release': PluginContentReleasesRelease;

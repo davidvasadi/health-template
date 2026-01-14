@@ -86,8 +86,8 @@ export const Testimonials = ({
           <TbLocationBolt className="h-6 w-6" />
         </FeatureIconContainer>
 
-        <Heading className="pt-4 text-[var(--breaker-950)]">{heading}</Heading>
-        <Subheading className="text-[var(--breaker-700)] mt-1 text-pretty">
+        <Heading className="mx-auto my-6 pt-4 text-[var(--breaker-950)]">{heading}</Heading>
+        <Subheading className="mx-auto text-[var(--breaker-700)] mt-1 text-pretty">
           {sub_heading}
         </Subheading>
 
