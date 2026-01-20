@@ -1,3 +1,4 @@
+// next/components/products/product-items.tsx
 "use client";
 
 import React from "react";
@@ -14,11 +15,13 @@ export const ProductItems = ({
   sub_heading = "Recently rose to popularity",
   products,
   locale,
+  baseSlug, // ✅ ÚJ
 }: {
   heading?: string;
   sub_heading?: string;
   products: Product[];
   locale: string;
+  baseSlug: string; // ✅ kötelező
 }) => {
   if (!products?.length) return null;
 
@@ -46,14 +49,27 @@ export const ProductItems = ({
         variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
       >
         {products.map((product) => (
-          <ProductItem key={"regular-product-item" + product.id} product={product} locale={locale} />
+          <ProductItem
+            key={"regular-product-item" + product.id}
+            product={product}
+            locale={locale}
+            baseSlug={baseSlug}
+          />
         ))}
       </motion.div>
     </section>
   );
 };
 
-const ProductItem = ({ product, locale }: { product: Product; locale: string }) => {
+const ProductItem = ({
+  product,
+  locale,
+  baseSlug,
+}: {
+  product: Product;
+  locale: string;
+  baseSlug: string;
+}) => {
   return (
     <motion.div
       variants={{
@@ -61,9 +77,9 @@ const ProductItem = ({ product, locale }: { product: Product; locale: string }) 
         show: { opacity: 1, y: 0, transition: spring },
       }}
     >
-      <Link href={`/${locale}/products/${product.slug}` as never} className="group relative block">
+      {/* ✅ Itt volt a hiba: /products/… → /{baseSlug}/… */}
+      <Link href={`/${locale}/${baseSlug}/${product.slug}` as never} className="group relative block">
         <div className="relative rounded-3xl overflow-hidden bg-white ring-1 ring-neutral-200 shadow-sm hover:shadow-lg transition-shadow">
-          {/* image + subtle zoom */}
           <StrapiImage
             src={product?.images?.[0]?.url}
             alt={product.name}
@@ -71,7 +87,6 @@ const ProductItem = ({ product, locale }: { product: Product; locale: string }) 
             height={800}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
-          {/* soft bottom gradient */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/10 via-black/0 to-transparent" />
         </div>
 

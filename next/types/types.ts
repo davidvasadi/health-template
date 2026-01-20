@@ -33,3 +33,20 @@ export interface Product {
   images: any[];
   categories?: any[];
 };
+
+export interface Practice {
+  id: number;
+  name?: string | null;
+  slug?: string | null;
+  description?: string | null;
+
+  // ✅ ez kell a videó thumbhoz
+  video_poster?: any | null;
+
+  media?: any[]; // vagy (StrapiMedia | any)[] ha vegyes
+
+  categories?: Category[];
+  dynamic_zone?: any[];
+  button?: any;
+  seo?: any;
+}

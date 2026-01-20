@@ -30,6 +30,18 @@ export interface CardsGraphCard extends Struct.ComponentSchema {
   };
 }
 
+export interface CardsPracticeCard extends Struct.ComponentSchema {
+  collectionName: 'components_cards_practice_cards';
+  info: {
+    displayName: 'practice-card';
+  };
+  attributes: {
+    icon: Schema.Attribute.Enumeration<['clock', 'difficult', 'type']>;
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
+  };
+}
+
 export interface CardsRayCard extends Struct.ComponentSchema {
   collectionName: 'components_cards_ray_cards';
   info: {
@@ -503,6 +515,20 @@ export interface SharedPerks extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedPractice extends Struct.ComponentSchema {
+  collectionName: 'components_shared_practices';
+  info: {
+    displayName: 'practice';
+    icon: 'bulletList';
+  };
+  attributes: {
+    description: Schema.Attribute.String;
+    heading: Schema.Attribute.String;
+    quote: Schema.Attribute.Text;
+    steps: Schema.Attribute.Blocks;
+  };
+}
+
 export interface SharedSection extends Struct.ComponentSchema {
   collectionName: 'components_shared_sections';
   info: {
@@ -601,6 +627,7 @@ declare module '@strapi/strapi' {
     export interface ComponentSchemas {
       'cards.globe-card': CardsGlobeCard;
       'cards.graph-card': CardsGraphCard;
+      'cards.practice-card': CardsPracticeCard;
       'cards.ray-card': CardsRayCard;
       'cards.social-media-card': CardsSocialMediaCard;
       'dynamic-zone.about': DynamicZoneAbout;
@@ -631,6 +658,7 @@ declare module '@strapi/strapi' {
       'shared.location': SharedLocation;
       'shared.opening-hour': SharedOpeningHour;
       'shared.perks': SharedPerks;
+      'shared.practice': SharedPractice;
       'shared.section': SharedSection;
       'shared.seo': SharedSeo;
       'shared.social-media-icon-links': SharedSocialMediaIconLinks;

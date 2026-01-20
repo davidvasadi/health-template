@@ -1,1 +1,2 @@
-export { POST } from "../../contact/route";
+// app/[locale]/contact/route.ts
+export { POST, runtime } from "../../contact/route";

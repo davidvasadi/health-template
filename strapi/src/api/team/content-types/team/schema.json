@@ -15,6 +15,14 @@
     }
   },
   "attributes": {
+    "badge_label": {
+      "type": "string",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
     "avatar": {
       "type": "media",
       "pluginOptions": {
@@ -47,6 +55,14 @@
       }
     },
     "short_description": {
+      "type": "string",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "heading": {
       "type": "string",
       "pluginOptions": {
         "i18n": {

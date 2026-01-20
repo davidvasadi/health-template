@@ -35,6 +35,12 @@
       "relation": "manyToMany",
       "target": "api::article.article",
       "mappedBy": "categories"
+    },
+    "practices": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::practice.practice",
+      "inversedBy": "categories"
     }
   }
 }

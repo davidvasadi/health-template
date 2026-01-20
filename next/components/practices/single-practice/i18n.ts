@@ -1,0 +1,77 @@
+// next/components/practices/single-practice/i18n.ts
+
+export const UI = {
+  hu: {
+    back: "Vissza a gyakorlatokhoz",
+    mediaCount: "média",
+    open: "Megnyitás",
+    download: "Letöltés",
+    noMediaTitle: "Nincs média feltöltve",
+    noMediaDesc: "Tegyél ide videót / képet / PDF-et a Strapi-ban",
+    summary: "Összefoglaló",
+    stepsTitle: "Lépésről lépésre",
+    descTitle: "Szakmai leírás",
+    share: "Megosztás",
+    copied: "Link másolva",
+    shared: "Megosztva",
+    duration: "Időtartam",
+    difficulty: "Nehézség",
+    type: "Típus",
+    expertFallbackName: "Szakember",
+    dataTitle: "Gyakorlat adatai",
+    important: "Fontos",
+    start: "Gyakorlat indítása",
+    gallery: "Médiák",
+  },
+  en: {
+    back: "Back to exercises",
+    mediaCount: "media",
+    open: "Open",
+    download: "Download",
+    noMediaTitle: "No media uploaded",
+    noMediaDesc: "Add video / image / PDF in Strapi",
+    summary: "Summary",
+    stepsTitle: "Step by step",
+    descTitle: "Professional description",
+    share: "Share",
+    copied: "Link copied",
+    shared: "Shared",
+    duration: "Duration",
+    difficulty: "Difficulty",
+    type: "Type",
+    expertFallbackName: "Expert",
+    dataTitle: "Exercise details",
+    important: "Important",
+    start: "Start exercise",
+    gallery: "Media",
+  },
+  de: {
+    back: "Zurück zu Übungen",
+    mediaCount: "Medien",
+    open: "Öffnen",
+    download: "Download",
+    noMediaTitle: "Keine Medien",
+    noMediaDesc: "Füge Video / Bild / PDF in Strapi hinzu",
+    summary: "Zusammenfassung",
+    stepsTitle: "Schritt für Schritt",
+    descTitle: "Fachbeschreibung",
+    share: "Teilen",
+    copied: "Link kopiert",
+    shared: "Geteilt",
+    duration: "Dauer",
+    difficulty: "Schwierigkeit",
+    type: "Typ",
+    expertFallbackName: "Fachperson",
+    dataTitle: "Übungsdetails",
+    important: "Wichtig",
+    start: "Übung starten",
+    gallery: "Medien",
+  },
+} as const;
+
+export type LocaleKey = keyof typeof UI;
+
+export function baseLocale(loc?: string): LocaleKey {
+  const code = (loc || "hu").toLowerCase().split("-")[0] as LocaleKey;
+  return (UI as any)[code] ? code : "hu";
+}
