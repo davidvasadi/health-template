@@ -13,12 +13,25 @@ function unwrap(x: any) {
   return x?.attributes ?? x;
 }
 
-// Strapi v5 media: images[0].formats.*.url
-function hasAnyImage(p: any): boolean {
-  const x = unwrap(p);
+/** Strapi v5 képek lehetnek: images: []  VAGY images: { data: [] } */
+function normalizeImagesField(product: any): any[] {
+  const x = unwrap(product);
   const imgs = x?.images;
-  if (!Array.isArray(imgs) || imgs.length === 0) return false;
+
+  if (Array.isArray(imgs)) return imgs.map(unwrap);
+
+  const data = imgs?.data;
+  if (Array.isArray(data)) return data.map(unwrap);
+
+  return [];
+}
+
+/** Van-e ténylegesen használható kép URL */
+function hasAnyImage(product: any): boolean {
+  const imgs = normalizeImagesField(product);
   const img0 = imgs[0];
+  if (!img0) return false;
+
   return Boolean(
     img0?.formats?.medium?.url ||
       img0?.formats?.small?.url ||
@@ -27,13 +40,30 @@ function hasAnyImage(p: any): boolean {
   );
 }
 
+/** API base: ha nincs env a kliensben, essünk vissza same-origin /api-ra */
 function getApiBase(): string {
-  const raw = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-  if (!raw) return ""; // ha nincs env, nem fetch-elünk
+  const raw = (
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_STRAPI_URL ||
+    ""
+  ).replace(/\/$/, "");
 
-  // ha már /api-val végződik
-  if (raw.endsWith("/api")) return raw;
-  return `${raw}/api`;
+  if (!raw) return "/api";
+  return raw.endsWith("/api") ? raw : `${raw}/api`;
+}
+
+/** Strapi $in filter stabilan: filters[slug][$in][0]=a ... */
+function buildProductsUrl(apiBase: string, locale: string, slugs: string[]) {
+  const params = new URLSearchParams();
+  params.set("locale", locale);
+  params.set("populate", "images");
+  params.set("pagination[pageSize]", "100");
+
+  slugs.forEach((slug, i) => {
+    params.set(`filters[slug][$in][${i}]`, slug);
+  });
+
+  return `${apiBase}/products?${params.toString()}`;
 }
 
 export const RelatedProducts = ({
@@ -48,58 +78,57 @@ export const RelatedProducts = ({
   locale: string;
 }) => {
   const baseSlug = PRODUCT_BASE[locale] ?? "products";
-  const [safeProducts, setSafeProducts] = useState<any[]>(products ?? []);
+  const [safeProducts, setSafeProducts] = useState<any[]>(() =>
+    Array.isArray(products) ? products : []
+  );
 
   useEffect(() => {
     const list = Array.isArray(products) ? products : [];
     setSafeProducts(list);
 
-    // csak azokat kérjük le, amiknél tényleg nincs kép adat
-    const missing = list
+    // csak azok, ahol tényleg nincs kép
+    const missingSlugs = list
       .map(unwrap)
       .filter((p) => p?.slug)
       .filter((p) => !hasAnyImage(p))
-      .map((p) => p.slug);
+      .map((p) => String(p.slug).trim())
+      .filter(Boolean);
 
-    const uniq = Array.from(new Set(missing));
+    const uniq = Array.from(new Set(missingSlugs));
     if (uniq.length === 0) return;
 
-    const api = getApiBase();
-    if (!api) return;
+    const apiBase = getApiBase();
+    const url = buildProductsUrl(apiBase, locale, uniq);
 
-    // Strapi filter: filters[slug][$in]=a,b,c
-    const inList = encodeURIComponent(uniq.join(","));
-    const url = `${api}/products?locale=${encodeURIComponent(
-      locale
-    )}&populate=images&filters[slug][$in]=${inList}&pagination[pageSize]=100`;
-
-    let cancelled = false;
+    const controller = new AbortController();
 
     (async () => {
       try {
-        const res = await fetch(url, { cache: "no-store" });
+        const res = await fetch(url, { cache: "no-store", signal: controller.signal });
         if (!res.ok) return;
 
         const json = await res.json();
-
-        // Strapi lehet {data:[...]} vagy már tömb
         const fetched = (json?.data ?? json ?? []).map(unwrap);
 
-        if (cancelled) return;
-
-        // merge slug alapján
+        // merge slug alapján (images normalizálva!)
         setSafeProducts((prev) => {
           const prevList = Array.isArray(prev) ? prev.map(unwrap) : [];
           const bySlug = new Map<string, any>();
-          for (const p of prevList) if (p?.slug) bySlug.set(p.slug, p);
+
+          for (const p of prevList) {
+            if (!p?.slug) continue;
+            bySlug.set(String(p.slug), p);
+          }
 
           for (const fp of fetched) {
-            if (fp?.slug) {
-              const cur = bySlug.get(fp.slug) ?? fp;
-              // fp.images jön a populate-ból -> felülírjuk
-              bySlug.set(fp.slug, { ...cur, ...fp, images: fp.images ?? cur.images });
-            }
+            const slug = fp?.slug ? String(fp.slug) : "";
+            if (!slug) continue;
+
+            const cur = bySlug.get(slug) ?? fp;
+            const images = normalizeImagesField(fp);
+            bySlug.set(slug, { ...cur, ...fp, images: images.length ? images : cur.images });
           }
+
           return Array.from(bySlug.values());
         });
       } catch {
@@ -107,9 +136,7 @@ export const RelatedProducts = ({
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [products, locale]);
 
   const finalProducts = useMemo(() => safeProducts ?? [], [safeProducts]);
