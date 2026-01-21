@@ -87,9 +87,8 @@ export default async function Products({ params }: { params: { locale: string } 
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
       <AmbientColor />
       <Container className="pt-40 pb-40">
-<Featured products={featured} locale={params.locale} baseSlug={baseSlug} />
-<ProductItems products={productsRes?.data} locale={params.locale} baseSlug={baseSlug} />
-
+        <Featured products={featured} locale={params.locale} baseSlug={baseSlug} />
+        <ProductItems products={productsRes?.data} locale={params.locale} baseSlug={baseSlug} />
       </Container>
     </div>
   );

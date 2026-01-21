@@ -1,3 +1,4 @@
+// next/components/products/single-product.tsx 
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -73,7 +74,7 @@ function extractCTA(product: any, locale?: string): ExtractedCTA {
 /* ── CSAK a két felirat lokális fordítása ─────────────────────────────────── */
 const Labels = {
   en: { availableFor: "Available for", categories: "Categories" },
-  hu: { availableFor: "Elérhető",      categories: "Kategóriák" },
+  hu: { availableFor: "Elérhető", categories: "Kategóriák" },
   de: { availableFor: "Verfügbar für", categories: "Kategorien" },
 } as const;
 
@@ -113,7 +114,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
   const cta = useMemo(() => extractCTA(product, activeLocale), [product, activeLocale]);
 
   return (
-    <section className="rounded-3xl border border-neutral-200 bg-white p-5 md:p-8 shadow-sm">
+    <section className="rounded-3xl border border-neutral-200 bg-white p-3 md:p-8 shadow-sm">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         {/* GALÉRIA */}
         <motion.div initial={galleryEnter.initial} animate={galleryEnter.animate} transition={spring} className="space-y-4">
@@ -145,7 +146,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
                   onClick={() => setActiveIndex(i)}
                   aria-label={`Show image ${i + 1}`}
                   className={cn(
-                    "relative h-20 w-20 rounded-xl overflow-hidden border transition-all",
+                    "relative h-14 w-14 md:h-20 md:w-20 rounded-xl overflow-hidden border transition-all",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500",
                     i === activeIndex ? "border-neutral-900 ring-2 ring-neutral-400" : "border-neutral-200 hover:border-neutral-300"
                   )}
@@ -161,7 +162,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
         <motion.div initial={contentEnter.initial} animate={contentEnter.animate} transition={spring} className="flex flex-col">
           <h1 className="text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight">{product.name}</h1>
 
-          <p className="md:hidden mt-3 mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 backdrop-blur border border-neutral-200 px-4 py-1 text-xs font-semibold text-neutral-900">
+          <p className="md:hidden mt-3 mb-5 inline-flex items-center gap-2 border-none md:rounded-full bg-white/85 backdrop-blur border border-neutral-200 px-0 md:px-2 py-0 md:py-1 text-xs font-semibold text-neutral-900">
             <span className="rounded-full bg-breaker-bay-700 text-white px-2 py-1">HUF {formatNumber(product.price)}</span>
           </p>
 
@@ -210,7 +211,7 @@ export const SingleProduct = ({ product, locale }: { product: Product; locale?: 
               href={cta.href as never}
               {...(cta.target === "_blank" ? { target: "_blank" as const } : {})}
               aria-label={cta.text}
-              className="group inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white px-5 py-3 font-medium shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition"
+              className="group inline-flex items-center gap-2 rounded-xl w-full text-white px-5 py-3 font-medium shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-neutral-400 transition"
             >
               {cta.text}
               <IconArrowRight className="h-4 w-4" />

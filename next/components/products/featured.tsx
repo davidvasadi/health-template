@@ -256,8 +256,8 @@ export function Featured({
                 <div
                   className="relative z-[30] mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
                   style={{
-                    marginTop: "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
-                    height: "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
+                    marginTop: "calc(var(--nav-h, 80px) + env(safe-area-inset-top, 0px) + 2px)",
+                    height: "calc(100svh - (var(--nav-h, 80px) + env(safe-area-inset-top, 0px) + 24px))",
                   }}
                 >
                   {/* SOR 1: Title */}
@@ -303,7 +303,7 @@ export function Featured({
                       bg-white/75 backdrop-blur-2xl backdrop-saturate-150
                       ring-1 ring-white/50
                       shadow-[0_16px_48px_-18px_rgba(3,57,63,0.28)]
-                      p-4 md:p-6 flex flex-col gap-3
+                      p-2 md:p-6 flex flex-col gap-3
                       transition hover:bg-white/80
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500
                     "
@@ -345,7 +345,7 @@ export function Featured({
         <div
           className="relative mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
           style={{
-            marginTop: "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
+            marginTop: "calc(var(--nav-h, 12px) + env(safe-area-inset-top, 0px) + 12px)",
             height: "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
           }}
         >

@@ -1,37 +1,9 @@
-// components/practices/practice-shared.ts
+// components/practice/practice-shared.ts
 /**
  * practice-shared – közös konstansok, helper-ek és típusok (UI-agnosztikus)
- *
- * Tartalom:
- * 1) Mini i18n:
- *    - UI dict (hu/en/de) + baseLocale fallback
- *
- * 2) Tailwind tokenek (className konstansok):
- *    - focusRing, glassPanel, bentoGrid, bentoItem, filterChip, filterChipActive, stb.
- *    - Ezek megváltoztatása UI-t érint → óvatosan.
- *
- * 3) Motion shared:
- *    - spring, gridVariants, itemVariants
- *
- * 4) Strapi normalize:
- *    - get(attributes unwrap), unwrapMedia/unwrapSingleMedia, isVideo/isImage
- *    - normalizeCategory, extractPracticeCategories
- *
- * 5) Média kiválasztás:
- *    - extractThumb: video_poster (kép) -> media első kép -> none
- *
- * 6) IconCard felismerés:
- *    - pickIconCards: clock/difficult/type felismerés icon vagy label alapján (contains match)
- *
- * 7) Type-ok:
- *    - PracticeCategory, NormalizedPractice
- *
- * Fontos:
- * - Nem renderel UI-t, csak adat + közös osztály stringek.
- * - Null-safe: Strapi hiányos adatnál se dobjon.
  */
 
-export const BRAND = "#007980";
+export const BRAND = "#057C80";
 export const ACCENT = "#00969e";
 
 /* ──────────────────────────────────────────────────────────────
@@ -183,14 +155,24 @@ export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+/** About-szerű tipó tokenek (semibold + tracking-tight, neutral) */
+export const typo = {
+  h2: "text-neutral-950 tracking-tight text-4xl md:text-7xl font-semibold",
+  sub: "text-left text-neutral-500 text-lg md:text-xl",
+  caps: "text-[11px] font-semibold uppercase tracking-wide text-neutral-500",
+  hint: "mt-2 text-sm font-medium text-neutral-500",
+  pill: "inline-flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-600",
+};
+
 export const focusRing =
-  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,121,128,0.20)] focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(5,124,128,0.18)] focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
 export const glassPanel =
-  "rounded-[1.25rem] border border-white/30 bg-white/55 backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]";
+  "rounded-[1.25rem] border border-neutral-200/70 bg-white/55 backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]";
 
 export const inputGlass =
-  "w-full bg-white border-none rounded-2xl py-4 pl-14 pr-6 text-slate-700 shadow-sm focus:ring-2 focus:ring-[rgba(0,121,128,0.20)] text-lg placeholder:text-slate-400 transition-all";
+  "w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-4 pl-14 pr-6 text-neutral-800 shadow-sm " +
+  "focus:ring-2 focus:ring-[rgba(5,124,128,0.18)] text-lg placeholder:text-neutral-400 transition-all";
 
 /**
  * Mobile bento:
@@ -202,22 +184,22 @@ export const bentoGrid =
   "gap-2 sm:gap-3 grid-flow-dense auto-rows-[minmax(180px,auto)] sm:auto-rows-[minmax(220px,auto)] lg:auto-rows-[minmax(220px,auto)]";
 
 export const bentoItem =
-  "relative overflow-hidden bg-[#f8fafc] rounded-[1.25rem] border border-slate-200 transition-all duration-300";
+  "relative overflow-hidden bg-[#f8fafc] rounded-[1.25rem] border border-neutral-200 transition-all duration-300";
 
 export const videoCard = "shadow-sm hover:shadow-xl hover:-translate-y-1";
 
 export const overlayGradient =
-  "pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent";
+  "pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-neutral-950/30 to-transparent";
 
 export const microBadge =
-  "px-2 py-1 bg-white/10 backdrop-blur-md text-[9px] font-bold uppercase tracking-wider rounded border border-white/20 text-white flex items-center gap-1.5";
+  "px-2 py-1 bg-white/10 backdrop-blur-md text-[9px] font-semibold uppercase tracking-wide rounded border border-white/20 text-white flex items-center gap-1.5";
 
 export const filterChip =
-  "rounded-full border border-slate-200 bg-[#f8fafc] font-semibold text-slate-600 hover:bg-white transition-all whitespace-nowrap " +
+  "rounded-full border border-neutral-200 bg-neutral-50 font-semibold text-neutral-700 hover:bg-white transition-all whitespace-nowrap " +
   "px-4 py-2 text-xs md:px-6 md:py-2.5 md:text-sm";
 
 export const filterChipActive =
-  "bg-[rgba(0,121,128,0.10)] border-[rgba(0,121,128,0.20)] text-[rgba(0,121,128,1)] hover:bg-[rgba(0,121,128,0.18)]";
+  "bg-[rgba(5,124,128,0.10)] border-[rgba(5,124,128,0.22)] text-[#057C80] hover:bg-[rgba(5,124,128,0.16)]";
 
 /* ──────────────────────────────────────────────────────────────
    Motion (shared)
@@ -361,13 +343,11 @@ export function extractThumb(practice: any) {
   return { kind: "none" as const, url: "" };
 }
 
+/* ──────────────────────────────────────────────────────────────
+   IconCards
+──────────────────────────────────────────────────────────────── */
 export type IconCardKey = "clock" | "difficult" | "type";
 
-/**
- * pickIconCards
- * - icon + label alapján is talál (contains match)
- * - több nyelv támogatás (HU/EN/DE)
- */
 export function pickIconCards(cards: any[]) {
   const normKey = (s: any) => safeLower(s).replace(/\s+/g, "").trim();
 
@@ -418,7 +398,7 @@ export type NormalizedPractice = {
 };
 
 /* ──────────────────────────────────────────────────────────────
-   Shared helpers used by PracticeCard (EXPORT OK!)
+   Shared helpers used by PracticeCard
 ──────────────────────────────────────────────────────────────── */
 export function isFeaturedFlag(p: any) {
   return Boolean(p?.featured ?? p?.is_featured ?? p?.highlighted ?? p?.isHighlighted);

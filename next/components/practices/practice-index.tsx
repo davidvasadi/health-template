@@ -1,25 +1,7 @@
 // components/practice/practice-index.ts
-/**
- * practice-index – “adatindex” / normalizáló logika a PracticeItems-hez (UI nélkül)
- *
- * Miért létezik:
- * - A PracticeItems túl hosszú volt: itt van minden számítás/normalizálás, ami nem markup.
- *
- * Mit ad vissza (usePracticeIndex):
- * - cats: összevont kategória lista (Strapi categories + itemekből kinyert categories), dedupe + ABC
- * - catLabelByKey: Map<key, name> a gyors label lookuphoz
- * - normalized: NormalizedPractice[] (Strapi raw -> kereshető, stabil, UI-barát forma)
- * - presetStats: short/easy/mid/hard/video darabszámok
- * - editorial: hero + wide kiválasztás (featured elsőbbség, különben első elem)
- *
- * Fontos:
- * - Strapi adatstruktúrát nem módosít, csak olvas/normalizál.
- * - A UI változatlansága miatt a normalizált mezők nevei/viselkedése stabil kell maradjon.
- */
-
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import {
   get,
   normalizeCategory,
@@ -37,9 +19,6 @@ import {
 
 export type Preset = "" | "short" | "easy" | "mid" | "hard" | "video";
 
-/* ──────────────────────────────────────────────────────────────
-   Helpers (UI-t nem érintik, csak a filter logikát)
-──────────────────────────────────────────────────────────────── */
 export function parseMinutes(raw?: string) {
   const s = String(raw ?? "").toLowerCase();
   const m = s.match(/(\d+)\s*(p|perc|min)/i);
@@ -75,11 +54,6 @@ export function difficultyLevel(raw?: string): "easy" | "mid" | "hard" | "unknow
   return "unknown";
 }
 
-/* ──────────────────────────────────────────────────────────────
-   usePracticeIndex
-   - korábban a practice-items.tsx-ben volt (túl hosszú volt)
-   - viselkedés 100%-ban változatlan, csak fájlba szervezve
-──────────────────────────────────────────────────────────────── */
 export function usePracticeIndex(practices: any[], categories: any[]) {
   const cats = useMemo<PracticeCategory[]>(() => {
     const base = (categories ?? []).map(normalizeCategory).filter((c: any) => c?.name);
