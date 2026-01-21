@@ -209,10 +209,10 @@ export function HeroMedia({
           <>
             <video
               ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-fit"
               playsInline
               preload="metadata"
-              poster={posterUrl || "/logo.svg"}
+              poster={posterUrl || "https://csontkovacsbence.hu/uploads/logo_018c92a763.svg"}
               src={absUrl(active.url)}
               // controls MUST be available after starting
               controls={!isOverlay}
