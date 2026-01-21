@@ -52,11 +52,11 @@
         }
       },
       "multiple": true,
-      "required": false,
       "allowedTypes": [
         "images",
         "files",
-        "videos"
+        "videos",
+        "audios"
       ]
     },
     "perks": {

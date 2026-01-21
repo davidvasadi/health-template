@@ -1277,7 +1277,10 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
         };
       }> &
       Schema.Attribute.DefaultTo<false>;
-    images: Schema.Attribute.Media<'images' | 'files' | 'videos', true> &
+    images: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios',
+      true
+    > &
       Schema.Attribute.SetPluginOptions<{
         i18n: {
           localized: true;
