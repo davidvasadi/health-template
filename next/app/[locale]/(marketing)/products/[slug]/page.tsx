@@ -91,6 +91,7 @@ export default async function SingleProductPage({
         images: { populate: "*" },
         seo: { populate: "metaImage" },
         dynamic_zone: { populate: "*" },
+        button: true,
       },
     },
     true
