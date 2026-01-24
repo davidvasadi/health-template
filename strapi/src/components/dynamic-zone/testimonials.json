@@ -17,6 +17,18 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::testimonial.testimonial"
+    },
+    "percentage_value": {
+      "type": "string"
+    },
+    "percentage_label": {
+      "type": "string"
+    },
+    "reviews_value": {
+      "type": "string"
+    },
+    "reviews_label": {
+      "type": "string"
     }
   }
 }

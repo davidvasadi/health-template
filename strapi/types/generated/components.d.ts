@@ -314,6 +314,10 @@ export interface DynamicZoneTestimonials extends Struct.ComponentSchema {
   };
   attributes: {
     heading: Schema.Attribute.String;
+    percentage_label: Schema.Attribute.String;
+    percentage_value: Schema.Attribute.String;
+    reviews_label: Schema.Attribute.String;
+    reviews_value: Schema.Attribute.String;
     sub_heading: Schema.Attribute.String;
     testimonials: Schema.Attribute.Relation<
       'oneToMany',
