@@ -7,7 +7,9 @@ export const revalidate = 600;
 const SITE = (
   process.env.WEBSITE_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://csontkovacsbence.hu")
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://csontkovacsbence.hu")
 ).replace(/\/$/, "");
 
 const STRAPI_BASE = (
@@ -191,6 +193,37 @@ async function getPracticesBaseLocalized(): Promise<Record<L, string>> {
   return map;
 }
 
+// ✅ VOUCHERS base slug (single type: voucher-page)
+async function getVouchersBaseLocalized(): Promise<Record<L, string>> {
+  const map: Record<L, string> = { hu: "vouchers", en: "vouchers", de: "vouchers" };
+
+  try {
+    const json = await sFetch("/api/voucher-page", {
+      fields: ["slug", "locale"],
+      populate: { localizations: { fields: ["slug", "locale"] } },
+      locale: "hu",
+    });
+
+    const root = Array.isArray(json?.data) ? json.data[0] : json?.data;
+    if (!root) return map;
+
+    const rootAttrs = attrs(root);
+    const rootLoc = (rootAttrs?.locale ?? root?.locale) as L | undefined;
+    const rootSlug = norm(rootAttrs?.slug ?? root?.slug);
+    if (rootLoc && rootSlug) map[rootLoc] = rootSlug;
+
+    for (const l of getLocalizations(root).map(attrs)) {
+      const lng = l?.locale as L | undefined;
+      const slug = norm(l?.slug);
+      if (lng && slug) map[lng] = slug;
+    }
+  } catch {
+    // fallback marad
+  }
+
+  return map;
+}
+
 // --- hreflang alternates ---
 function dedupeHreflang(list: { hreflang: string; href: string }[]) {
   const seen = new Set<string>();
@@ -268,6 +301,7 @@ export async function GET() {
   // base slugs
   const productsBase = await getProductsBaseLocalized();
   const practicesBase = await getPracticesBaseLocalized();
+  const vouchersBase = await getVouchersBaseLocalized(); // ✅
 
   // HOME
   const homeAlternates = [
@@ -336,6 +370,33 @@ export async function GET() {
             changefreq: "weekly",
             priority: 0.8,
             alternates: altsForIndex("practices", { products: productsBase, practices: practicesBase }),
+          })
+        );
+      }
+    }
+
+    // ✅ vouchers page (single type) index — csak EZ kell, nincs detail oldal
+    {
+      const base = vouchersBase[lng] || "vouchers";
+      const loc = `${SITE}/${lng}/${base}`;
+
+      if (!seen.has(loc)) {
+        seen.add(loc);
+
+        const alternates = dedupeHreflang([
+          ...LOCALES.map((x) => ({
+            hreflang: x,
+            href: `${SITE}/${x}/${vouchersBase[x] || "vouchers"}`,
+          })),
+          { hreflang: "x-default", href: `${SITE}/hu/${vouchersBase.hu || "vouchers"}` },
+        ]);
+
+        nodes.push(
+          urlNode(loc, {
+            lastmod: new Date().toISOString(),
+            changefreq: "monthly",
+            priority: 0.7,
+            alternates,
           })
         );
       }
@@ -414,7 +475,7 @@ export async function GET() {
     console.error("[sitemap] articles fetch failed:", e);
   }
 
-  // PRODUCTS (product detail) — ✅ base slug-gal!
+  // PRODUCTS (product detail)
   try {
     for (const lng of LOCALES) {
       const productsJson = await fetchCollection("/api/products", lng);

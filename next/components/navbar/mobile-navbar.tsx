@@ -149,7 +149,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         </AnimatePresence>
 
         {/* Bal: Logo */}
-        <Logo locale={locale} image={logo?.image} />
+        <Logo locale={locale} image={logo?.image} company={logo?.company} />
 
         {/* Jobb: Nyelvváltó + Menü gomb */}
         <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
             >
               {/* Panel fej: logo + nyelv + close */}
               <div className="flex items-center justify-between">
-                <Logo locale={locale} image={logo?.image} />
+                <Logo locale={locale} image={logo?.image} company={logo?.company} />
                 <div className="flex items-center gap-2">
                   <LocaleSwitcher currentLocale={locale} />
                   <button

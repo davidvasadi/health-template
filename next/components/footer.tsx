@@ -19,7 +19,7 @@ export const Footer = ({ data, locale }: FooterProps) => {
           <div className="max-w-md">
             {data?.logo?.image && (
               <div className="mb-6">
-                <Logo image={data.logo.image} />
+                <Logo image={data.logo.image} company={data.logo.company} />
               </div>
             )}
 

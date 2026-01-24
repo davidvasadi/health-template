@@ -129,7 +129,7 @@ export const Testimonials = ({
         <div className="relative md:py-16 pb-16">
           <TestimonialsSlider testimonials={testimonials} />
 
-          <div className="h-full w-full mt-20 bg-white">
+          <div className="h-full w-full  bg-white">
             <div className="max-w-7xl mx-auto px-4">
               <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--breaker-200)] to-transparent mb-8" />
             </div>

@@ -243,7 +243,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
 
         {/* BAL: logó + menü (chip-stílus) */}
         <div className="flex flex-row gap-2 items-center">
-          <Logo locale={locale} image={logo?.image} />
+          <Logo locale={locale} image={logo?.image} company={logo?.company} />
           <div className="nav-links flex items-center gap-1.5">
             {leftNavbarItems.map((item) => {
               const href = `/${locale}${item.URL}`;
