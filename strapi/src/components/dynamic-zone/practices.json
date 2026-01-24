@@ -1,0 +1,29 @@
+{
+  "collectionName": "components_dynamic_zone_practices",
+  "info": {
+    "displayName": "Practices"
+  },
+  "options": {},
+  "attributes": {
+    "badge_label": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "sub_heading": {
+      "type": "string"
+    },
+    "button": {
+      "type": "component",
+      "component": "shared.button",
+      "repeatable": false
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::category.category"
+    }
+  },
+  "config": {}
+}

@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "voucher_orders",
+  "info": {
+    "singularName": "voucher-order",
+    "pluralName": "voucher-orders",
+    "displayName": "Voucher Orders"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "message": {
+      "type": "text"
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "voucher": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::voucher.voucher",
+      "private": true,
+      "inversedBy": "voucher_orders"
+    },
+    "paid_at": {
+      "type": "datetime"
+    },
+    "sent_at": {
+      "type": "datetime"
+    },
+    "order_status": {
+      "type": "enumeration",
+      "default": "pending_payment",
+      "enum": [
+        "pending_payment",
+        "payment_received",
+        "voucher_sent",
+        "cancelled"
+      ]
+    },
+    "reference_code": {
+      "type": "string",
+      "required": false,
+      "unique": true
+    }
+  }
+}

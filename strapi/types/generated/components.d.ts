@@ -1,5 +1,24 @@
 import type { Schema, Struct } from '@strapi/strapi';
 
+export interface CardsBankTransfer extends Struct.ComponentSchema {
+  collectionName: 'components_cards_bank_transfers';
+  info: {
+    displayName: 'Bank_Card';
+  };
+  attributes: {
+    account_label: Schema.Attribute.String;
+    account_number: Schema.Attribute.String;
+    amount_label: Schema.Attribute.String;
+    beneficiary_label: Schema.Attribute.String;
+    beneficiary_name: Schema.Attribute.String;
+    delivery_note: Schema.Attribute.Text;
+    reference_hint: Schema.Attribute.String;
+    reference_label: Schema.Attribute.String;
+    section_title: Schema.Attribute.String;
+    warning_text: Schema.Attribute.Text;
+  };
+}
+
 export interface CardsGlobeCard extends Struct.ComponentSchema {
   collectionName: 'components_cards_globe_cards';
   info: {
@@ -70,6 +89,21 @@ export interface CardsSocialMediaCard extends Struct.ComponentSchema {
     logos: Schema.Attribute.Relation<'oneToMany', 'api::logo.logo'>;
     span: Schema.Attribute.Enumeration<['one', 'two', 'three']>;
     Title: Schema.Attribute.String;
+  };
+}
+
+export interface CardsVoucherSteps extends Struct.ComponentSchema {
+  collectionName: 'components_cards_voucher_steps';
+  info: {
+    displayName: 'Voucher_Steps';
+  };
+  attributes: {
+    key: Schema.Attribute.Enumeration<
+      ['select', 'personalize', 'transfer', 'success']
+    > &
+      Schema.Attribute.DefaultTo<'select'>;
+    kicker: Schema.Attribute.String;
+    title: Schema.Attribute.String;
   };
 }
 
@@ -213,6 +247,23 @@ export interface DynamicZoneLaunches extends Struct.ComponentSchema {
   };
 }
 
+export interface DynamicZonePractices extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_practices';
+  info: {
+    displayName: 'Practices';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    categories: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::category.category'
+    >;
+    heading: Schema.Attribute.String;
+    sub_heading: Schema.Attribute.String;
+  };
+}
+
 export interface DynamicZonePricing extends Struct.ComponentSchema {
   collectionName: 'components_dynamic_zone_pricings';
   info: {
@@ -268,6 +319,21 @@ export interface DynamicZoneTestimonials extends Struct.ComponentSchema {
       'oneToMany',
       'api::testimonial.testimonial'
     >;
+  };
+}
+
+export interface DynamicZoneVouchers extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_vouchers';
+  info: {
+    displayName: 'Vouchers';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    heading: Schema.Attribute.String;
+    info_label: Schema.Attribute.String;
+    subheading: Schema.Attribute.Text;
+    vouchers: Schema.Attribute.Relation<'oneToMany', 'api::voucher.voucher'>;
   };
 }
 
@@ -625,11 +691,13 @@ export interface SharedUser extends Struct.ComponentSchema {
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
+      'cards.bank-transfer': CardsBankTransfer;
       'cards.globe-card': CardsGlobeCard;
       'cards.graph-card': CardsGraphCard;
       'cards.practice-card': CardsPracticeCard;
       'cards.ray-card': CardsRayCard;
       'cards.social-media-card': CardsSocialMediaCard;
+      'cards.voucher-steps': CardsVoucherSteps;
       'dynamic-zone.about': DynamicZoneAbout;
       'dynamic-zone.brands': DynamicZoneBrands;
       'dynamic-zone.cta': DynamicZoneCta;
@@ -639,10 +707,12 @@ declare module '@strapi/strapi' {
       'dynamic-zone.hero': DynamicZoneHero;
       'dynamic-zone.how-it-works': DynamicZoneHowItWorks;
       'dynamic-zone.launches': DynamicZoneLaunches;
+      'dynamic-zone.practices': DynamicZonePractices;
       'dynamic-zone.pricing': DynamicZonePricing;
       'dynamic-zone.related-articles': DynamicZoneRelatedArticles;
       'dynamic-zone.related-products': DynamicZoneRelatedProducts;
       'dynamic-zone.testimonials': DynamicZoneTestimonials;
+      'dynamic-zone.vouchers': DynamicZoneVouchers;
       'global.footer': GlobalFooter;
       'global.navbar': GlobalNavbar;
       'items.graph-card-top-items': ItemsGraphCardTopItems;

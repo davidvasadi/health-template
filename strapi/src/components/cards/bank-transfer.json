@@ -1,0 +1,40 @@
+{
+  "collectionName": "components_cards_bank_transfers",
+  "info": {
+    "displayName": "Bank_Card"
+  },
+  "options": {},
+  "attributes": {
+    "section_title": {
+      "type": "string"
+    },
+    "beneficiary_label": {
+      "type": "string"
+    },
+    "beneficiary_name": {
+      "type": "string"
+    },
+    "account_label": {
+      "type": "string"
+    },
+    "account_number": {
+      "type": "string"
+    },
+    "amount_label": {
+      "type": "string"
+    },
+    "reference_label": {
+      "type": "string"
+    },
+    "reference_hint": {
+      "type": "string"
+    },
+    "warning_text": {
+      "type": "text"
+    },
+    "delivery_note": {
+      "type": "text"
+    }
+  },
+  "config": {}
+}
