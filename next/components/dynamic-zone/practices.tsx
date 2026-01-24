@@ -328,7 +328,7 @@ export function Practices(props: any) {
                   <Link
                     href={btnHref}
                     target={target}
-                    className={buttonClass + " mt-8 font-thin"}
+                    className={buttonClass + " mt-8 font-semibold tracking-[0.08em] sm:tracking-[0.12em]"}
                     style={{ background: BRAND }}
                   >
                     <span className="whitespace-nowrap">{btnText}</span>

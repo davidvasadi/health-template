@@ -1,3 +1,4 @@
+// next/components/ui/strapi-image.tsx
 "use client";
 
 import Image from "next/image";
