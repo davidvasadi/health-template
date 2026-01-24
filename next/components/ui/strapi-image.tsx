@@ -1,4 +1,3 @@
-// next/components/ui/strapi-image.tsx
 "use client";
 
 import Image from "next/image";
@@ -91,23 +90,22 @@ export function StrapiImage({
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const mediaUrl = useMemo(() => getStrapiMedia(src), [src]);
-  const safeUrl = mediaUrl ?? ""; // hogy a memo/dep stabil legyen
+  const safeUrl = mediaUrl ?? "";
 
   const isVideo = useMemo(() => (safeUrl ? isVideoUrl(safeUrl) : false), [safeUrl]);
-  const thumb = useMemo(
-    () => isLikelyThumb(className, (rest as any).width, (rest as any).height),
-    [className, (rest as any).width, (rest as any).height]
-  );
 
-  // main videónál: csak akkor “játszik”, ha a video play event bekövetkezik
+  // ✅ dep array cleanup: ne (rest as any).width legyen bent
+  const width = (rest as any).width as unknown;
+  const height = (rest as any).height as unknown;
+
+  const thumb = useMemo(() => isLikelyThumb(className, width, height), [className, width, height]);
+
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // media váltáskor reseteljük a play-state-et
   useEffect(() => {
     setIsPlaying(false);
   }, [safeUrl]);
 
-  // play/pause/ended figyelés (csak ha video)
   useEffect(() => {
     if (!isVideo) return;
 
@@ -127,9 +125,8 @@ export function StrapiImage({
       v.removeEventListener("pause", onPause);
       v.removeEventListener("ended", onEnded);
     };
-  }, [isVideo, safeUrl]);
+  }, [isVideo]);
 
-  // tab váltáskor pause
   useEffect(() => {
     if (!pauseOnHide || !isVideo) return;
     if (typeof document === "undefined") return;
@@ -149,7 +146,6 @@ export function StrapiImage({
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [pauseOnHide, isVideo]);
 
-  // media váltás / unmount: stop + reset (state nélkül a cleanupban)
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -171,10 +167,6 @@ export function StrapiImage({
 
   const posterUrl = poster ? getStrapiMedia(poster) : null;
 
-  // Thumbnail:
-  // - passzív, nincs controls, nem indul kattintásra
-  // Main:
-  // - controls csak akkor, ha elindult (vagy explicit controls)
   const showControls = controls ?? (!thumb && isPlaying);
 
   const handlePlayClick = async (e: React.MouseEvent) => {
@@ -187,7 +179,7 @@ export function StrapiImage({
     try {
       await v.play();
     } catch {
-      // autoplay policy miatt elbukhat – ilyenkor a user úgyis natív play-t nyom
+      // autoplay policy miatt elbukhat
     }
   };
 
@@ -216,7 +208,6 @@ export function StrapiImage({
         <source src={mediaUrl} />
       </video>
 
-      {/* THUMB overlay */}
       {thumb && (
         <span aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
           <span className="rounded-full bg-black/40 p-2 shadow-sm">
@@ -225,7 +216,6 @@ export function StrapiImage({
         </span>
       )}
 
-      {/* MAIN overlay */}
       {!thumb && !isPlaying && (
         <button
           type="button"

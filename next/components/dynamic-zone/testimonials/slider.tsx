@@ -151,7 +151,12 @@ export const TestimonialsSlider = ({
   reviewsValue?: string;
   reviewsLabel?: string;
 }) => {
-  const items = useMemo(() => (Array.isArray(testimonials) ? testimonials.filter(Boolean) : []), [testimonials]);
+  const items = useMemo(
+    () => (Array.isArray(testimonials) ? testimonials.filter(Boolean) : []),
+    [testimonials]
+  );
+
+  const hasItems = items.length > 0;
 
   const [active, setActive] = useState(0);
   const [autorotate, setAutorotate] = useState(true);
@@ -163,36 +168,45 @@ export const TestimonialsSlider = ({
   // video interaction state
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [controlsOn, setControlsOn] = useState(false); // controls csak play katt után
-  const [hasPlayed, setHasPlayed] = useState(false); // poster overlay csak az első play-ig
+  const [hasPlayed, setHasPlayed] = useState(false);   // poster overlay csak az első play-ig
 
+  // ✅ autorotate (guard belül)
   useEffect(() => {
-    if (!autorotate || items.length <= 1) return;
-    const t = setInterval(() => setActive((p) => (p + 1 >= items.length ? 0 : p + 1)), 7000);
+    if (!autorotate) return;
+    if (items.length <= 1) return;
+
+    const t = setInterval(() => {
+      setActive((p) => (p + 1 >= items.length ? 0 : p + 1));
+    }, 7000);
+
     return () => clearInterval(t);
   }, [autorotate, items.length]);
 
+  // ✅ clamp active (guard belül)
   useEffect(() => {
+    if (!hasItems) return;
     if (active >= items.length) setActive(0);
-  }, [active, items.length]);
+  }, [active, items.length, hasItems]);
 
-  if (!items.length) return null;
-
-  const base = items[active];
-  const docId = getDocumentId(base);
-  const locale = getLocale(base);
+  // SAFE base/hydrated
+  const base = hasItems ? items[active] : null;
+  const docId = base ? getDocumentId(base) : null;
+  const locale = base ? getLocale(base) : null;
 
   const hydrated = docId ? hydratedById[docId] : null;
 
   // hydrate csak ha kell
-  const baseHasVideo = !!getVideoUrl(base);
-  const baseHasAvatar = !!getUserImageUrl(base);
-  const baseHasPoster = !!getPosterUrl(base);
+  const baseHasVideo = !!(base && getVideoUrl(base));
+  const baseHasAvatar = !!(base && getUserImageUrl(base));
+  const baseHasPoster = !!(base && getPosterUrl(base));
+  const hasHydratedAlready = !!(docId && hydratedById[docId]);
 
   useEffect(() => {
-    if (!docId) return;
-    if (hydratedById[docId]) return;
+    if (!docId || !base) return;
+    if (hasHydratedAlready) return;
     if (attemptedRef.current.has(docId)) return;
 
+    // ha minden megvan base-ben, nem kell hydrate
     if (baseHasVideo && baseHasAvatar && baseHasPoster) return;
 
     attemptedRef.current.add(docId);
@@ -208,12 +222,12 @@ export const TestimonialsSlider = ({
     return () => {
       cancelled = true;
     };
-  }, [docId, locale, baseHasVideo, baseHasAvatar, baseHasPoster, hydratedById]);
+  }, [docId, locale, base, baseHasVideo, baseHasAvatar, baseHasPoster, hasHydratedAlready]);
 
   // ✅ STABIL fallback: hydrated -> base
-  const videoRel = getVideoUrl(hydrated) || getVideoUrl(base);
-  const avatarRel = getUserImageUrl(hydrated) || getUserImageUrl(base);
-  const posterRel = getPosterUrl(hydrated) || getPosterUrl(base);
+  const videoRel = (hydrated && getVideoUrl(hydrated)) || (base && getVideoUrl(base)) || null;
+  const avatarRel = (hydrated && getUserImageUrl(hydrated)) || (base && getUserImageUrl(base)) || null;
+  const posterRel = (hydrated && getPosterUrl(hydrated)) || (base && getPosterUrl(base)) || null;
 
   const videoSrc = toAbs(videoRel);
   const avatarSrc = toAbs(avatarRel);
@@ -225,20 +239,22 @@ export const TestimonialsSlider = ({
   useEffect(() => {
     setControlsOn(false);
     setHasPlayed(false);
-    if (videoRef.current) {
-      try {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      } catch {}
-    }
+
+    const el = videoRef.current;
+    if (!el) return;
+
+    try {
+      el.pause();
+      el.currentTime = 0;
+    } catch {}
   }, [videoSrc, active]);
 
-  const firstname = (getUserFirstName(hydrated) || getUserFirstName(base)).trim();
-  const lastname = (getUserLastName(hydrated) || getUserLastName(base)).trim();
+  const firstname = ((hydrated && getUserFirstName(hydrated)) || (base && getUserFirstName(base)) || "").trim();
+  const lastname = ((hydrated && getUserLastName(hydrated)) || (base && getUserLastName(base)) || "").trim();
   const name = `${firstname} ${lastname}`.trim();
 
-  const text = getText(hydrated) || getText(base);
-  const job = getUserJob(hydrated) || getUserJob(base);
+  const text = (hydrated && getText(hydrated)) || (base && getText(base)) || "";
+  const job = ((hydrated && getUserJob(hydrated)) || (base && getUserJob(base)) || "").trim();
 
   // ✅ top avatars: md-től nagyobb + legutolsó legyen felül (zIndex nő i-vel)
   const avatars = useMemo(() => {
@@ -277,20 +293,20 @@ export const TestimonialsSlider = ({
   const showBadge = !hasVideo || !controlsOn;
   const showPosterOverlay = hasVideo && !!posterSrc && !hasPlayed;
 
+  // ✅ HOOK-SAFE: csak a legvégén térünk vissza null-lal
+  if (!hasItems) return null;
+
   return (
     <section className="bg-white">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* ✅ mobilon még kisebb padding */}
         <div className="rounded-[28px] border border-[#D1D5DB] bg-white p-3 sm:p-7 lg:p-14">
-          {/* ✅ mobilon kisebb gap */}
           <div className="grid gap-4 sm:gap-6 lg:gap-0 lg:grid-cols-[minmax(240px,330px)_120px_1fr] items-stretch">
             {/* BAL: videó / kép */}
             <div className="relative overflow-hidden rounded-[24px] border border-[#D1D5DB] bg-white">
-              {/* ✅ mobilon kisebb min-height */}
               <div className="relative h-full min-h-[220px] sm:min-h-[360px] lg:min-h-[520px]">
                 {hasVideo ? (
                   <>
-                    {/* ✅ Video: object-fit = contain, poster külön overlay cover-rel */}
+                    {/* Video: contain, poster külön overlay cover-rel */}
                     <video
                       ref={videoRef}
                       key={videoSrc!}
@@ -303,11 +319,11 @@ export const TestimonialsSlider = ({
                       onPlay={() => setHasPlayed(true)}
                     />
 
-                    {/* ✅ Poster overlay (cover marad!) */}
-                    {showPosterOverlay && (
+                    {/* Poster overlay (cover marad!) */}
+                    {showPosterOverlay && posterSrc && (
                       <div className="absolute inset-0 pointer-events-none">
                         <StrapiImage
-                          src={posterSrc!}
+                          src={posterSrc}
                           alt={name ? `${name} – videó poszter` : "Videó poszter"}
                           fill
                           sizes="(min-width: 1024px) 330px, 100vw"
@@ -316,7 +332,7 @@ export const TestimonialsSlider = ({
                       </div>
                     )}
 
-                    {/* ✅ Zöld play gomb középen (koppintás előtt) */}
+                    {/* Zöld play gomb (koppintás előtt) */}
                     {!controlsOn && (
                       <button
                         type="button"
@@ -342,12 +358,12 @@ export const TestimonialsSlider = ({
                   <div className="absolute inset-0 bg-[#F3F4F6]" />
                 )}
 
-                {/* ✅ finom alsó overlay a szöveghez (koppintás előtt) */}
+                {/* finom alsó overlay a szöveghez (koppintás előtt) */}
                 {showBadge && (
                   <div className="absolute inset-x-0 bottom-0 h-20 sm:h-28 bg-gradient-to-t from-black/35 via-black/10 to-transparent pointer-events-none" />
                 )}
 
-                {/* ✅ Százalék szöveg: mobilon még kisebb */}
+                {/* százalék szöveg */}
                 {showBadge && (
                   <div className="absolute left-4 bottom-4 sm:left-7 sm:bottom-7 pointer-events-none z-10">
                     <div className="text-white leading-none drop-shadow-sm">
@@ -366,34 +382,31 @@ export const TestimonialsSlider = ({
             <div className="flex flex-col justify-between">
               {/* top row */}
               <div className="flex items-start justify-between gap-3 sm:gap-6">
-                {/* ✅ top avatars: mobilon kisebb */}
                 <div className="flex -space-x-4">
                   {avatars.map((src, i) => (
                     <div
                       key={`${src}-${i}`}
                       className="rounded-full ring-1 ring-[#D1D5DB] bg-white overflow-hidden h-12 w-12 md:h-16 md:w-16"
-                      style={{ zIndex: i }} // ✅ last has highest z-index
+                      style={{ zIndex: i }}
                     >
                       <StrapiImage src={src} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
                     </div>
                   ))}
                 </div>
 
-                {/* ✅ címek mobilon még kisebbek */}
                 <div className="text-right leading-none">
                   <div className="text-3xl sm:text-6xl font-extrabold tracking-tight text-[#4B5563]">{reviewsValue}</div>
                   <div className="text-2xl sm:text-5xl font-semibold tracking-tight text-[#057C80]">{reviewsLabel}</div>
                 </div>
               </div>
 
-              {/* ✅ leírás: mobilon kisebb + kevesebb padding */}
+              {/* leírás */}
               <div className="mt-4 sm:mt-8 rounded-2xl border border-[#D1D5DB] bg-white p-3 sm:p-7">
                 <p className="text-sm sm:text-xl leading-relaxed text-[#4B5563] font-semibold">{text}</p>
               </div>
 
               {/* bottom row */}
               <div className="mt-4 sm:mt-8 flex items-center gap-3">
-                {/* bal: avatar + szöveg */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="rounded-full border border-[#D1D5DB] overflow-hidden bg-white flex-shrink-0 h-10 w-10 sm:h-14 sm:w-14">
                     {avatarSrc ? (
@@ -409,7 +422,6 @@ export const TestimonialsSlider = ({
                   </div>
                 </div>
 
-                {/* jobbra: gombok (mobilon kisebbek) */}
                 <div className="ml-auto flex items-center gap-2 flex-shrink-0">
                   <button
                     type="button"
