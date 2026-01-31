@@ -19,6 +19,24 @@ export interface CardsBankTransfer extends Struct.ComponentSchema {
   };
 }
 
+export interface CardsExperienceCard extends Struct.ComponentSchema {
+  collectionName: 'components_cards_experience_cards';
+  info: {
+    displayName: 'Experience_Card';
+    icon: 'check';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    experiences: Schema.Attribute.Component<'shared.experience-badges', true>;
+    heading: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    image_description: Schema.Attribute.String;
+    image_title: Schema.Attribute.String;
+    introdution: Schema.Attribute.Blocks;
+  };
+}
+
 export interface CardsGlobeCard extends Struct.ComponentSchema {
   collectionName: 'components_cards_globe_cards';
   info: {
@@ -146,6 +164,23 @@ export interface DynamicZoneCta extends Struct.ComponentSchema {
     heading: Schema.Attribute.String;
     sub_heading: Schema.Attribute.String;
     trust_chips: Schema.Attribute.Component<'shared.trust-chip', true>;
+  };
+}
+
+export interface DynamicZoneExperience extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_experiences';
+  info: {
+    displayName: 'Experience';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    experience_card: Schema.Attribute.Component<'cards.experience-card', false>;
+    experience_cards: Schema.Attribute.Component<
+      'shared.experience-badges',
+      true
+    >;
+    heading: Schema.Attribute.String;
+    sub_heading: Schema.Attribute.String;
   };
 }
 
@@ -470,6 +505,18 @@ export interface SharedButton extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedExperienceBadges extends Struct.ComponentSchema {
+  collectionName: 'components_shared_experience_badges';
+  info: {
+    displayName: 'experience_badges';
+    icon: 'bulletList';
+  };
+  attributes: {
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
+  };
+}
+
 export interface SharedForm extends Struct.ComponentSchema {
   collectionName: 'components_shared_forms';
   info: {
@@ -696,6 +743,7 @@ declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
       'cards.bank-transfer': CardsBankTransfer;
+      'cards.experience-card': CardsExperienceCard;
       'cards.globe-card': CardsGlobeCard;
       'cards.graph-card': CardsGraphCard;
       'cards.practice-card': CardsPracticeCard;
@@ -705,6 +753,7 @@ declare module '@strapi/strapi' {
       'dynamic-zone.about': DynamicZoneAbout;
       'dynamic-zone.brands': DynamicZoneBrands;
       'dynamic-zone.cta': DynamicZoneCta;
+      'dynamic-zone.experience': DynamicZoneExperience;
       'dynamic-zone.faq': DynamicZoneFaq;
       'dynamic-zone.features': DynamicZoneFeatures;
       'dynamic-zone.form-next-to-section': DynamicZoneFormNextToSection;
@@ -724,6 +773,7 @@ declare module '@strapi/strapi' {
       'items.left-navbar-items': ItemsLeftNavbarItems;
       'items.ray-items': ItemsRayItems;
       'shared.button': SharedButton;
+      'shared.experience-badges': SharedExperienceBadges;
       'shared.form': SharedForm;
       'shared.heading': SharedHeading;
       'shared.launches': SharedLaunches;

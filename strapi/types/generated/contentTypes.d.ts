@@ -813,6 +813,7 @@ export interface ApiPagePage extends Struct.CollectionTypeSchema {
         'dynamic-zone.about',
         'dynamic-zone.vouchers',
         'dynamic-zone.practices',
+        'dynamic-zone.experience',
       ]
     > &
       Schema.Attribute.SetPluginOptions<{

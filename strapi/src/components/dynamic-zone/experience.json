@@ -1,0 +1,29 @@
+{
+  "collectionName": "components_dynamic_zone_experiences",
+  "info": {
+    "displayName": "Experience"
+  },
+  "options": {},
+  "attributes": {
+    "badge_label": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "sub_heading": {
+      "type": "string"
+    },
+    "experience_card": {
+      "type": "component",
+      "component": "cards.experience-card",
+      "repeatable": false
+    },
+    "experience_cards": {
+      "type": "component",
+      "component": "shared.experience-badges",
+      "repeatable": true
+    }
+  },
+  "config": {}
+}
