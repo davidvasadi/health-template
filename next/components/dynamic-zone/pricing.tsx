@@ -40,18 +40,16 @@ export type Plan = {
   CTA?: CTA;
   badgeLabel?: string;
 
-  /** Strapi-ból jöhet bárhogy – ezekre rápróbálunk */
   duration?: string | number | null;
   minutes?: number | null;
   time?: string | number | null;
   durationLabel?: string | null;
 
-  background?: any; // Strapi media field (data/attributes/url) vagy bármi
+  background?: any;
   cover?: any;
   image?: any;
   heroImage?: any;
 
-  /** ha mégis string URL-t adsz */
   imageSrc?: string;
   imageAlt?: string;
 };
@@ -81,15 +79,12 @@ function ctaHref(locale: string, cta?: CTA) {
   return `/${locale}${normalized}`.replace(/\/{2,}/g, "/");
 }
 
-/** Strapi base url (ha relatív media url-t kapsz) */
 const STRAPI_URL =
   (process.env.NEXT_PUBLIC_STRAPI_URL || process.env.NEXT_PUBLIC_STRAPI_URL?.trim() || "").replace(/\/$/, "");
 
-/** Strapi media URL feloldás: string | {data:{attributes:{url}}} | {url} */
 function resolveMediaUrl(input: any): { url?: string; alt?: string } {
   if (!input) return {};
 
-  // ha már string
   if (typeof input === "string") {
     const u = input.trim();
     if (!u) return {};
@@ -97,7 +92,6 @@ function resolveMediaUrl(input: any): { url?: string; alt?: string } {
     return { url: STRAPI_URL ? `${STRAPI_URL}${u.startsWith("/") ? "" : "/"}${u}` : u };
   }
 
-  // Strapi v4: { data: { attributes: { url, alternativeText } } }
   const url1 = input?.data?.attributes?.url;
   const alt1 = input?.data?.attributes?.alternativeText || input?.data?.attributes?.name;
 
@@ -107,7 +101,6 @@ function resolveMediaUrl(input: any): { url?: string; alt?: string } {
     return { url: abs, alt: alt1 };
   }
 
-  // néha már "attributes" nélkül jön
   const url2 = input?.url;
   const alt2 = input?.alternativeText || input?.name;
   if (typeof url2 === "string" && url2.trim()) {
@@ -120,7 +113,6 @@ function resolveMediaUrl(input: any): { url?: string; alt?: string } {
 }
 
 function resolvePlanBackground(plan: Plan): { url?: string; alt?: string } {
-  // próbálkozási sorrend
   const candidates = [
     plan.background,
     plan.cover,
@@ -129,7 +121,7 @@ function resolvePlanBackground(plan: Plan): { url?: string; alt?: string } {
     (plan as any)?.backgroundImage,
     (plan as any)?.bg,
     (plan as any)?.thumbnail,
-    plan.imageSrc, // string fallback
+    plan.imageSrc,
   ];
 
   for (const c of candidates) {
@@ -180,11 +172,7 @@ function resolveDurationLabel(plan: Plan, locale: "hu" | "en" | "de"): string | 
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Tokenek (Figma kártya) — módosítva:
-   - üveg panel a tartalom mögé (alul leér, nincs bottom padding)
-   - CTA gomb zöld bordere leszedve (hard override: border-transparent + !ring-0)
-   - Kiemelt pill áttetszőbb + üveges
-   - kártya szélesség picit bővítve (ha kell)
+   Tokenek
 ────────────────────────────────────────────────────────────────────────────── */
 const t = {
   page: "bg-white",
@@ -194,12 +182,10 @@ const t = {
 
   card:
     "relative h-full overflow-hidden rounded-2xl border border-neutral-200/60 shadow-[0_18px_60px_rgba(0,0,0,0.18)]",
-  // ha kell egy kicsit több hely:
   mediaWrap: "relative w-full aspect-[4/5] min-h-[520px] mx-auto",
 
   overlay: "absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10",
 
-  // ÁTTETSZŐBB + ÜVEG "Kiemelt"
   topPill:
     "inline-flex items-center rounded-full bg-white/60 text-[#057C80] px-3 py-1 text-xs font-semibold ring-1 ring-inset ring-white/40 backdrop-blur-xl shadow-[0_6px_18px_rgba(0,0,0,0.12)]",
 
@@ -212,11 +198,9 @@ const t = {
   perkText: "text-sm font-medium text-white/95",
   perkIcon: "mt-0.5 h-5 w-5 flex-shrink-0 rounded-full bg-[#057C80] grid place-items-center",
 
-  // ÜVEG PANEL A TARTALOM MÖGÉ — alul LEÉR, ezért bottom padding: 0
   contentGlass:
     "absolute inset-x-0 bottom-0 z-0 rounded-[26px] bg-white/12 backdrop-blur-sm ring-1 ring-inset ring-white/20 shadow-[0_18px_40px_rgba(0,0,0,0.18)]",
 
-  // CTA konténer
   ctaBar: "my-4 bg-white/95 backdrop-blur-xl shadow-[0_18px_40px_rgba(0,0,0,0.18)] rounded-xl",
 };
 
@@ -230,6 +214,9 @@ const fadeUp = {
 
 /* ────────────────────────────────────────────────────────────────────────────
    Pricing
+   - Containerbe téve
+   - Külső border az egész köré
+   - A sectionből kiszedve a korábbi pt/pb/px wrapper paddings
 ────────────────────────────────────────────────────────────────────────────── */
 export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans }) => {
   const sectionRef = useRef<HTMLDivElement | null>(null);
@@ -243,8 +230,13 @@ export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans })
 
   return (
     <section ref={sectionRef} className={cn("relative isolate pt-28 md:pt-36", t.page)}>
-      <div className="px-2 md:px-6 pb-24 md:pb-28 lg:pb-32">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="text-center">
+      <Container className="rounded-3xl border border-neutral-200/60 overflow-hidden pt-8">
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-80px" }}
+          className="text-center"
+        >
           <motion.div variants={fadeUp} style={{ y: yHeading }}>
             <FeatureIconContainer className="mx-auto flex justify-center items-center backdrop-blur-sm ring-1 ring-breaker-bay-200/60 shadow-none">
               <IconReceipt2 className={cn("h-6 w-6", t.icon)} />
@@ -279,14 +271,13 @@ export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans })
             </div>
           </motion.div>
         </motion.div>
-      </div>
-
+      </Container>
     </section>
   );
 };
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Egyféle kártya (Figma) — módosítva a kéréseid szerint
+   Card (változatlan)
 ────────────────────────────────────────────────────────────────────────────── */
 const Card: React.FC<{ plan: Plan; locale: "hu" | "en" | "de" }> = ({ plan, locale }) => {
   const isFeatured = !!plan.featured;
@@ -317,37 +308,24 @@ const Card: React.FC<{ plan: Plan; locale: "hu" | "en" | "de" }> = ({ plan, loca
   return (
     <article className={t.card}>
       <div className={t.mediaWrap}>
-        {/* háttérkép */}
         {bg.url ? (
-          <img
-            src={bg.url}
-            alt={bg.alt || plan.name}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={bg.url} alt={bg.alt || plan.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
         ) : (
           <div className="absolute inset-0 bg-neutral-200" />
         )}
 
-        {/* overlay */}
         <div className={t.overlay} />
 
-        {/* top-right pill */}
         {showTopPill ? (
           <div className="absolute top-4 right-4 z-20">
             <span className={t.topPill}>{topPillLabel}</span>
           </div>
         ) : null}
 
-        {/* content (panel + content) */}
         <div className="absolute inset-0 z-10 flex flex-col justify-end">
-          {/* ÜVEG panel a tartalom mögé:
-              - oldal/fent kap paddingot
-              - ALUL leér, nincs bottom padding */}
           <div className="relative mx-5  px-2 pt-5 pb-0">
             <div className={cn(t.contentGlass, "top-0")} />
 
-            {/* tartalom a panel fölött */}
             <div className="relative z-10">
               <h3 className={t.title}>{plan.name}</h3>
 
@@ -375,7 +353,6 @@ const Card: React.FC<{ plan: Plan; locale: "hu" | "en" | "de" }> = ({ plan, loca
                 ))}
               </ul>
 
-              {/* CTA bar: alul leér, ezért NINCS külön bottom padding; a bar maga ad belsőt */}
               {plan.CTA && (
                 <div className="mt-5 pb-0">
                   {openInNewTab ? (
@@ -385,9 +362,7 @@ const Card: React.FC<{ plan: Plan; locale: "hu" | "en" | "de" }> = ({ plan, loca
                           variant="outline"
                           className={cn(
                             "w-full rounded-xl bg-transparent",
-                            // HARD OVERRIDE: zöld border/ring OFF
                             "!border-transparent !ring-0 !ring-offset-0 focus:!ring-0 focus-visible:!ring-0",
-                            // ha a Button belül is borderel:
                             "[&_*]:!ring-0"
                           )}
                         >
@@ -431,8 +406,6 @@ const Card: React.FC<{ plan: Plan; locale: "hu" | "en" | "de" }> = ({ plan, loca
               )}
             </div>
           </div>
-
-          {/* ALUL teljesen leér: ezért nincs itt plusz p-5 */}
         </div>
       </div>
     </article>

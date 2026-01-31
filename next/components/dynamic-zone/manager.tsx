@@ -20,6 +20,7 @@ const componentMapping: { [key: string]: any } = {
   'dynamic-zone.brands': dynamic(() => import('./brands').then(mod => mod.Brands), { ssr: false }),
   'dynamic-zone.pricing': dynamic(() => import('./pricing').then(mod => mod.Pricing), { ssr: false }),
   'dynamic-zone.vouchers': dynamic(() => import('./vouchers').then(mod => mod.Vouchers), { ssr: false }),
+  'dynamic-zone.experience': dynamic(() => import('./experience').then(mod => mod.Experience), { ssr: false }),
   'dynamic-zone.practices': dynamic(() => import('./practices').then(mod => mod.Practices), { ssr: false }),
   'dynamic-zone.about': dynamic(() => import('./about/about').then(mod => mod.About), { ssr: false }),
   'dynamic-zone.launches': dynamic(() => import('./launches').then(mod => mod.Launches), { ssr: false }),

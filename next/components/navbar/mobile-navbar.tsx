@@ -64,6 +64,13 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
   /* Scroll figyelés: desktop/tablet esetén 80px felett jelenjen meg az üveg háttér */
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 80));
 
+  /* ✅ RouteOverlay navigáció event → zárjuk a menüt */
+  useEffect(() => {
+    const onNav = () => setOpen(false);
+    window.addEventListener("route-overlay:navigate", onNav as EventListener);
+    return () => window.removeEventListener("route-overlay:navigate", onNav as EventListener);
+  }, []);
+
   /* ESC zárás + scroll-lock nyitott menü esetén */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -86,7 +93,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         "backdrop-blur-lg backdrop-saturate-150",
         i === 0 && "bg-breaker-bay-100/20 text-breaker-bay-900 ",
         i === 1 && "bg-breaker-bay-300/20 text-breaker-bay-950 ",
-        i > 1 && "bg-white/10 text-breaker-bay-800 dark:text-breaker-bay-200"
+        i > 1 && "bg-white/10 text-breaker-bay-800"
       ),
     []
   );
@@ -171,9 +178,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         </div>
       </div>
 
-      {/* ───────────────────────── OVERLAY ─────────────────────────
-          - Mindig mountolva: csak opacity és pointer-events váltása.
-          - Kattintás az overlay-re: zárja a panelt. */}
+      {/* ───────────────────────── OVERLAY ───────────────────────── */}
       <motion.div
         id="mobile-menu-overlay"
         aria-hidden={!open}
@@ -188,9 +193,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
         )}
       />
 
-      {/* ───────────────────────── PANEL ─────────────────────────
-          - Középre igazított, eredeti szélesség (w-full + mx-3).
-          - A wrapper pointer-events-none → overlay-re átereszt; a panel pointer-events-auto. */}
+      {/* ───────────────────────── PANEL ───────────────────────── */}
       <AnimatePresence>
         {open && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
@@ -230,7 +233,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                 </div>
               </div>
 
-              {/* Linkek: "chip" stílus — aktív route kiemelve */}
+              {/* Linkek */}
               <nav className="mt-4 flex flex-col gap-2">
                 {leftNavbarItems.map((navItem) => {
                   if (navItem.children?.length) {
@@ -280,14 +283,14 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                 })}
               </nav>
 
-              {/* CTA-k: tailwind-only + "sheen" (btn-glass) */}
+              {/* CTA-k */}
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 {rightNavbarItems.map((item, index) => (
                   <Button
                     key={item.text}
                     as={Link}
                     href={`/${locale}${item.URL}`}
-                    className={ctaClass(index)}
+                    className={cn(ctaClass(index), "w-full")}
                     {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
                     onClick={() => setOpen(false)}
                   >

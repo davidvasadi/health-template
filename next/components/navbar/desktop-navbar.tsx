@@ -270,7 +270,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
               key={item.text}
               as={Link}
               href={`/${locale}${item.URL}`}
-              className={cn("btn-xl btn-glass", ctaClass(index))}
+              className={cn(" btn-glass px-3 py-1 rounded-md", ctaClass(index))}
               {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
             >
               {item.text}
