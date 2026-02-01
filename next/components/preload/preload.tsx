@@ -74,7 +74,7 @@ function isSafariUA() {
   return isApple && !isCriOS && !isFxiOS;
 }
 
-export default function Preload() {
+export default function Preload({ tagline = "The Place Studio" }: { tagline?: string }) {
   const reduce = useReducedMotion();
   const safari = useMemo(() => isSafariUA(), []);
 
@@ -92,7 +92,9 @@ export default function Preload() {
   const floatAT = reduce ? undefined : { duration: 2.6, ease: "easeInOut", repeat: Infinity };
 
   const floatB = reduce ? {} : safari ? { y: [0, -2, 0] } : { y: [0, -2, 0] };
-  const floatBT = reduce ? undefined : { duration: 3.1, ease: "easeInOut", repeat: Infinity, delay: 0.12 };
+  const floatBT = reduce
+    ? undefined
+    : { duration: 3.1, ease: "easeInOut", repeat: Infinity, delay: 0.12 };
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -108,7 +110,7 @@ export default function Preload() {
             <motion.path
               key={`teal-${i}`}
               d={p.d}
-              className="fill-teal-700"
+              className="fill-[#057C80]"
               variants={tealVariants}
               initial="hidden"
               animate="show"
@@ -122,7 +124,7 @@ export default function Preload() {
             <motion.path
               key={`dark-${i}`}
               d={p.d}
-              className="fill-teal-950"
+              className="fill-[#003133]"
               variants={darkVariants}
               initial="hidden"
               animate="show"
@@ -131,6 +133,23 @@ export default function Preload() {
           ))}
         </motion.g>
       </motion.svg>
+
+      {/* TAGLINE */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={
+          reduce
+            ? { duration: 0.01 }
+            : { duration: 0.45, ease: EASE, delay: safari ? 0.35 : 0.42 }
+        }
+        className="flex flex-col items-center gap-3"
+      >
+        <p className="text-[11px] sm:text-xs font-medium uppercase tracking-[0.32em] text-[#4B5563]">
+          {tagline}
+        </p>
+        <div className="h-px w-24 bg-[#057C80]/35" />
+      </motion.div>
     </div>
   );
 }
