@@ -8,6 +8,11 @@ const nextConfig = {
       // ha maradt pár hardcodeolt régi domain (nálad VAN):
       { protocol: "https", hostname: "csontkovacsbence.hu" },
       { protocol: "https", hostname: "www.csontkovacsbence.hu" },
+        // ✅ local Strapi (dev)
+      { protocol: "http", hostname: "localhost", port: "1337", pathname: "/uploads/**" },
+      { protocol: "http", hostname: "127.0.0.1", port: "1337", pathname: "/uploads/**" },
+      { protocol: "http", hostname: "localhost", port: "3000", pathname: "/uploads/**" },
+
     ],
   },
   pageExtensions: ["ts", "tsx"],

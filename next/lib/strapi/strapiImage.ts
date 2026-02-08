@@ -39,6 +39,9 @@ function normalizeApiOrigin(): string {
 const SITE_ORIGIN = normalizeSiteOrigin();
 const API_ORIGIN = normalizeApiOrigin();
 
+const UPLOADS_ORIGIN = API_ORIGIN || SITE_ORIGIN;
+
+
 export function strapiImage(input: unknown): string {
   noStore();
   if (!input) return "";
@@ -58,12 +61,13 @@ export function strapiImage(input: unknown): string {
       // ha valaha /api/uploads jönne: alakítsuk /uploads-ra
       if (u.pathname.startsWith("/api/uploads/")) {
         const fixedPath = u.pathname.replace(/^\/api\/uploads\//, "/uploads/");
-        return `${SITE_ORIGIN}${stripTrailingSlashAfterAsset(fixedPath)}${u.search || ""}`;
+        return `${UPLOADS_ORIGIN}${stripTrailingSlashAfterAsset(fixedPath)}${u.search || ""}`;
+
       }
 
       // uploads mindig a SITE_ORIGIN alól menjen (stabil)
       if (u.pathname.startsWith("/uploads/")) {
-        return `${SITE_ORIGIN}${stripTrailingSlashAfterAsset(u.pathname)}${u.search || ""}`;
+return `${UPLOADS_ORIGIN}${stripTrailingSlashAfterAsset(u.pathname)}${u.search || ""}`;
       }
 
       return url;
@@ -82,7 +86,7 @@ export function strapiImage(input: unknown): string {
 
   // uploads: ABSZOLÚT!
   if (url.startsWith("/uploads/")) {
-    return `${SITE_ORIGIN}${stripTrailingSlashAfterAsset(url)}`;
+return `${UPLOADS_ORIGIN}${stripTrailingSlashAfterAsset(url)}`;
   }
 
   // egyéb relatív: ha kell, API originre fűzzük
