@@ -3,13 +3,16 @@ name: Deploy to VPS (gated + rotating backup)
 on:
   workflow_run:
     workflows: ["Build (Next + Strapi)"]
-    branches: [ main ]
-    types: [ completed ]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
   group: deploy-main
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -21,16 +24,21 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_SHA: ${{ env.DEPLOY_SHA }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          envs: DEPLOY_SHA
+          script_stop: true
           script: |
             set -euo pipefail
 
             echo "=== Deploy SHA ==="
-            echo "${DEPLOY_SHA}"
+            echo "$DEPLOY_SHA"
+            [ -n "$DEPLOY_SHA" ] || { echo "ERROR: DEPLOY_SHA is empty"; exit 1; }
 
             cd /var/www/health-template || exit 1
 
@@ -40,7 +48,6 @@ jobs:
             test -f strapi/.env.prod || test -f strapi/.env.production || test -f strapi/.env || echo "WARN: Strapi env file not found (check if you use PM2 env instead)"
 
             echo "=== ROTATING BACKUP (overwrite) ==="
-            ts="$(date +%F_%H%M%S)"
             B="/root/backups/fullsite-latest"
             umask 077
             rm -rf "$B"
@@ -100,7 +107,7 @@ jobs:
 
             echo "=== DEPLOY CODE (exact SHA) ==="
             git fetch --all --prune
-            git reset --hard "${DEPLOY_SHA}"
+            git reset --hard "$DEPLOY_SHA"
 
             echo "=== BUILD NEXT ==="
             cd next
@@ -118,7 +125,7 @@ jobs:
             pm2 save || true
 
             echo "=== SMOKE CHECK ==="
-            curl -fsS -I https://theplacestudio.hu/ | head -n 12 || exit 1
-            curl -fsS -I https://theplacestudio.hu/api/privacy-policy | head -n 12 || exit 1
+            curl -fsS -I https://theplacestudio.hu/ | head -n 12
+            curl -fsS -I https://theplacestudio.hu/api/privacy-policy | head -n 12
 
             echo "DEPLOY DONE ✅"
