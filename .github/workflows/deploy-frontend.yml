@@ -1,0 +1,81 @@
+name: deploy-frontend
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "next/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  VPS_HOST: ${{ secrets.VPS_HOST }}
+  VPS_PORT: ${{ secrets.VPS_PORT }}
+  VPS_USER: ${{ secrets.VPS_USER }}
+  VPS_KEY:  ${{ secrets.VPS_KEY }}
+
+  REMOTE_PATH: /var/www/health-template/next
+  PM2_NAME: next
+  NODE_VERSION: "20"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (runner)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${VPS_KEY}" > ~/.ssh/id_ci
+          chmod 600 ~/.ssh/id_ci
+          ssh-keyscan -p "${VPS_PORT}" -H "${VPS_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload Next (exclude env/node_modules)
+        run: |
+          rsync -avz --delete \
+            --exclude "node_modules" \
+            --exclude ".env*" \
+            -e "ssh -i ~/.ssh/id_ci -p ${VPS_PORT} -o IdentitiesOnly=yes" \
+            next/ ${VPS_USER}@${VPS_HOST}:${REMOTE_PATH}/
+
+      - name: Install + build + restart Next on VPS
+        run: |
+          ssh -i ~/.ssh/id_ci -p ${VPS_PORT} -o IdentitiesOnly=yes ${VPS_USER}@${VPS_HOST} <<'EOF'
+          set -euo pipefail
+          cd /var/www/health-template/next
+
+          node -v
+          npm -v
+
+          npm ci
+          npm run build
+
+          pm2 describe next >/dev/null 2>&1 && \
+            pm2 restart next --update-env || \
+            pm2 start "npm run start -- -p 3000" --name next --cwd /var/www/health-template/next
+
+          pm2 save
+          EOF
+
+      - name: Health check
+        run: |
+          curl -fsS -I https://csontkovacsbence.hu/ | head -n 15 || true
