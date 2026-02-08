@@ -1,0 +1,17 @@
+{
+  "collectionName": "components_shared_experience_badges",
+  "info": {
+    "displayName": "experience_badges",
+    "icon": "bulletList"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string"
+    }
+  },
+  "config": {}
+}

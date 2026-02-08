@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_shared_practices",
+  "info": {
+    "displayName": "practice",
+    "icon": "bulletList"
+  },
+  "options": {},
+  "attributes": {
+    "heading": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "blocks"
+    },
+    "quote": {
+      "type": "text"
+    }
+  },
+  "config": {}
+}

@@ -1,0 +1,26 @@
+{
+  "collectionName": "components_cards_voucher_steps",
+  "info": {
+    "displayName": "Voucher_Steps"
+  },
+  "options": {},
+  "attributes": {
+    "kicker": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "key": {
+      "type": "enumeration",
+      "default": "select",
+      "enum": [
+        "select",
+        "personalize",
+        "transfer",
+        "success"
+      ]
+    }
+  },
+  "config": {}
+}

@@ -1,0 +1,47 @@
+{
+  "collectionName": "components_cards_experience_cards",
+  "info": {
+    "displayName": "Experience_Card",
+    "icon": "check"
+  },
+  "options": {},
+  "attributes": {
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "image_title": {
+      "type": "string"
+    },
+    "image_description": {
+      "type": "string"
+    },
+    "badge_label": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "introdution": {
+      "type": "blocks",
+      "required": false
+    },
+    "button": {
+      "type": "component",
+      "component": "shared.button",
+      "repeatable": false
+    },
+    "experiences": {
+      "type": "component",
+      "component": "shared.experience-badges",
+      "repeatable": true
+    }
+  },
+  "config": {}
+}

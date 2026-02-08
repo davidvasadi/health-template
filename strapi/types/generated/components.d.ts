@@ -1,5 +1,42 @@
 import type { Schema, Struct } from '@strapi/strapi';
 
+export interface CardsBankTransfer extends Struct.ComponentSchema {
+  collectionName: 'components_cards_bank_transfers';
+  info: {
+    displayName: 'Bank_Card';
+  };
+  attributes: {
+    account_label: Schema.Attribute.String;
+    account_number: Schema.Attribute.String;
+    amount_label: Schema.Attribute.String;
+    beneficiary_label: Schema.Attribute.String;
+    beneficiary_name: Schema.Attribute.String;
+    delivery_note: Schema.Attribute.Text;
+    reference_hint: Schema.Attribute.String;
+    reference_label: Schema.Attribute.String;
+    section_title: Schema.Attribute.String;
+    warning_text: Schema.Attribute.Text;
+  };
+}
+
+export interface CardsExperienceCard extends Struct.ComponentSchema {
+  collectionName: 'components_cards_experience_cards';
+  info: {
+    displayName: 'Experience_Card';
+    icon: 'check';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    experiences: Schema.Attribute.Component<'shared.experience-badges', true>;
+    heading: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    image_description: Schema.Attribute.String;
+    image_title: Schema.Attribute.String;
+    introdution: Schema.Attribute.Blocks;
+  };
+}
+
 export interface CardsGlobeCard extends Struct.ComponentSchema {
   collectionName: 'components_cards_globe_cards';
   info: {
@@ -27,6 +64,18 @@ export interface CardsGraphCard extends Struct.ComponentSchema {
     span: Schema.Attribute.Enumeration<['one', 'two', 'three']>;
     title: Schema.Attribute.String;
     top_items: Schema.Attribute.Component<'items.graph-card-top-items', true>;
+  };
+}
+
+export interface CardsPracticeCard extends Struct.ComponentSchema {
+  collectionName: 'components_cards_practice_cards';
+  info: {
+    displayName: 'practice-card';
+  };
+  attributes: {
+    icon: Schema.Attribute.Enumeration<['clock', 'difficult', 'type']>;
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
   };
 }
 
@@ -61,6 +110,34 @@ export interface CardsSocialMediaCard extends Struct.ComponentSchema {
   };
 }
 
+export interface CardsVoucherSteps extends Struct.ComponentSchema {
+  collectionName: 'components_cards_voucher_steps';
+  info: {
+    displayName: 'Voucher_Steps';
+  };
+  attributes: {
+    key: Schema.Attribute.Enumeration<
+      ['select', 'personalize', 'transfer', 'success']
+    > &
+      Schema.Attribute.DefaultTo<'select'>;
+    kicker: Schema.Attribute.String;
+    title: Schema.Attribute.String;
+  };
+}
+
+export interface DynamicZoneAbout extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_abouts';
+  info: {
+    displayName: 'About';
+  };
+  attributes: {
+    heading: Schema.Attribute.Component<'shared.heading', false>;
+    list: Schema.Attribute.Component<'shared.list', false>;
+    logo: Schema.Attribute.Relation<'oneToOne', 'api::logo.logo'>;
+    teams: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
+  };
+}
+
 export interface DynamicZoneBrands extends Struct.ComponentSchema {
   collectionName: 'components_dynamic_zone_brands';
   info: {
@@ -87,6 +164,23 @@ export interface DynamicZoneCta extends Struct.ComponentSchema {
     heading: Schema.Attribute.String;
     sub_heading: Schema.Attribute.String;
     trust_chips: Schema.Attribute.Component<'shared.trust-chip', true>;
+  };
+}
+
+export interface DynamicZoneExperience extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_experiences';
+  info: {
+    displayName: 'Experience';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    experience_card: Schema.Attribute.Component<'cards.experience-card', false>;
+    experience_cards: Schema.Attribute.Component<
+      'shared.experience-badges',
+      true
+    >;
+    heading: Schema.Attribute.String;
+    sub_heading: Schema.Attribute.String;
   };
 }
 
@@ -188,6 +282,23 @@ export interface DynamicZoneLaunches extends Struct.ComponentSchema {
   };
 }
 
+export interface DynamicZonePractices extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_practices';
+  info: {
+    displayName: 'Practices';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    categories: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::category.category'
+    >;
+    heading: Schema.Attribute.String;
+    sub_heading: Schema.Attribute.String;
+  };
+}
+
 export interface DynamicZonePricing extends Struct.ComponentSchema {
   collectionName: 'components_dynamic_zone_pricings';
   info: {
@@ -238,11 +349,30 @@ export interface DynamicZoneTestimonials extends Struct.ComponentSchema {
   };
   attributes: {
     heading: Schema.Attribute.String;
+    percentage_label: Schema.Attribute.String;
+    percentage_value: Schema.Attribute.String;
+    reviews_label: Schema.Attribute.String;
+    reviews_value: Schema.Attribute.String;
     sub_heading: Schema.Attribute.String;
     testimonials: Schema.Attribute.Relation<
       'oneToMany',
       'api::testimonial.testimonial'
     >;
+  };
+}
+
+export interface DynamicZoneVouchers extends Struct.ComponentSchema {
+  collectionName: 'components_dynamic_zone_vouchers';
+  info: {
+    displayName: 'Vouchers';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    button: Schema.Attribute.Component<'shared.button', false>;
+    heading: Schema.Attribute.String;
+    info_label: Schema.Attribute.String;
+    subheading: Schema.Attribute.Text;
+    vouchers: Schema.Attribute.Relation<'oneToMany', 'api::voucher.voucher'>;
   };
 }
 
@@ -375,6 +505,18 @@ export interface SharedButton extends Struct.ComponentSchema {
   };
 }
 
+export interface SharedExperienceBadges extends Struct.ComponentSchema {
+  collectionName: 'components_shared_experience_badges';
+  info: {
+    displayName: 'experience_badges';
+    icon: 'bulletList';
+  };
+  attributes: {
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
+  };
+}
+
 export interface SharedForm extends Struct.ComponentSchema {
   collectionName: 'components_shared_forms';
   info: {
@@ -384,6 +526,20 @@ export interface SharedForm extends Struct.ComponentSchema {
   };
   attributes: {
     inputs: Schema.Attribute.Component<'items.input', true>;
+  };
+}
+
+export interface SharedHeading extends Struct.ComponentSchema {
+  collectionName: 'components_shared_headings';
+  info: {
+    displayName: 'Heading';
+  };
+  attributes: {
+    badge_label: Schema.Attribute.String;
+    description: Schema.Attribute.String;
+    heading: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    sub_heading: Schema.Attribute.String;
   };
 }
 
@@ -416,6 +572,19 @@ export interface SharedLink extends Struct.ComponentSchema {
     variant: Schema.Attribute.Enumeration<
       ['simple', 'outline', 'primary', 'muted']
     >;
+  };
+}
+
+export interface SharedList extends Struct.ComponentSchema {
+  collectionName: 'components_shared_lists';
+  info: {
+    displayName: 'List';
+  };
+  attributes: {
+    list_title: Schema.Attribute.String;
+    span: Schema.Attribute.Component<'shared.perks', true>;
+    story_description: Schema.Attribute.Text;
+    story_title: Schema.Attribute.String;
   };
 }
 
@@ -460,6 +629,20 @@ export interface SharedPerks extends Struct.ComponentSchema {
   };
   attributes: {
     text: Schema.Attribute.String;
+  };
+}
+
+export interface SharedPractice extends Struct.ComponentSchema {
+  collectionName: 'components_shared_practices';
+  info: {
+    displayName: 'practice';
+    icon: 'bulletList';
+  };
+  attributes: {
+    description: Schema.Attribute.String;
+    heading: Schema.Attribute.String;
+    quote: Schema.Attribute.Text;
+    steps: Schema.Attribute.Blocks;
   };
 }
 
@@ -550,7 +733,7 @@ export interface SharedUser extends Struct.ComponentSchema {
   };
   attributes: {
     firstname: Schema.Attribute.String;
-    image: Schema.Attribute.Media<'images'>;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
     job: Schema.Attribute.String;
     lastname: Schema.Attribute.String;
   };
@@ -559,22 +742,30 @@ export interface SharedUser extends Struct.ComponentSchema {
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
+      'cards.bank-transfer': CardsBankTransfer;
+      'cards.experience-card': CardsExperienceCard;
       'cards.globe-card': CardsGlobeCard;
       'cards.graph-card': CardsGraphCard;
+      'cards.practice-card': CardsPracticeCard;
       'cards.ray-card': CardsRayCard;
       'cards.social-media-card': CardsSocialMediaCard;
+      'cards.voucher-steps': CardsVoucherSteps;
+      'dynamic-zone.about': DynamicZoneAbout;
       'dynamic-zone.brands': DynamicZoneBrands;
       'dynamic-zone.cta': DynamicZoneCta;
+      'dynamic-zone.experience': DynamicZoneExperience;
       'dynamic-zone.faq': DynamicZoneFaq;
       'dynamic-zone.features': DynamicZoneFeatures;
       'dynamic-zone.form-next-to-section': DynamicZoneFormNextToSection;
       'dynamic-zone.hero': DynamicZoneHero;
       'dynamic-zone.how-it-works': DynamicZoneHowItWorks;
       'dynamic-zone.launches': DynamicZoneLaunches;
+      'dynamic-zone.practices': DynamicZonePractices;
       'dynamic-zone.pricing': DynamicZonePricing;
       'dynamic-zone.related-articles': DynamicZoneRelatedArticles;
       'dynamic-zone.related-products': DynamicZoneRelatedProducts;
       'dynamic-zone.testimonials': DynamicZoneTestimonials;
+      'dynamic-zone.vouchers': DynamicZoneVouchers;
       'global.footer': GlobalFooter;
       'global.navbar': GlobalNavbar;
       'items.graph-card-top-items': ItemsGraphCardTopItems;
@@ -582,12 +773,16 @@ declare module '@strapi/strapi' {
       'items.left-navbar-items': ItemsLeftNavbarItems;
       'items.ray-items': ItemsRayItems;
       'shared.button': SharedButton;
+      'shared.experience-badges': SharedExperienceBadges;
       'shared.form': SharedForm;
+      'shared.heading': SharedHeading;
       'shared.launches': SharedLaunches;
       'shared.link': SharedLink;
+      'shared.list': SharedList;
       'shared.location': SharedLocation;
       'shared.opening-hour': SharedOpeningHour;
       'shared.perks': SharedPerks;
+      'shared.practice': SharedPractice;
       'shared.section': SharedSection;
       'shared.seo': SharedSeo;
       'shared.social-media-icon-links': SharedSocialMediaIconLinks;

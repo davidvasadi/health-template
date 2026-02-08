@@ -2,7 +2,7 @@
 import type { MetadataRoute } from "next";
 
 // A domain forrása: először WEBSITE_URL (SSR), majd NEXT_PUBLIC_SITE_URL (client)
-const SITE_URL = (process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://csontkovacsbence.hu").replace(/\/$/, "");
+const SITE_URL = (process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplacestudio.hu").replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
   return {

@@ -323,8 +323,8 @@ export const Launches = ({ heading, sub_heading, launches }: { heading: string; 
         <FeatureIconContainer className="mx-auto flex justify-center items-center bg-white">
           <IconRocket className="h-6 w-6 text-[color:var(--breaker-700)]" />
         </FeatureIconContainer>
-        <Heading as="h2" className="mt-4 text-[color:var(--breaker-950)]">{heading}</Heading>
-        <Subheading className="text-breaker-bay-900">{sub_heading}</Subheading>
+        <Heading as="h2" className="my-6 mx-auto text-[color:var(--breaker-950)]">{heading}</Heading>
+        <Subheading className="text-breaker-bay-900 mx-auto text-center">{sub_heading}</Subheading>
       </div>
 
       {/* timeline – FEKETE/FEHÉR felülírás a scope-on belül */}

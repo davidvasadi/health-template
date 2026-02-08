@@ -1,146 +1,448 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, memo } from "react";
-import { Transition } from "@headlessui/react";
-import { SparklesCore } from "@/components/ui/sparkles";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StrapiImage } from "@/components/ui/strapi-image";
 
-export const TestimonialsSlider = ({ testimonials }: { testimonials: any[] }) => {
-  const [active, setActive] = useState(0);
-  const [autorotate, setAutorotate] = useState(true);
+function ArrowLeftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+      <path
+        d="M15 18l-6-6 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function ArrowRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+      <path
+        d="M9 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" aria-hidden>
+      <path d="M8.5 5.5v13l11-6.5-11-6.5z" />
+    </svg>
+  );
+}
 
-  const testimonialsRef = useRef<HTMLDivElement>(null);
+/** Strapi base URL (client oldalon csak NEXT_PUBLIC_!) */
+const STRAPI_URL = (process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337").replace(/\/$/, "");
 
-  const sliced = useMemo(
-    () => (Array.isArray(testimonials) ? testimonials.slice(0, 3) : []),
+function toAbs(u?: string | null) {
+  if (!u) return null;
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  const path = u.startsWith("/") ? u : `/${u}`;
+  return `${STRAPI_URL}${path}`;
+}
+
+/* ──────────────────────────────────────────────────────────────
+  Strapi v5 safe getterek
+────────────────────────────────────────────────────────────── */
+
+function getDocumentId(t: any): string | null {
+  return t?.documentId ?? t?.attributes?.documentId ?? null;
+}
+function getLocale(t: any): string | null {
+  return t?.locale ?? t?.attributes?.locale ?? null;
+}
+function getText(t: any): string {
+  return t?.text ?? t?.attributes?.text ?? "";
+}
+function getUser(t: any): any {
+  return t?.user ?? t?.attributes?.user ?? null;
+}
+function getUserFirstName(t: any): string {
+  const u = getUser(t);
+  return u?.firstname ?? u?.attributes?.firstname ?? "";
+}
+function getUserLastName(t: any): string {
+  const u = getUser(t);
+  return u?.lastname ?? u?.attributes?.lastname ?? "";
+}
+function getUserJob(t: any): string {
+  const u = getUser(t);
+  return u?.job ?? u?.attributes?.job ?? "";
+}
+function getVideoUrl(t: any): string | null {
+  return (
+    t?.video?.url ??
+    t?.attributes?.video?.url ??
+    t?.video?.data?.attributes?.url ??
+    t?.attributes?.video?.data?.attributes?.url ??
+    null
+  );
+}
+function getUserImageUrl(t: any): string | null {
+  return (
+    t?.user?.image?.url ??
+    t?.attributes?.user?.image?.url ??
+    t?.user?.image?.data?.attributes?.url ??
+    t?.attributes?.user?.image?.data?.attributes?.url ??
+    null
+  );
+}
+
+/**
+ * ✅ Poster URL getter – Strapi-ban mező: `poster` (Media)
+ * (hagyva alternatív nevekkel, ha átnevezed)
+ */
+function getPosterUrl(t: any): string | null {
+  return (
+    t?.poster?.url ??
+    t?.attributes?.poster?.url ??
+    t?.poster?.data?.attributes?.url ??
+    t?.attributes?.poster?.data?.attributes?.url ??
+    t?.video_poster?.url ??
+    t?.attributes?.video_poster?.url ??
+    t?.video_poster?.data?.attributes?.url ??
+    t?.attributes?.video_poster?.data?.attributes?.url ??
+    t?.poster_image?.url ??
+    t?.attributes?.poster_image?.url ??
+    t?.poster_image?.data?.attributes?.url ??
+    t?.attributes?.poster_image?.data?.attributes?.url ??
+    t?.posterImage?.url ??
+    t?.attributes?.posterImage?.url ??
+    t?.posterImage?.data?.attributes?.url ??
+    t?.attributes?.posterImage?.data?.attributes?.url ??
+    null
+  );
+}
+
+/** ✅ Strapi v5 hydrate: populate=* */
+async function fetchTestimonialHydrated(documentId: string, locale?: string | null) {
+  const qs = new URLSearchParams();
+  qs.set("populate", "*");
+  if (locale) qs.set("locale", locale);
+
+  const url = `${STRAPI_URL}/api/testimonials/${documentId}?${qs.toString()}`;
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Strapi ${res.status} — ${text || "Request failed"}`);
+  }
+
+  const json = await res.json();
+  return json?.data ?? null;
+}
+
+export const TestimonialsSlider = ({
+  testimonials,
+  percentageValue = "100%",
+  percentageLabel = "Vendég értékelés",
+  reviewsValue = "+2K",
+  reviewsLabel = "Vélemény",
+}: {
+  testimonials: any[];
+  percentageValue?: string;
+  percentageLabel?: string;
+  reviewsValue?: string;
+  reviewsLabel?: string;
+}) => {
+  const items = useMemo(
+    () => (Array.isArray(testimonials) ? testimonials.filter(Boolean) : []),
     [testimonials]
   );
 
-  useEffect(() => {
-    if (!autorotate || sliced.length <= 1) return;
-    const t = setInterval(() => {
-      setActive((prev) => (prev + 1 === sliced.length ? 0 : prev + 1));
-    }, 7000);
-    return () => clearInterval(t);
-  }, [autorotate, sliced.length]);
+  const hasItems = items.length > 0;
 
-  // >>> FIX: minHeight-et állítunk, ne vágja le a hosszabb idézetet és ne csússzon rá az alatta lévő gombsorra
-  const heightFix = () => {
-    if (testimonialsRef.current?.parentElement) {
-      const parent = testimonialsRef.current.parentElement as HTMLElement;
-      parent.style.minHeight = `${testimonialsRef.current.clientHeight}px`;
+  const [active, setActive] = useState(0);
+  const [autorotate, setAutorotate] = useState(true);
+
+  // hydrate cache
+  const [hydratedById, setHydratedById] = useState<Record<string, any>>({});
+  const attemptedRef = useRef<Set<string>>(new Set());
+
+  // video interaction state
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [controlsOn, setControlsOn] = useState(false); // controls csak play katt után
+  const [hasPlayed, setHasPlayed] = useState(false);   // poster overlay csak az első play-ig
+
+  // ✅ autorotate (guard belül)
+  useEffect(() => {
+    if (!autorotate) return;
+    if (items.length <= 1) return;
+
+    const t = setInterval(() => {
+      setActive((p) => (p + 1 >= items.length ? 0 : p + 1));
+    }, 7000);
+
+    return () => clearInterval(t);
+  }, [autorotate, items.length]);
+
+  // ✅ clamp active (guard belül)
+  useEffect(() => {
+    if (!hasItems) return;
+    if (active >= items.length) setActive(0);
+  }, [active, items.length, hasItems]);
+
+  // SAFE base/hydrated
+  const base = hasItems ? items[active] : null;
+  const docId = base ? getDocumentId(base) : null;
+  const locale = base ? getLocale(base) : null;
+
+  const hydrated = docId ? hydratedById[docId] : null;
+
+  // hydrate csak ha kell
+  const baseHasVideo = !!(base && getVideoUrl(base));
+  const baseHasAvatar = !!(base && getUserImageUrl(base));
+  const baseHasPoster = !!(base && getPosterUrl(base));
+  const hasHydratedAlready = !!(docId && hydratedById[docId]);
+
+  useEffect(() => {
+    if (!docId || !base) return;
+    if (hasHydratedAlready) return;
+    if (attemptedRef.current.has(docId)) return;
+
+    // ha minden megvan base-ben, nem kell hydrate
+    if (baseHasVideo && baseHasAvatar && baseHasPoster) return;
+
+    attemptedRef.current.add(docId);
+
+    let cancelled = false;
+    fetchTestimonialHydrated(docId, locale)
+      .then((full) => {
+        if (cancelled || !full) return;
+        setHydratedById((prev) => ({ ...prev, [docId]: full }));
+      })
+      .catch((err) => console.warn("TESTIMONIAL hydrate failed:", err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [docId, locale, base, baseHasVideo, baseHasAvatar, baseHasPoster, hasHydratedAlready]);
+
+  // ✅ STABIL fallback: hydrated -> base
+  const videoRel = (hydrated && getVideoUrl(hydrated)) || (base && getVideoUrl(base)) || null;
+  const avatarRel = (hydrated && getUserImageUrl(hydrated)) || (base && getUserImageUrl(base)) || null;
+  const posterRel = (hydrated && getPosterUrl(hydrated)) || (base && getPosterUrl(base)) || null;
+
+  const videoSrc = toAbs(videoRel);
+  const avatarSrc = toAbs(avatarRel);
+  const posterSrc = toAbs(posterRel);
+
+  const hasVideo = !!videoSrc;
+
+  // slide/video váltáskor reset
+  useEffect(() => {
+    setControlsOn(false);
+    setHasPlayed(false);
+
+    const el = videoRef.current;
+    if (!el) return;
+
+    try {
+      el.pause();
+      el.currentTime = 0;
+    } catch {}
+  }, [videoSrc, active]);
+
+  const firstname = ((hydrated && getUserFirstName(hydrated)) || (base && getUserFirstName(base)) || "").trim();
+  const lastname = ((hydrated && getUserLastName(hydrated)) || (base && getUserLastName(base)) || "").trim();
+  const name = `${firstname} ${lastname}`.trim();
+
+  const text = (hydrated && getText(hydrated)) || (base && getText(base)) || "";
+  const job = ((hydrated && getUserJob(hydrated)) || (base && getUserJob(base)) || "").trim();
+
+  // ✅ top avatars: md-től nagyobb + legutolsó legyen felül (zIndex nő i-vel)
+  const avatars = useMemo(() => {
+    return items
+      .slice(0, 4)
+      .map((t) => toAbs(getUserImageUrl(t)))
+      .filter(Boolean) as string[];
+  }, [items]);
+
+  const prev = () => {
+    setAutorotate(false);
+    setActive((p) => (p - 1 < 0 ? items.length - 1 : p - 1));
+  };
+
+  const next = () => {
+    setAutorotate(false);
+    setActive((p) => (p + 1 >= items.length ? 0 : p + 1));
+  };
+
+  const startVideo = async () => {
+    if (!videoSrc) return;
+    setAutorotate(false);
+    setControlsOn(true);
+
+    const el = videoRef.current;
+    if (!el) return;
+
+    try {
+      await el.play();
+    } catch {
+      // controls már látszik, user elindíthatja
     }
   };
-  useEffect(() => {
-    heightFix();
-    const vis = () => document.visibilityState === "visible" && heightFix();
-    document.addEventListener("visibilitychange", vis);
-    return () => document.removeEventListener("visibilitychange", vis);
-  }, []);
 
-  if (sliced.length === 0) return null;
+  // badge + overlay csak koppintás előtt legyen
+  const showBadge = !hasVideo || !controlsOn;
+  const showPosterOverlay = hasVideo && !!posterSrc && !hasPlayed;
+
+  // ✅ HOOK-SAFE: csak a legvégén térünk vissza null-lal
+  if (!hasItems) return null;
 
   return (
     <section className="bg-white">
-      {/* rugalmas minimum, hogy hosszú idézetnél se legyen összeérés */}
-      <div className="max-w-3xl mx-auto relative z-30 min-h-[20rem]">
-        <div className="relative pb-12 md:pb-20">
-          <div className="absolute left-1/2 -translate-x-1/2 -top-2 -z-10 w-80 h-20 -mt-6">
-            <MemoizedSparklesCore
-              id="testimonials-particles"
-              background="transparent"
-              minSize={0.4}
-              maxSize={1}
-              particleDensity={90}
-              className="w-full h-full"
-              particleColor="#5CB7AE"
-            />
-          </div>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[28px] border border-[#D1D5DB] bg-white p-3 sm:p-7 lg:p-14">
+          <div className="grid gap-4 sm:gap-6 lg:gap-0 lg:grid-cols-[minmax(240px,330px)_120px_1fr] items-stretch">
+            {/* BAL: videó / kép */}
+            <div className="relative overflow-hidden rounded-[24px] border border-[#D1D5DB] bg-white">
+              <div className="relative h-full min-h-[220px] sm:min-h-[360px] lg:min-h-[520px]">
+                {hasVideo ? (
+                  <>
+                    {/* Video: contain, poster külön overlay cover-rel */}
+                    <video
+                      ref={videoRef}
+                      key={videoSrc!}
+                      src={videoSrc!}
+                      playsInline
+                      preload="metadata"
+                      controls={controlsOn}
+                      poster={posterSrc ?? undefined}
+                      className="absolute inset-0 h-full w-full object-contain bg-white"
+                      onPlay={() => setHasPlayed(true)}
+                    />
 
-          <div className="text-center space-y-6 md:space-y-8">
-            {/* Portré/halo blokk (fix magasság, így nem csúszik le) */}
-            <div className="relative h-40 [mask-image:_linear-gradient(0deg,transparent,#FFFFFF_32%,#FFFFFF)] md:[mask-image:_linear-gradient(0deg,transparent,#FFFFFF_42%,#FFFFFF)]">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[480px] h-[480px] -z-10 pointer-events-none before:rounded-full rounded-full before:absolute before:inset-0 before:bg-gradient-to-b before:from-[#5CB7AE]/12 before:to-transparent before:to-20% after:rounded-full after:absolute after:inset-0 after:bg-white after:m-px before:-z-20 after:-z-20">
-                {sliced.map((item: any, index: number) => (
-                  <Transition
-                    key={index}
-                    show={active === index}
-                    enter="transition ease-out duration-700 order-first"
-                    enterFrom="opacity-0 -translate-x-5"
-                    enterTo="opacity-100 translate-x-0"
-                    leave="transition ease-in duration-500"
-                    leaveFrom="opacity-100 translate-x-0"
-                    leaveTo="opacity-0 translate-x-5"
-                    beforeEnter={() => heightFix()}
-                  >
-                    <div className="absolute inset-0 h-full -z-10">
-                      <StrapiImage
-                        className="relative top-11 left-1/2 -translate-x-1/2 rounded-full ring-2 ring-neutral-200"
-                        src={item?.user?.image?.url}
-                        width={56}
-                        height={56}
-                        alt={`${item?.user?.firstname ?? ""} ${item?.user?.lastname ?? ""}`}
-                      />
+                    {/* Poster overlay (cover marad!) */}
+                    {showPosterOverlay && posterSrc && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        <StrapiImage
+                          src={posterSrc}
+                          alt={name ? `${name} – videó poszter` : "Videó poszter"}
+                          fill
+                          sizes="(min-width: 1024px) 330px, 100vw"
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Zöld play gomb (koppintás előtt) */}
+                    {!controlsOn && (
+                      <button
+                        type="button"
+                        onClick={startVideo}
+                        className="absolute inset-0 grid place-items-center"
+                        aria-label="Videó lejátszása"
+                      >
+                        <span className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-[#057C80] text-white grid place-items-center shadow-[0_12px_30px_rgba(0,0,0,0.25)] hover:opacity-95 active:opacity-90 transition">
+                          <PlayIcon />
+                        </span>
+                      </button>
+                    )}
+                  </>
+                ) : avatarSrc ? (
+                  <StrapiImage
+                    src={avatarSrc}
+                    alt={name ? `${name} – fotó` : "Vélemény fotó"}
+                    fill
+                    sizes="(min-width: 1024px) 330px, 100vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[#F3F4F6]" />
+                )}
+
+                {/* finom alsó overlay a szöveghez (koppintás előtt) */}
+                {showBadge && (
+                  <div className="absolute inset-x-0 bottom-0 h-20 sm:h-28 bg-gradient-to-t from-black/35 via-black/10 to-transparent pointer-events-none" />
+                )}
+
+                {/* százalék szöveg */}
+                {showBadge && (
+                  <div className="absolute left-4 bottom-4 sm:left-7 sm:bottom-7 pointer-events-none z-10">
+                    <div className="text-white leading-none drop-shadow-sm">
+                      <div className="text-3xl sm:text-6xl font-extrabold tracking-tight">{percentageValue}</div>
+                      <div className="text-sm sm:text-xl font-medium opacity-95">{percentageLabel}</div>
                     </div>
-                  </Transition>
-                ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Idézetek konténer — >>> FIX: overflow-hidden, hogy a kilépő réteg ne lógjon rá az alatta lévő vezérlőkre */}
-            <div className="mb-10 transition-all duration-150 delay-150 ease-out px-8 sm:px-6">
-              <div className="relative flex flex-col overflow-hidden" ref={testimonialsRef}>
-                {sliced.map((item: any, index: number) => (
-                  <Transition
-                    key={index}
-                    show={active === index}
-                    enter="transition ease-out duration-500 order-first"
-                    enterFrom="opacity-0 -translate-y-1"
-                    enterTo="opacity-100 translate-y-0"
-                    // >>> FIX: absolute helyett absolute + inset-0, hogy a kilépő példány pont ugyanoda legyen pozicionálva
-                    leave="transition ease-in duration-300 absolute inset-0"
-                    leaveFrom="opacity-100 translate-y-0"
-                    leaveTo="opacity-0 translate-y-1"
-                    beforeEnter={() => heightFix()}
-                  >
-                    <div className="text-base md:text-xl font-semibold text-neutral-900 leading-relaxed break-words text-pretty hyphens-auto">
-                      {item?.text}
-                    </div>
-                  </Transition>
-                ))}
-              </div>
-            </div>
+            {/* üres sáv desktopon */}
+            <div className="hidden lg:block" />
 
-            {/* Választó gombok */}
-            <div className="flex flex-wrap justify-center -m-1.5 px-8 sm:px-6">
-              {sliced.map((item: any, index: number) => {
-                const isActive = active === index;
-                return (
+            {/* JOBB */}
+            <div className="flex flex-col justify-between">
+              {/* top row */}
+              <div className="flex items-start justify-between gap-3 sm:gap-6">
+                <div className="flex -space-x-4">
+                  {avatars.map((src, i) => (
+                    <div
+                      key={`${src}-${i}`}
+                      className="rounded-full ring-1 ring-[#D1D5DB] bg-white overflow-hidden h-12 w-12 md:h-16 md:w-16"
+                      style={{ zIndex: i }}
+                    >
+                      <StrapiImage src={src} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-right leading-none">
+                  <div className="text-3xl sm:text-6xl font-extrabold tracking-tight text-[#4B5563]">{reviewsValue}</div>
+                  <div className="text-2xl sm:text-5xl font-semibold tracking-tight text-[#057C80]">{reviewsLabel}</div>
+                </div>
+              </div>
+
+              {/* leírás */}
+              <div className="mt-4 sm:mt-8 rounded-2xl border border-[#D1D5DB] bg-white p-3 sm:p-7">
+                <p className="text-sm sm:text-xl leading-relaxed text-[#4B5563] font-semibold">{text}</p>
+              </div>
+
+              {/* bottom row */}
+              <div className="mt-4 sm:mt-8 flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="rounded-full border border-[#D1D5DB] overflow-hidden bg-white flex-shrink-0 h-10 w-10 sm:h-14 sm:w-14">
+                    {avatarSrc ? (
+                      <StrapiImage src={avatarSrc} alt={name || "Szerző"} width={40} height={40} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-[#F3F4F6]" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-sm sm:text-lg font-bold text-[#4B5563] truncate">{name || "—"}</div>
+                    <div className="text-xs sm:text-base font-medium text-[#4B5563] opacity-80 truncate">{job}</div>
+                  </div>
+                </div>
+
+                <div className="ml-auto flex items-center gap-2 flex-shrink-0">
                   <button
-                    key={index}
-                    onClick={() => {
-                      setActive(index);
-                      setAutorotate(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-full m-1.5 text-xs transition duration-150 border ${
-                      isActive
-                        ? "border-[#5CB7AE] text-neutral-900 bg-[#5CB7AE]/10"
-                        : "border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50"
-                    }`}
-                    aria-label={`Váltás: ${item?.user?.firstname ?? ""} ${item?.user?.lastname ?? ""}`}
+                    type="button"
+                    onClick={prev}
+                    className="grid place-items-center rounded-full border border-[#D1D5DB] text-[#4B5563] bg-white hover:bg-neutral-50 active:bg-neutral-100 transition h-9 w-9 sm:h-11 sm:w-11"
+                    aria-label="Előző vélemény"
                   >
-                    <span className="relative">
-                      <span className="font-bold">
-                        {(item?.user?.firstname ?? "") + " " + (item?.user?.lastname ?? "")}
-                      </span>{" "}
-                      <br className="block sm:hidden" />
-                      <span className="text-neutral-400 hidden sm:inline-block">•</span>{" "}
-                      <span className="hidden sm:inline-block">{item?.user?.job}</span>
-                    </span>
+                    <ArrowLeftIcon />
                   </button>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={next}
+                    className="grid place-items-center rounded-full border border-[#D1D5DB] text-[#4B5563] bg-white hover:bg-neutral-50 active:bg-neutral-100 transition h-9 w-9 sm:h-11 sm:w-11"
+                    aria-label="Következő vélemény"
+                  >
+                    <ArrowRightIcon />
+                  </button>
+                </div>
+              </div>
             </div>
+            {/* /JOBB */}
           </div>
         </div>
       </div>
@@ -148,4 +450,4 @@ export const TestimonialsSlider = ({ testimonials }: { testimonials: any[] }) =>
   );
 };
 
-const MemoizedSparklesCore = memo(SparklesCore);
+export default TestimonialsSlider;

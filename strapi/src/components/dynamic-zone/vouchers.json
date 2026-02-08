@@ -1,0 +1,32 @@
+{
+  "collectionName": "components_dynamic_zone_vouchers",
+  "info": {
+    "displayName": "Vouchers"
+  },
+  "options": {},
+  "attributes": {
+    "badge_label": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "subheading": {
+      "type": "text"
+    },
+    "button": {
+      "type": "component",
+      "component": "shared.button",
+      "repeatable": false
+    },
+    "info_label": {
+      "type": "string"
+    },
+    "vouchers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::voucher.voucher"
+    }
+  },
+  "config": {}
+}

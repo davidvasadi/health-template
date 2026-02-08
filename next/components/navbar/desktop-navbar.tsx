@@ -243,7 +243,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
 
         {/* BAL: logó + menü (chip-stílus) */}
         <div className="flex flex-row gap-2 items-center">
-          <Logo locale={locale} image={logo?.image} />
+          <Logo locale={locale} image={logo?.image} company={logo?.company} />
           <div className="nav-links flex items-center gap-1.5">
             {leftNavbarItems.map((item) => {
               const href = `/${locale}${item.URL}`;
@@ -270,7 +270,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
               key={item.text}
               as={Link}
               href={`/${locale}${item.URL}`}
-              className={cn("btn-xl btn-glass", ctaClass(index))}
+              className={cn(" btn-glass px-3 py-1 rounded-md", ctaClass(index))}
               {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
             >
               {item.text}

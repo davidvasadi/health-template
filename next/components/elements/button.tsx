@@ -55,6 +55,8 @@ export const Button: React.FC<ButtonProps> = ({
       ? "bg-breaker-bay-700 text-white backdrop-blur-md border border-breaker-bay-500 hover:bg-breaker-bay-600 hover:shadow-xl transition duration-300 font-semibold rounded-lg px-6 py-2 flex items-center justify-center"
       : variant === "muted"
       ? "bg-neutral-900 text-white/80 hover:bg-neutral-800/90 border border-neutral-700 hover:shadow-inner transition duration-300 font-medium rounded-2xl px-5 py-2.5 flex items-center justify-center"
+      : variant === "extra"
+      ? "bg-neutral-900 text-white/80 hover:bg-neutral-800/90 border border-neutral-700 hover:shadow-inner transition duration-300 font-medium rounded-2xl px-5 py-2.5 flex items-center justify-center"
       : "";
 
   return (

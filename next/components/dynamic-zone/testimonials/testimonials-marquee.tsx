@@ -4,6 +4,17 @@ import React from "react";
 import Marquee from "react-fast-marquee";
 import { StrapiImage } from "@/components/ui/strapi-image";
 
+// ✅ Biztos video-url kiolvasás (Strapi v5 + fallback)
+function getVideoUrl(t: any): string | null {
+  return (
+    t?.video?.url ??
+    t?.attributes?.video?.url ??
+    t?.video?.data?.attributes?.url ??
+    t?.attributes?.video?.data?.attributes?.url ??
+    null
+  );
+}
+
 /**
  * TestimonialsMarquee — két sorban gördülő „long read” kártyák
  */
@@ -21,12 +32,32 @@ export const TestimonialsMarquee = ({ testimonials }: { testimonials: any[] }) =
         <div className="h-full absolute w-20 right-0 inset-y-0 z-30 bg-gradient-to-l from-white to-transparent pointer-events-none" />
 
         <Marquee pauseOnHover gradient={false} speed={24}>
-          {levelOne.map((t: any, i: number) => (
-            <Card key={`t1-${t?.id ?? i}`} className="max-w-xl min-h-[14rem] mx-4">
-              <Quote>{t?.text}</Quote>
-              <Author t={t} />
-            </Card>
-          ))}
+          {levelOne.map((t: any, i: number) => {
+            const videoUrl = getVideoUrl(t);
+
+            return (
+              <Card key={`t1-${t?.id ?? i}`} className="max-w-xl mx-4">
+                {/* ✅ VIDEO (ha van) */}
+                {videoUrl && (
+                  <div className="mb-5">
+                    <StrapiImage
+                      src={videoUrl}
+                      alt="Vélemény videó"
+                      width={1280}
+                      height={720}
+                      className="w-full aspect-video rounded-xl border border-neutral-200 shadow-sm"
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  </div>
+                )}
+
+                <Quote>{t?.text}</Quote>
+                <Author t={t} />
+              </Card>
+            );
+          })}
         </Marquee>
       </div>
 
@@ -36,12 +67,32 @@ export const TestimonialsMarquee = ({ testimonials }: { testimonials: any[] }) =
         <div className="h-full absolute w-20 right-0 inset-y-0 z-30 bg-gradient-to-l from-white to-transparent pointer-events-none" />
 
         <Marquee direction="right" pauseOnHover gradient={false} speed={22}>
-          {levelTwo.map((t: any, i: number) => (
-            <Card key={`t2-${t?.id ?? i}`} className="max-w-xl min-h-[14rem] mx-4">
-              <Quote>{t?.text}</Quote>
-              <Author t={t} />
-            </Card>
-          ))}
+          {levelTwo.map((t: any, i: number) => {
+            const videoUrl = getVideoUrl(t);
+
+            return (
+              <Card key={`t2-${t?.id ?? i}`} className="max-w-xl mx-4">
+                {/* ✅ VIDEO (ha van) */}
+                {videoUrl && (
+                  <div className="mb-5">
+                    <StrapiImage
+                      src={videoUrl}
+                      alt="Vélemény videó"
+                      width={1280}
+                      height={720}
+                      className="w-full aspect-video rounded-xl border border-neutral-200 shadow-sm"
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  </div>
+                )}
+
+                <Quote>{t?.text}</Quote>
+                <Author t={t} />
+              </Card>
+            );
+          })}
         </Marquee>
       </div>
     </div>
@@ -91,7 +142,11 @@ export const Quote = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <h3 className={`text-[15px] leading-relaxed font-medium text-neutral-900 break-words text-pretty hyphens-auto ${className ?? ""}`}>
+  <h3
+    className={`text-[15px] leading-relaxed font-medium text-neutral-900 break-words text-pretty hyphens-auto ${
+      className ?? ""
+    }`}
+  >
     {children}
   </h3>
 );

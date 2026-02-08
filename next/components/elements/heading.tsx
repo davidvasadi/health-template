@@ -61,7 +61,7 @@ export const Heading = ({
     <Tag
       className={cn(
         // *********************** ALAP TIPOGRÁFIAI STÍLUSOK ***********************
-        "text-3xl md:text-5xl md:leading-tight max-w-5xl mx-auto text-center tracking-tight",
+        "text-3xl md:text-5xl md:leading-tight max-w-5xl  text-center tracking-tight",
         "font-medium",
         // Gradiens szöveg: a szöveg átszínezése háttér-gradienst használva
         "bg-clip-text text-transparent bg-gradient-to-b from-neutral-800 via-white to-white",

@@ -1,3 +1,4 @@
+// next/components/products/featured.tsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, CSSProperties } from "react";
@@ -43,23 +44,19 @@ function lockBodyScroll() {
     bodyTouchAction: (body.style as any).touchAction,
   };
 
-  // teljes tiltás és scroll chaining OFF
   html.style.overflow = "hidden";
   (html.style as any).overscrollBehavior = "none";
   body.style.overflow = "hidden";
   (body.style as any).touchAction = "none";
 
-  // klasszikus body-fix, hogy még viewport bounce se húzza fel a hátteret
   body.style.position = "fixed";
   body.style.top = `-${scrollY}px`;
   body.style.width = "100%";
 
-  // globális preventDefault a gesztusokra (non-passive!)
   const cancel = (e: Event) => e.preventDefault();
   window.addEventListener("touchmove", cancel, { passive: false });
   window.addEventListener("wheel", cancel, { passive: false });
 
-  // cleanup
   return () => {
     window.removeEventListener("touchmove", cancel as any);
     window.removeEventListener("wheel", cancel as any);
@@ -77,9 +74,11 @@ function lockBodyScroll() {
 export function Featured({
   products = [],
   locale,
+  baseSlug, // ✅ ÚJ: canonical base (HU: szolgaltatasok)
 }: {
   products: Product[];
   locale: string;
+  baseSlug: string; // ✅ kötelező
 }) {
   const hasProducts = products?.length > 0;
   const L = UI_LABELS[baseLocale(locale)];
@@ -97,7 +96,6 @@ export function Featured({
 
   const navVars = { ["--nav-h" as any]: "120px" } as CSSProperties;
 
-  /** 🔒 TELJES scroll lock, amíg a komponens látható */
   useEffect(() => {
     if (!hasProducts) return;
     const unlock = lockBodyScroll();
@@ -136,8 +134,8 @@ export function Featured({
 
       if (!prefersReduce) {
         const firstImage = images[0];
-        const firstCard  = sections[0]?.querySelector<HTMLElement>(".bb-card");
-        const counterWraps = countNodes().map(n => n.parentElement!).filter(Boolean);
+        const firstCard = sections[0]?.querySelector<HTMLElement>(".bb-card");
+        const counterWraps = countNodes().map((n) => n.parentElement!).filter(Boolean);
 
         if (firstCard) gsap.set(firstCard, { autoAlpha: 0, x: -32 });
         const bottomGroup = [firstImage, ...counterWraps].filter(Boolean) as Element[];
@@ -145,7 +143,8 @@ export function Featured({
 
         const intro = gsap.timeline();
         if (firstCard) intro.to(firstCard, { autoAlpha: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0);
-        if (bottomGroup.length) intro.to(bottomGroup, { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out" }, 0.05);
+        if (bottomGroup.length)
+          intro.to(bottomGroup, { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out" }, 0.05);
       }
 
       function gotoSection(newIndex: number, direction: number) {
@@ -155,7 +154,9 @@ export function Featured({
 
         const tl = gsap.timeline({
           defaults: { duration: spring.duration, ease: spring.ease },
-          onComplete() { animating = false; },
+          onComplete() {
+            animating = false;
+          },
         });
 
         gsap.set([...sections, ...images, ...headings], { zIndex: 0, autoAlpha: 0 });
@@ -165,7 +166,7 @@ export function Featured({
         const nextHeading = headings[newIndex];
 
         tl.call(() => {
-          countNodes().forEach(n => (n.textContent = String(newIndex + 1).padStart(2, "0")));
+          countNodes().forEach((n) => (n.textContent = String(newIndex + 1).padStart(2, "0")));
         }, undefined, 0.2)
           .fromTo(outerWrappers[newIndex]!, { xPercent: 100 * direction }, { xPercent: 0 }, 0)
           .fromTo(innerWrappers[newIndex]!, { xPercent: -100 * direction }, { xPercent: 0 }, 0);
@@ -173,18 +174,23 @@ export function Featured({
         if (nextHeading) tl.fromTo(nextHeading, { xPercent: -20 * direction }, { xPercent: 0 }, 0);
 
         tl.fromTo(
-          images[newIndex]!, { xPercent: 125 * direction, scaleX: 1.35, scaleY: 1.18 },
-          { xPercent: 0, scaleX: 1, scaleY: 1, duration: 1 }, 0
-        ).fromTo(
-          images[index]!, { xPercent: 0, scaleX: 1, scaleY: 1 },
-          { xPercent: -125 * direction, scaleX: 1.35, scaleY: 1.18 }, 0
-        ).timeScale(0.9);
+          images[newIndex]!,
+          { xPercent: 125 * direction, scaleX: 1.35, scaleY: 1.18 },
+          { xPercent: 0, scaleX: 1, scaleY: 1, duration: 1 },
+          0
+        )
+          .fromTo(
+            images[index]!,
+            { xPercent: 0, scaleX: 1, scaleY: 1 },
+            { xPercent: -125 * direction, scaleX: 1.35, scaleY: 1.18 },
+            0
+          )
+          .timeScale(0.9);
 
         index = newIndex;
         setCurrentIndex(index);
       }
 
-      // csak a gyökér elemre figyelünk + default scroll megakadályozása
       const obs = Observer.create({
         target: rootRef.current,
         type: "wheel,touch,pointer",
@@ -193,7 +199,7 @@ export function Featured({
         onUp: () => gotoSection(index + 1, +1),
         onDown: () => gotoSection(index - 1, -1),
         tolerance: 10,
-        ignore: "input,textarea,select,[contenteditable]"
+        ignore: "input,textarea,select,[contenteditable]",
       });
 
       const onKey = (e: KeyboardEvent) => {
@@ -217,7 +223,6 @@ export function Featured({
     <div
       ref={rootRef}
       style={navVars}
-      // ⛔️ scroll chaining off + touch default off
       className="relative w-full h-svh overflow-hidden bg-breaker-bay-50 overscroll-none touch-none"
     >
       {/* MOBIL SZÁMLÁLÓ */}
@@ -241,14 +246,18 @@ export function Featured({
               <div className="bb-slide-content absolute inset-0 flex items-start justify-center">
                 {/* háttér */}
                 <div className={`absolute inset-0 z-[1] ${slideBg[i % slideBg.length]}`} />
-                <div className={`absolute inset-0 z-[1] ${i === 0 ? "opacity-[0.02]" : "opacity-[0.05]"} [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`} />
+                <div
+                  className={`absolute inset-0 z-[1] ${
+                    i === 0 ? "opacity-[0.02]" : "opacity-[0.05]"
+                  } [background-image:radial-gradient(#02393f_0.5px,transparent_0.5px)] [background-size:14px_14px]`}
+                />
 
                 {/* FRONT GRID */}
                 <div
                   className="relative z-[30] mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
                   style={{
-                    marginTop: "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
-                    height: "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
+                    marginTop: "calc(var(--nav-h, 80px) + env(safe-area-inset-top, 0px) + 2px)",
+                    height: "calc(100svh - (var(--nav-h, 80px) + env(safe-area-inset-top, 0px) + 24px))",
                   }}
                 >
                   {/* SOR 1: Title */}
@@ -282,7 +291,8 @@ export function Featured({
 
                   {/* CONTENT CARD */}
                   <Link
-                    href={`/${locale}/products/${p.slug}` as never}
+                    // ✅ Itt volt a hiba: /products/… → /{baseSlug}/…
+                    href={`/${locale}/${baseSlug}/${p.slug}` as never}
                     aria-label={`${p.name} – ${L.details}`}
                     className="
                       bb-card relative
@@ -293,7 +303,7 @@ export function Featured({
                       bg-white/75 backdrop-blur-2xl backdrop-saturate-150
                       ring-1 ring-white/50
                       shadow-[0_16px_48px_-18px_rgba(3,57,63,0.28)]
-                      p-4 md:p-6 flex flex-col gap-3
+                      p-2 md:p-6 flex flex-col gap-3
                       transition hover:bg-white/80
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500
                     "
@@ -313,7 +323,12 @@ export function Featured({
                       <span className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-breaker-bay-800 text-white ring-1 ring-white/10 shadow-[0_10px_24px_-14px_rgba(3,57,63,.5)] px-4 py-3 text-[14px] md:text-sm font-medium hover:bg-breaker-bay-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400 focus-visible:ring-offset-white transition">
                         {L.details}
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M5 12h14M13 5l7 7-7 7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                          <path
+                            d="M5 12h14M13 5l7 7-7 7"
+                            strokeWidth="1.7"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       </span>
                     </div>
@@ -330,7 +345,7 @@ export function Featured({
         <div
           className="relative mx-auto w-[100vw] max-w-7xl grid grid-cols-12 grid-rows-12 gap-4 px-4 md:px-8"
           style={{
-            marginTop: "calc(var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 12px)",
+            marginTop: "calc(var(--nav-h, 12px) + env(safe-area-inset-top, 0px) + 12px)",
             height: "calc(100svh - (var(--nav-h, 120px) + env(safe-area-inset-top, 0px) + 24px))",
           }}
         >

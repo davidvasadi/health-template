@@ -2,6 +2,7 @@
 
 // =========================================================
 // HERO (Refactor v1 + URL fix + Faster 3D first paint)
+// + ScrollCue v3.1 (NO blink, hysteresis, faster bounce, single arrow icon)
 // =========================================================
 
 // --- React & Next ---
@@ -17,7 +18,7 @@ const MotionDiv = motion.div as unknown as React.ComponentType<any>;
 // --- 3D (three + r3f + drei) ---
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Float, PerformanceMonitor /* Preload kikapcs */, useProgress } from "@react-three/drei";
+import { Environment, Float, PerformanceMonitor /* Preload kikapcs */ } from "@react-three/drei";
 
 // --- UI elemek ---
 import { Heading } from "../elements/heading";
@@ -43,12 +44,22 @@ const BG_GRADIENT_A =
   "radial-gradient(880px 540px at 82% 32%, rgba(29,228,226,0.12) 0%, rgba(255,255,255,0.08) 34%, transparent 62%)";
 const BG_GRADIENT_B = "radial-gradient(1200px 800px at 50% 100%, rgba(10,97,101,0.06) 0%, transparent 60%)";
 const CARD_SHADOW = "0 10px 26px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.22)";
-const CARD_INNER_GRADIENT = "radial-gradient(56% 56% at 50% 50%, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.03) 64%, rgba(0,0,0,0.0) 78%)";
+const CARD_INNER_GRADIENT =
+  "radial-gradient(56% 56% at 50% 50%, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.03) 64%, rgba(0,0,0,0.0) 78%)";
 
 // Framer Motion variánsok
-const sectionVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } } } as const;
-const bgVariants = { hidden: { y: 28, opacity: 0 }, show: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } } } as const;
-const cardVariants = { hidden: { y: -22, opacity: 0 }, show: { y: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } } } as const;
+const sectionVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+} as const;
+const bgVariants = {
+  hidden: { y: 28, opacity: 0 },
+  show: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+} as const;
+const cardVariants = {
+  hidden: { y: -22, opacity: 0 },
+  show: { y: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+} as const;
 
 // CTA stílus segédek
 const CTA_BASE_CLASS =
@@ -154,8 +165,6 @@ function formatSlotLabel(d: Date, locale: string) {
 // =============================================
 // Segédfüggvények — CTA (URL FIX: külső/belső/anchor + elgépelés)
 // =============================================
-
-// Elgépelős "https:/" → "https://"
 function sanitizeUrl(u: string) {
   return String(u || "")
     .replace(/^https:\//i, "https://")
@@ -163,7 +172,6 @@ function sanitizeUrl(u: string) {
     .trim();
 }
 
-// Külső / spec. protokoll felismerése
 function isExternalUrl(u: string) {
   const s = u.toLowerCase();
   return (
@@ -205,9 +213,19 @@ function ctaStyleByVariant(v: CtaVariant): React.CSSProperties {
 
   switch (v) {
     case "primary":
-      return { ...base, background: "linear-gradient(180deg, rgba(4,200,200,0.35) 0%, rgba(29,228,226,0.20) 100%)", color: "var(--breaker-950)", border: "none" };
+      return {
+        ...base,
+        background: "linear-gradient(180deg, rgba(4,200,200,0.35) 0%, rgba(29,228,226,0.20) 100%)",
+        color: "var(--breaker-950)",
+        border: "none",
+      };
     case "accent":
-      return { ...base, background: "linear-gradient(180deg, rgba(144,255,246,0.25) 0%, rgba(199,255,250,0.12) 100%)", color: "var(--breaker-900)", border: "none" };
+      return {
+        ...base,
+        background: "linear-gradient(180deg, rgba(144,255,246,0.25) 0%, rgba(199,255,250,0.12) 100%)",
+        color: "var(--breaker-900)",
+        border: "none",
+      };
     case "muted":
       return { ...base, background: "rgba(255,255,255,0.06)", color: "var(--breaker-800)", border: "1px solid rgba(255,255,255,0.18)" };
     case "simple":
@@ -227,21 +245,127 @@ function pickPrimaryCta(CTAs: any[], primaryCtaPath?: string) {
   return CTAs[0];
 }
 
-// LOCALE prefixelés csak belső utakra; külsőt és #anchor-t nem piszkáljuk
 function ctaHref(locale: string, cta: any) {
   const raw = sanitizeUrl(cta?.URL ?? "");
   if (!raw) return "#";
 
-  if (isExternalUrl(raw)) return raw; // külső link: érintetlen
-  if (raw.startsWith("#")) return raw; // anchor: érintetlen
+  if (isExternalUrl(raw)) return raw;
+  if (raw.startsWith("#")) return raw;
 
   const path = raw.startsWith("/") ? raw : `/${raw}`;
   const pref = `/${locale}`;
 
-  // már locale-ozott
   if (path === pref || path.startsWith(`${pref}/`)) return path;
-
   return `${pref}${path}`;
+}
+
+// =============================================
+// ScrollCue v3.1 — single arrow + faster bounce + hysteresis
+// Hide: scrollY > 64
+// Show: scrollY < 8
+// =============================================
+const SCROLL_ARIA: Record<string, string> = {
+  hu: "Görgess lejjebb",
+  en: "Scroll down",
+  de: "Scroll nach unten",
+};
+
+function ScrollCue({ reducedMotion, locale }: { reducedMotion: boolean; locale: string }) {
+  const [shown, setShown] = useState(false);
+  const initedRef = useRef(false);
+
+  useEffect(() => {
+    let ticking = false;
+
+    const decide = () => {
+      const y = window.scrollY || 0;
+
+      setShown((prev) => {
+        if (!initedRef.current) {
+          initedRef.current = true;
+          return y <= 64;
+        }
+        if (prev) return y <= 64;
+        return y < 8;
+      });
+
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(decide);
+    };
+
+    decide();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  const scrollToNext = () => {
+    const target = document.querySelector<HTMLElement>("[data-hero-next]") || document.querySelector<HTMLElement>("#content");
+    const behavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+
+    if (target) {
+      const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--nav-h")) || 120;
+      const top = target.getBoundingClientRect().top + window.scrollY - navH - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior });
+      return;
+    }
+
+    window.scrollTo({ top: window.innerHeight * 0.9, behavior });
+  };
+
+  const aria = SCROLL_ARIA[locale] ?? SCROLL_ARIA.hu;
+
+  // ✅ single arrow (shaft + head) — no “double chevron”
+  const Icon = (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="opacity-90">
+      <path d="M12 5v10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7 13l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
+  return (
+    <motion.div
+      className="absolute inset-x-0 bottom-6 z-40 flex justify-center"
+      style={{ pointerEvents: "none" }}
+      initial={false}
+      animate={{ opacity: shown ? 1 : 0, y: shown ? 0 : 10 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      aria-hidden={!shown}
+    >
+      <motion.button
+        type="button"
+        onClick={scrollToNext}
+        aria-label={aria}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/35 shadow-lg backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/30"
+        style={{
+          pointerEvents: shown ? "auto" : "none",
+          background: "rgba(255,255,255,0.14)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
+          backdropFilter: "blur(14px) saturate(160%)",
+          boxShadow: "0 10px 22px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.18)",
+          color: "rgba(0,0,0,0.70)",
+        }}
+        whileTap={{ scale: 0.98 }}
+        // ✅ sűrűbb “pattogás” (gyorsabb cycle + punchy easing)
+        animate={reducedMotion || !shown ? { y: 0 } : { y: [0, -6, 0] }}
+        transition={
+          reducedMotion || !shown
+            ? { duration: 0 }
+            : { duration: 1.35, repeat: Infinity, ease: [0.2, 0.9, 0.2, 1] }
+        }
+      >
+        {Icon}
+      </motion.button>
+    </motion.div>
+  );
 }
 
 // =============================================
@@ -296,16 +420,12 @@ function SpineGroup() {
   const scroll = useScrollProgress();
   const isSafari = useIsSafari();
 
-  // SPEED: kevesebb szegmens Safarin/mobilon (vizuálisan azonosnak hat)
   const seg = useMemo(
     () =>
-      isSafari
-        ? { cyl: 32, torusTubular: 40, torusRadial: 18, cone: 16 } // ↓
-        : { cyl: 48, torusTubular: 60, torusRadial: 24, cone: 24 },
+      isSafari ? { cyl: 32, torusTubular: 40, torusRadial: 18, cone: 16 } : { cyl: 48, torusTubular: 60, torusRadial: 24, cone: 24 },
     [isSafari]
   );
 
-  // Fül váltáskor ne frissítsünk — de ne unmountoljuk
   const hiddenRef = useRef(false);
   useEffect(() => {
     const onVis = () => {
@@ -320,7 +440,7 @@ function SpineGroup() {
     if (!g.current || hiddenRef.current) return;
 
     const delta = Math.min(rawDelta, 1 / 30);
-    const p = scroll.current; // 0..1
+    const p = scroll.current;
     const baseSpin = 0.18;
     const speed = baseSpin + p * 0.9;
 
@@ -345,7 +465,6 @@ function SpineScene({
   dpr: number | [number, number];
   setDpr: (d: [number, number]) => void;
 }) {
-  // SPEED: nem várjuk meg a 100%-ot; az első frame-re ready-nek tekintjük
   const createdOnce = useRef(false);
 
   return (
@@ -367,7 +486,6 @@ function SpineScene({
         state.gl.setClearColor(0x000000, 0);
         if (!createdOnce.current) {
           createdOnce.current = true;
-          // első frame után jelzünk, hogy jöhet a SoftOverlay stb.
           requestAnimationFrame(onReady);
         }
       }}
@@ -376,27 +494,19 @@ function SpineScene({
       {/* @ts-ignore */}
       <color attach="background" args={["transparent"]} />
       <Suspense fallback={null}>
-        {/* SPEED: kisebb PMREM felbontás → gyorsabb env feldolgozás, hasonló look */}
         <Environment preset="studio" resolution={256} />
         <Float floatIntensity={0.3} rotationIntensity={0.12} speed={0.6}>
           <SpineGroup />
         </Float>
-
-        {/* SPEED: a Preload all blokkolhatja az első képkockát → kivéve */}
-        {/* <Preload all /> */}
       </Suspense>
 
-      {/* DPR automata finomhangolás */}
-      <PerformanceMonitor
-        onDecline={() => setDpr([1, 1.25])}
-        onIncline={() => setDpr([1, 1.8])}
-      />
+      <PerformanceMonitor onDecline={() => setDpr([1, 1.25])} onIncline={() => setDpr([1, 1.8])} />
     </Canvas>
   );
 }
 
 // =============================================
-// SoftOverlay (változatlan logika, tisztított stílus)
+// SoftOverlay
 // =============================================
 function SoftOverlay({ visible, reducedMotion }: { visible: boolean; reducedMotion: boolean }) {
   const { scrollYProgress } = useScroll();
@@ -418,7 +528,7 @@ export const Hero = ({
   sub_heading,
   CTAs,
   locale,
-  phone, // jelenleg nem használt
+  phone,
   nextSlotDate,
   primaryCtaPath,
   businessHours,
@@ -436,12 +546,10 @@ export const Hero = ({
 }) => {
   const reducedMotion = useReducedMotion();
 
-  // Címsor feldarabolása
   const hasSpace = heading.includes(" ");
   const first = hasSpace ? heading.substring(0, heading.lastIndexOf(" ")) : heading;
   const last = hasSpace ? heading.split(" ").pop() : "";
 
-  // SPEED: óvatosabb DPR indulás; majd PM emeli
   const [sceneReady, setSceneReady] = useState(false);
   const [dpr, setDpr] = useState<[number, number]>(() => {
     if (typeof window === "undefined") return [1, 1.5];
@@ -449,7 +557,6 @@ export const Hero = ({
     return [1, max];
   });
 
-  // Első megnyitás vs visszatérés
   const [hasEnteredOnce, setHasEnteredOnce] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("heroSeen") === "1";
@@ -461,12 +568,10 @@ export const Hero = ({
     }
   }, [sceneReady, hasEnteredOnce]);
 
-  // Parallax a kártyára
   const { scrollYProgress } = useScroll();
   const cardY = useTransform(scrollYProgress, [0, 1], [0, -12]);
   const cardScale = useTransform(scrollYProgress, [0, 1], [1, 0.997]);
 
-  // Legközelebbi időpont
   const explicitNext = useMemo(() => coerceNextDate(nextSlotDate), [nextSlotDate]);
   const nextSlot = useMemo(() => {
     if (explicitNext) return explicitNext;
@@ -475,14 +580,11 @@ export const Hero = ({
   }, [explicitNext, businessHours]);
   const nextSlotLabel = useMemo(() => formatSlotLabel(nextSlot, locale), [nextSlot, locale]);
 
-  // Profil kép
   const profileUrl = useMemo(() => strapiImgUrl(profile_image), [profile_image]);
   const profileAlt = useMemo(() => strapiImgAlt(profile_image), [profile_image]);
 
-  // CTA-k
   const primaryCTA = useMemo(() => pickPrimaryCta(CTAs, primaryCtaPath), [CTAs, primaryCtaPath]);
 
-  // 3D csak ha nem kér kevesebb mozgást
   const showScene = !reducedMotion;
 
   return (
@@ -492,7 +594,6 @@ export const Hero = ({
       initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
       animate={reducedMotion ? undefined : "show"}
     >
-      {/* HÁTTÉR: 3D Spine */}
       {showScene && (
         <MotionDiv
           className="absolute inset-0 -z-10"
@@ -504,13 +605,10 @@ export const Hero = ({
         </MotionDiv>
       )}
 
-      {/* Soft overlay csak sceneReady után */}
       <SoftOverlay visible={sceneReady && showScene} reducedMotion={!!reducedMotion} />
 
-      {/* KÖZÉP – üvegkártya */}
       <div className="relative z-30 flex items-center justify-center px-6 min-h-svh">
         <div className="relative w-full max-w-[960px] rounded-[28px] px-8 py-8 md:px-12 md:py-12 text-center">
-          {/* Üveghatású háttér */}
           <div
             className="absolute inset-0 rounded-[28px] -z-20"
             style={{
@@ -522,22 +620,15 @@ export const Hero = ({
             aria-hidden
           />
 
-          {/* Belső sötétedő gradiens */}
           <div className="absolute inset-0 rounded-[28px] -z-10 pointer-events-none" style={{ background: CARD_INNER_GRADIENT }} aria-hidden />
 
-          {/* Kártya tartalom + parallax */}
           <MotionDiv
             variants={cardVariants}
             initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
             animate={reducedMotion ? undefined : "show"}
-            style={
-              reducedMotion
-                ? undefined
-                : { y: cardY, scale: cardScale, willChange: "transform", transform: "translateZ(0)" }
-            }
+            style={reducedMotion ? undefined : { y: cardY, scale: cardScale, willChange: "transform", transform: "translateZ(0)" }}
             className="relative"
           >
-            {/* Shimmer csík */}
             {!reducedMotion && (
               <MotionDiv
                 className="pointer-events-none absolute top-0 left-0 h-full w-1/3 rounded-[28px] will-change-transform"
@@ -549,7 +640,6 @@ export const Hero = ({
               />
             )}
 
-            {/* Avatar */}
             {profileUrl && (
               <div className="flex justify-end">
                 <div
@@ -573,7 +663,6 @@ export const Hero = ({
               </div>
             )}
 
-            {/* Címsor + alcím */}
             <Heading
               as="h1"
               className="font-semibold leading-tight text-balance text-current bg-none mx-auto max-w-[22ch]"
@@ -595,14 +684,12 @@ export const Hero = ({
               {sub_heading}
             </Subheading>
 
-            {/* CTA-k — külső/belső döntés + új ablak külsőknél */}
             {!!CTAs?.length && (
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
                 {CTAs.map((cta: any, i: number) => {
                   const v = resolveCtaVariant(cta, i);
                   const href = ctaHref(locale, cta);
                   const external = isExternalUrl(href);
-
                   const As: any = external ? "a" : Link;
 
                   return (
@@ -625,9 +712,7 @@ export const Hero = ({
         </div>
       </div>
 
-      {/* JOBB ALSÓ STÁTUSZKÁRTYA – meghagyva kommentben */}
-      {/*
-      {primaryCTA && (
+      {/* {primaryCTA && (
         <MotionDiv
           initial={reducedMotion ? undefined : hasEnteredOnce ? false : { opacity: 0, y: 12 }}
           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
@@ -646,8 +731,12 @@ export const Hero = ({
             }}
           >
             <div className="pointer-events-none absolute -inset-px rounded-xl -z-10" style={{ background: "linear-gradient(135deg, rgba(4,200,200,0.16) 0%, rgba(4,200,200,0.00) 58%)", filter: "blur(6px)" }} aria-hidden />
-            <p className="text-[11px] uppercase tracking-wide" style={{ color: "rgba(13,81,84,0.9)" }}>Legközelebbi szabad időpont</p>
-            <p className="mt-0.5" style={{ color: "var(--breaker-950)", fontWeight: 700, fontSize: 18 }}>{nextSlotLabel}</p>
+            <p className="text-[11px] uppercase tracking-wide" style={{ color: "rgba(13,81,84,0.9)" }}>
+              Legközelebbi szabad időpont
+            </p>
+            <p className="mt-0.5" style={{ color: "var(--breaker-950)", fontWeight: 700, fontSize: 18 }}>
+              {nextSlotLabel}
+            </p>
             <div className="mt-2.5 flex justify-end">
               {(() => {
                 const v = "primary" as const;
@@ -665,8 +754,9 @@ export const Hero = ({
             </div>
           </div>
         </MotionDiv>
-      )}
-      */}
+      )} */}
+
+      <ScrollCue reducedMotion={!!reducedMotion} locale={locale} />
     </MotionSection>
   );
 };

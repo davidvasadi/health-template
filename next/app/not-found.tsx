@@ -116,7 +116,7 @@ export default function NotFound() {
           {/* Logó – fix URL */}
           <Link href={t.paths.home} aria-label="Go to homepage" className="inline-flex items-center justify-center">
             <img
-              src="https://csontkovacsbence.hu/uploads/logo_018c92a763.svg"
+              src="/logo.svg"
               alt="Csontkovács Bence – logo"
               className="h-9 w-auto opacity-90 hover:opacity-100 transition-opacity"
               height={36}
