@@ -46,7 +46,37 @@ jobs:
             command -v pm2 >/dev/null 2>&1 || { echo "pm2 missing"; exit 1; }
             test -f next/.env.production.local || { echo "missing next/.env.production.local"; exit 1; }
 
-            # Backup hely: fix, felülírós (nem nő a tárhely)
+            echo "=== CALC CHANGES (before any backup) ==="
+            OLD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
+            git fetch --all --prune
+
+            if [ -n "$OLD_SHA" ] && [ "$OLD_SHA" = "$DEPLOY_SHA" ]; then
+              echo "No change (OLD_SHA == DEPLOY_SHA). Exiting."
+              exit 0
+            fi
+
+            NEED_NEXT=1
+            NEED_STRAPI=1
+
+            if [ -n "$OLD_SHA" ]; then
+              CHANGED="$(git diff --name-only "$OLD_SHA" "$DEPLOY_SHA" || true)"
+              echo "=== CHANGED FILES (short) ==="
+              printf "%s\n" "$CHANGED" | head -n 200 || true
+
+              NEED_NEXT=0
+              NEED_STRAPI=0
+              printf "%s\n" "$CHANGED" | grep -qE '^next/'  && NEED_NEXT=1 || true
+              printf "%s\n" "$CHANGED" | grep -qE '^strapi/' && NEED_STRAPI=1 || true
+            fi
+
+            echo "NEED_NEXT=$NEED_NEXT NEED_STRAPI=$NEED_STRAPI"
+
+            # ✅ ha csak workflow/docs változott, ne csináljon semmit (ettől lett most piros)
+            if [ "$NEED_NEXT" -eq 0 ] && [ "$NEED_STRAPI" -eq 0 ]; then
+              echo "No next/strapi changes -> skipping backup/build/restart/smoke."
+              exit 0
+            fi
+
             echo "=== FIXED BACKUP (overwrite in-place) ==="
             B="/root/backups/fullsite-latest"
             umask 077
@@ -67,7 +97,7 @@ jobs:
               git log --oneline -n 20 || true
             } > "$B/server_state.txt"
 
-            # --- DB backup (sqlite) - gyors, felülírós ---
+            # --- DB backup (sqlite) ---
             DB_REAL="$(readlink -f strapi/.tmp/data.db 2>/dev/null || true)"
             if [ -n "${DB_REAL}" ] && [ -f "${DB_REAL}" ]; then
               if command -v sqlite3 >/dev/null 2>&1; then
@@ -80,16 +110,15 @@ jobs:
               echo "WARN: Strapi DB not found at strapi/.tmp/data.db"
             fi
 
-            # --- Uploads mirror backup (gyorsabb, nem tömörít, nem nő) ---
-            if [ -d "strapi/public/uploads" ]; then
+            # uploads backup csak akkor, ha strapi deploy lesz (különben lassít feleslegesen)
+            if [ "$NEED_STRAPI" -eq 1 ] && [ -d "strapi/public/uploads" ]; then
               mkdir -p "$B/uploads"
               rsync -a --delete "strapi/public/uploads/" "$B/uploads/"
               echo "✅ uploads mirror -> $B/uploads (rsync --delete)"
             else
-              echo "WARN: uploads folder not found"
+              echo "uploads backup skipped (no strapi deploy)"
             fi
 
-            # --- Nginx / pm2 (kicsi) ---
             tar -czf "$B/nginx_config.tgz" \
               /etc/nginx/nginx.conf \
               /etc/nginx/sites-available \
@@ -99,40 +128,19 @@ jobs:
             cp -a /root/.pm2/dump.pm2 "$B/pm2/" 2>/dev/null || true
             pm2 jlist > "$B/pm2/pm2_jlist.json" 2>/dev/null || true
 
-            (cd "$B" && sha256sum * 2>/dev/null > SHA256SUMS.txt || true)
             echo "Backup done: $(du -sh "$B" || true)"
 
             echo "=== DEPLOY CODE (exact SHA) ==="
-            OLD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
-            git fetch --all --prune
             git reset --hard "$DEPLOY_SHA"
 
-            # Mi változott?
-            NEED_NEXT=1
-            NEED_STRAPI=1
-            if [ -n "$OLD_SHA" ]; then
-              CHANGED="$(git diff --name-only "$OLD_SHA" "$DEPLOY_SHA" || true)"
-              echo "=== CHANGED FILES (short) ==="
-              echo "$CHANGED" | head -n 200 || true
-
-              NEED_NEXT=0
-              NEED_STRAPI=0
-              echo "$CHANGED" | grep -qE '^next/'  && NEED_NEXT=1 || true
-              echo "$CHANGED" | grep -qE '^strapi/' && NEED_STRAPI=1 || true
-            fi
-
-            echo "NEED_NEXT=$NEED_NEXT NEED_STRAPI=$NEED_STRAPI"
-
             install_if_needed() {
-              # param: appdir
               APPDIR="$1"
               cd "/var/www/health-template/$APPDIR"
-
               LOCK="package-lock.json"
               HASH_FILE="node_modules/.ci_lock_hash"
 
               if [ ! -f "$LOCK" ]; then
-                echo "WARN: $APPDIR/$LOCK missing -> running npm ci"
+                echo "WARN: $APPDIR/$LOCK missing -> npm ci"
                 npm ci
                 return 0
               fi
@@ -144,7 +152,7 @@ jobs:
               if [ -d node_modules ] && [ -n "$OLD_HASH" ] && [ "$CUR_HASH" = "$OLD_HASH" ]; then
                 echo "✅ $APPDIR deps unchanged -> skip npm ci"
               else
-                echo "→ $APPDIR deps changed or missing -> npm ci"
+                echo "→ $APPDIR deps changed/missing -> npm ci"
                 npm ci
                 mkdir -p node_modules
                 echo "$CUR_HASH" > "$HASH_FILE"
@@ -170,25 +178,21 @@ jobs:
             fi
 
             echo "=== RESTART (only what changed) ==="
-            if [ "$NEED_NEXT" -eq 1 ]; then
-              pm2 restart next --update-env
-            fi
-            if [ "$NEED_STRAPI" -eq 1 ]; then
-              pm2 restart strapi --update-env
-            fi
+            if [ "$NEED_NEXT" -eq 1 ]; then pm2 restart next --update-env; fi
+            if [ "$NEED_STRAPI" -eq 1 ]; then pm2 restart strapi --update-env; fi
             pm2 save || true
 
-            echo "=== SMOKE CHECK ==="
-            # home: kövesse a 308-at
-            curl -fsS -I -L https://theplacestudio.hu/hu | head -n 12
+            echo "=== SMOKE CHECK (no pipes) ==="
+            curl -fsS -I -L https://theplacestudio.hu/hu > /tmp/smoke_home.txt
+            head -n 12 /tmp/smoke_home.txt || true
 
-            # strapi: retry, restart után néha kell pár mp
             for i in $(seq 1 20); do
               code="$(curl -sS -o /dev/null -w "%{http_code}" https://theplacestudio.hu/api/global || true)"
               echo "API code=$code (try $i)"
               [ "$code" != "000" ] && [ "$code" -lt 500 ] && break
               sleep 3
             done
-            curl -fsS -I https://theplacestudio.hu/api/global | head -n 12
+            curl -fsS -I https://theplacestudio.hu/api/global > /tmp/smoke_api.txt
+            head -n 12 /tmp/smoke_api.txt || true
 
             echo "DEPLOY DONE ✅"
