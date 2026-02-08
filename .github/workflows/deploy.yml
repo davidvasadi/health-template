@@ -65,6 +65,32 @@ jobs:
             }
             trap on_err ERR
 
+            # --- capture runner: ha elhasal valami, kiírjuk a konkrét hibát ---
+            run_capture() {
+              local name="$1"; shift
+              local f="/tmp/deploy_${DEPLOY_SHA}_${name}.log"
+
+              log "RUN: $name"
+              set +e
+              "$@" >"$f" 2>&1
+              local rc=$?
+              set -e
+
+              if [ "$rc" -ne 0 ]; then
+                log "❌ $name failed rc=$rc — last 220 lines:"
+                tail -n 220 "$f" || true
+
+                log "npm debug log tail (if exists):"
+                local npm_log
+                npm_log="$(ls -t /root/.npm/_logs/* 2>/dev/null | head -n 1 || true)"
+                [ -n "$npm_log" ] && tail -n 220 "$npm_log" || true
+
+                die "$name failed"
+              fi
+
+              log "✅ $name OK"
+            }
+
             REPO="/var/www/health-template"
             DOMAIN="https://theplacestudio.hu"
             LOCK_FILE="/var/lock/health-template-deploy.lock"
@@ -81,11 +107,11 @@ jobs:
             fi
 
             STAGE="prechecks"
-            command -v pm2 >/dev/null 2>&1 || die "pm2 missing"
-            command -v git >/dev/null 2>&1 || die "git missing"
-            command -v curl >/dev/null 2>&1 || die "curl missing"
-            command -v node >/dev/null 2>&1 || die "node missing"
-            command -v npm  >/dev/null 2>&1 || die "npm missing"
+            command -v pm2   >/dev/null 2>&1 || die "pm2 missing"
+            command -v git   >/dev/null 2>&1 || die "git missing"
+            command -v curl  >/dev/null 2>&1 || die "curl missing"
+            command -v node  >/dev/null 2>&1 || die "node missing"
+            command -v npm   >/dev/null 2>&1 || die "npm missing"
             command -v rsync >/dev/null 2>&1 || die "rsync missing (required for safe swap_dir)"
 
             cd "$REPO" || die "Cannot cd $REPO"
@@ -198,7 +224,8 @@ jobs:
               ( cd "$REPO" && git worktree remove --force "$BUILD_DIR" >/dev/null 2>&1 ) || true
               ( cd "$REPO" && git worktree prune >/dev/null 2>&1 ) || true
             }
-            trap 'cleanup_worktree' EXIT
+            # IMPORTANT: őrizze az eredeti exit code-ot
+            trap 'rc=$?; cleanup_worktree; exit $rc' EXIT
 
             # env copy
             if [ -f "$REPO/next/.env.production.local" ]; then
@@ -208,38 +235,18 @@ jobs:
               cp -a "$REPO/strapi/.env" "$BUILD_DIR/strapi/.env" || true
             fi
 
-            reuse_node_modules(){
-              local app="$1"
-              local lock_changed="$2"
-              local live_nm="$REPO/$app/node_modules"
-              local build_nm_parent="$BUILD_DIR/$app"
-              if [ "$lock_changed" -eq 0 ] && [ -d "$live_nm" ]; then
-                log "Reuse $app/node_modules via hardlinks"
-                mkdir -p "$build_nm_parent"
-                cp -al "$live_nm" "$build_nm_parent/" 2>/dev/null || return 1
-                return 0
-              fi
-              return 1
-            }
-
-            npm_ci_build(){
-              local app="$1"
-              log "npm ci (build tree) -> $app"
-              ( cd "$BUILD_DIR/$app" && npm ci --no-audit --no-fund )
-            }
-
             if [ "$NEED_NEXT" -eq 1 ]; then
               STAGE="build-next"
-              reuse_node_modules "next" "$LOCK_NEXT_CHANGED" || npm_ci_build "next"
-              ( cd "$BUILD_DIR/next" && npm run build )
+              run_capture "next_npm_ci" bash -lc "cd '$BUILD_DIR/next' && npm ci --no-audit --no-fund"
+              run_capture "next_build"  bash -lc "cd '$BUILD_DIR/next' && npm run build"
             else
               log "Skip next build"
             fi
 
             if [ "$NEED_STRAPI" -eq 1 ]; then
               STAGE="build-strapi"
-              reuse_node_modules "strapi" "$LOCK_STRAPI_CHANGED" || npm_ci_build "strapi"
-              ( cd "$BUILD_DIR/strapi" && npm run build )
+              run_capture "strapi_npm_ci" bash -lc "cd '$BUILD_DIR/strapi' && npm ci --no-audit --no-fund"
+              run_capture "strapi_build"  bash -lc "cd '$BUILD_DIR/strapi' && npm run build"
             else
               log "Skip strapi build"
             fi
@@ -255,12 +262,11 @@ jobs:
               local lockfile="$REPO/$app/package-lock.json"
               local hash_dir="$REPO/.ci"
               local hash_file="$hash_dir/${app}_lock_hash"
-
               mkdir -p "$hash_dir"
 
               if [ ! -f "$lockfile" ]; then
                 log "WARN: $app/package-lock.json missing -> npm ci"
-                ( cd "$REPO/$app" && npm ci --no-audit --no-fund )
+                run_capture "${app}_live_npm_ci" bash -lc "cd '$REPO/$app' && npm ci --no-audit --no-fund"
                 return 0
               fi
 
@@ -272,7 +278,7 @@ jobs:
                 log "✅ $app deps unchanged -> skip npm ci (live)"
               else
                 log "→ $app deps changed/missing -> npm ci (live)"
-                ( cd "$REPO/$app" && npm ci --no-audit --no-fund )
+                run_capture "${app}_live_npm_ci" bash -lc "cd '$REPO/$app' && npm ci --no-audit --no-fund"
                 echo "$cur_hash" > "$hash_file"
               fi
             }
@@ -285,7 +291,6 @@ jobs:
               local source_dir="$2"
               local new_dir="${target_dir}.new"
               local prev_dir="${target_dir}.prev"
-
               rm -rf "$new_dir" "$prev_dir" 2>/dev/null || true
               mkdir -p "$new_dir"
 
