@@ -24,7 +24,7 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
 
   return (
     <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={spring} className="h-full">
-      {/* OUTER CARD WRAPPER (nem Link!) */}
+      {/* OUTER CARD WRAPPER (képtől lefele kattintható !) */}
       <div
         className="
           group grid grid-cols-1 md:grid-rows-2 rounded-3xl overflow-hidden

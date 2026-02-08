@@ -17,46 +17,68 @@ env:
   NODE_VERSION: "20"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      next: ${{ steps.filter.outputs.next }}
+      strapi: ${{ steps.filter.outputs.strapi }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            next:
+              - 'next/**'
+            strapi:
+              - 'strapi/**'
+
+      - name: Summary
+        run: |
+          echo "next_changed=${{ steps.filter.outputs.next }}"
+          echo "strapi_changed=${{ steps.filter.outputs.strapi }}"
+
   next-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.next == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: next
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: next/package-lock.json
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build
 
   strapi-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.strapi == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: strapi
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: strapi/package-lock.json
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build

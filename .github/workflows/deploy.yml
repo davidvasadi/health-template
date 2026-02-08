@@ -3,7 +3,6 @@ name: Deploy to VPS (gated + fast + safe)
 on:
   workflow_run:
     workflows: ["Build (Next + Strapi)"]
-    branches: [main]
     types: [completed]
   workflow_dispatch:
 
@@ -18,11 +17,21 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 70
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
     steps:
+      - name: Debug trigger
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "conclusion=${{ github.event.workflow_run.conclusion }}"
+          echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "deploy_sha=${{ env.DEPLOY_SHA }}"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -36,7 +45,7 @@ jobs:
           script_stop: true
           command_timeout: 60m
           script: |
-            # --- bash guard (ha nem bash, ne menjen tovább) ---
+            # --- bash guard ---
             if [ -z "${BASH_VERSION:-}" ]; then
               echo "ERROR: This script must run in bash. Current shell is not bash."
               exit 1
@@ -44,7 +53,6 @@ jobs:
 
             set -Eeuo pipefail
 
-            # -------- helpers ----------
             STAGE="init"
             log(){ printf '[%s] [%s] %s\n' "$(date -Is)" "$STAGE" "$*"; }
             die(){ log "❌ ERROR: $*"; exit 1; }
@@ -57,7 +65,6 @@ jobs:
             }
             trap on_err ERR
 
-            # -------- config ----------
             REPO="/var/www/health-template"
             DOMAIN="https://theplacestudio.hu"
             LOCK_FILE="/var/lock/health-template-deploy.lock"
@@ -66,6 +73,7 @@ jobs:
             [ -n "${DEPLOY_SHA:-}" ] || die "DEPLOY_SHA is empty"
 
             STAGE="lock"
+            command -v flock >/dev/null 2>&1 || die "flock missing (install util-linux)"
             exec 9>"$LOCK_FILE"
             if ! flock -n 9; then
               log "Another deploy is running -> exit 0"
@@ -76,23 +84,22 @@ jobs:
             command -v pm2 >/dev/null 2>&1 || die "pm2 missing"
             command -v git >/dev/null 2>&1 || die "git missing"
             command -v curl >/dev/null 2>&1 || die "curl missing"
-            command -v rsync >/dev/null 2>&1 || log "WARN: rsync missing (backup/uploads mirror may be skipped)"
+            command -v node >/dev/null 2>&1 || die "node missing"
+            command -v npm  >/dev/null 2>&1 || die "npm missing"
+            command -v rsync >/dev/null 2>&1 || die "rsync missing (required for safe swap_dir)"
 
             cd "$REPO" || die "Cannot cd $REPO"
             git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "Not a git repo: $REPO"
 
-            # opcionális, de nagyon ajánlott: ne deployolj, ha valaki belenyúlt a szerveren
+            # safety: ne töröljünk szerver oldali kézi módosítást
             if ! git diff --quiet || ! git diff --cached --quiet; then
-              die "Working tree is dirty (uncommitted changes). Abort to avoid wiping server edits."
+              die "Working tree is dirty (uncommitted changes). Abort."
             fi
 
             STAGE="fetch"
             OLD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
             log "OLD_SHA=$OLD_SHA"
             git fetch --all --prune
-            # biztos ami biztos: próbáljuk lehúzni konkrétan a targetet is
-            git fetch origin "$DEPLOY_SHA" --depth=1 >/dev/null 2>&1 || true
-
             git cat-file -e "$DEPLOY_SHA^{commit}" 2>/dev/null || die "DEPLOY_SHA not found in repo objects"
 
             if [ -n "$OLD_SHA" ] && [ "$OLD_SHA" = "$DEPLOY_SHA" ]; then
@@ -130,7 +137,6 @@ jobs:
               exit 0
             fi
 
-            # -------- backup (best-effort) ----------
             STAGE="backup"
             (
               set +e
@@ -164,7 +170,7 @@ jobs:
                 [ -f "${B}/strapi_data.db" ] || cp -a "${DB_REAL}" "${B}/strapi_data.db" || true
               fi
 
-              if [ "$NEED_STRAPI" -eq 1 ] && [ -d "strapi/public/uploads" ] && command -v rsync >/dev/null 2>&1; then
+              if [ "$NEED_STRAPI" -eq 1 ] && [ -d "strapi/public/uploads" ]; then
                 mkdir -p "$B/uploads"
                 rsync -a --delete "strapi/public/uploads/" "$B/uploads/" || true
               fi
@@ -180,24 +186,21 @@ jobs:
               exit 0
             ) || true
 
-            # -------- staging build (nem bántja a prodot) ----------
             STAGE="staging-build"
             DEPLOY_ROOT="$REPO/.deploy"
             BUILD_DIR="$DEPLOY_ROOT/build-$DEPLOY_SHA"
             mkdir -p "$DEPLOY_ROOT"
-
-            # cleanup régi félbemaradt
             rm -rf "$BUILD_DIR" 2>/dev/null || true
 
-            # worktree a target SHA-hoz
             git worktree add --detach "$BUILD_DIR" "$DEPLOY_SHA" >/dev/null
+
             cleanup_worktree(){
               ( cd "$REPO" && git worktree remove --force "$BUILD_DIR" >/dev/null 2>&1 ) || true
               ( cd "$REPO" && git worktree prune >/dev/null 2>&1 ) || true
             }
             trap 'cleanup_worktree' EXIT
 
-            # env átmásolás (build-hez kellhet)
+            # env copy
             if [ -f "$REPO/next/.env.production.local" ]; then
               cp -a "$REPO/next/.env.production.local" "$BUILD_DIR/next/.env.production.local"
             fi
@@ -205,15 +208,13 @@ jobs:
               cp -a "$REPO/strapi/.env" "$BUILD_DIR/strapi/.env" || true
             fi
 
-            # gyorsítás: ha lock nem változott, próbáljuk hardlinkkel reuse-olni a node_modules-t a buildhez
             reuse_node_modules(){
               local app="$1"
               local lock_changed="$2"
               local live_nm="$REPO/$app/node_modules"
               local build_nm_parent="$BUILD_DIR/$app"
-
               if [ "$lock_changed" -eq 0 ] && [ -d "$live_nm" ]; then
-                log "Reuse $app/node_modules via hardlinks (fast path)"
+                log "Reuse $app/node_modules via hardlinks"
                 mkdir -p "$build_nm_parent"
                 cp -al "$live_nm" "$build_nm_parent/" 2>/dev/null || return 1
                 return 0
@@ -224,7 +225,7 @@ jobs:
             npm_ci_build(){
               local app="$1"
               log "npm ci (build tree) -> $app"
-              ( cd "$BUILD_DIR/$app" && npm ci --no-audit --no-fund ) 
+              ( cd "$BUILD_DIR/$app" && npm ci --no-audit --no-fund )
             }
 
             if [ "$NEED_NEXT" -eq 1 ]; then
@@ -243,10 +244,11 @@ jobs:
               log "Skip strapi build"
             fi
 
-            # -------- live update csak MOST (build már sikerült) ----------
             STAGE="apply-live-code"
             cd "$REPO"
             git reset --hard "$DEPLOY_SHA"
+            log "LIVE HEAD NOW: $(git rev-parse HEAD)"
+            log "LIVE COMMIT: $(git show -s --oneline HEAD)"
 
             install_live_if_needed(){
               local app="$1"
@@ -275,14 +277,12 @@ jobs:
               fi
             }
 
-            # fontos: live npm ci csak akkor, ha tényleg kell (restart előtt, de build már kész)
             if [ "$NEED_NEXT" -eq 1 ]; then install_live_if_needed "next"; fi
             if [ "$NEED_STRAPI" -eq 1 ]; then install_live_if_needed "strapi"; fi
 
-            # -------- atomikus artifact swap (minimal risk) ----------
             swap_dir(){
-              local target_dir="$1"    # pl: /var/www/.../next/.next
-              local source_dir="$2"    # pl: $BUILD_DIR/next/.next
+              local target_dir="$1"
+              local source_dir="$2"
               local new_dir="${target_dir}.new"
               local prev_dir="${target_dir}.prev"
 
@@ -304,17 +304,14 @@ jobs:
 
             if [ "$NEED_STRAPI" -eq 1 ]; then
               STAGE="swap-strapi"
-              # Strapi build output: dist
               swap_dir "$REPO/strapi/dist" "$BUILD_DIR/strapi/dist"
             fi
 
-            # -------- restart csak sikeres build+swap után ----------
             STAGE="restart"
             if [ "$NEED_NEXT" -eq 1 ]; then pm2 restart next --update-env; fi
             if [ "$NEED_STRAPI" -eq 1 ]; then pm2 restart strapi --update-env; fi
             pm2 save || true
 
-            # -------- smoke checks (retries + timeouts) ----------
             STAGE="smoke"
             check_url(){
               local url="$1"
@@ -336,7 +333,6 @@ jobs:
               log "=== ROLLBACK to OLD_SHA=$OLD_SHA ==="
               [ -n "${OLD_SHA:-}" ] || { log "No OLD_SHA -> cannot rollback"; return 1; }
 
-              # artifact vissza
               if [ "$NEED_NEXT" -eq 1 ] && [ -d "$REPO/next/.next.prev" ]; then
                 rm -rf "$REPO/next/.next" 2>/dev/null || true
                 mv "$REPO/next/.next.prev" "$REPO/next/.next" || true
@@ -347,17 +343,13 @@ jobs:
               fi
 
               git reset --hard "$OLD_SHA" || true
-
-              # NOTE: ha lockfile változott, itt lehetne npm ci-t futtatni OLD_SHA-hoz (lassabb, de biztosabb)
               if [ "$NEED_NEXT" -eq 1 ]; then pm2 restart next --update-env || true; fi
               if [ "$NEED_STRAPI" -eq 1 ]; then pm2 restart strapi --update-env || true; fi
               pm2 save || true
               log "ROLLBACK DONE ✅"
             }
 
-            # Next home
             check_url "$DOMAIN/hu" "HOME" 10 || { log "SMOKE FAIL: home"; rollback || true; exit 1; }
-            # Strapi global
             check_url "$DOMAIN/api/global" "API(global)" 20 || { log "SMOKE FAIL: api/global"; rollback || true; exit 1; }
 
             log "DEPLOY DONE ✅"
