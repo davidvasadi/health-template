@@ -7,17 +7,22 @@ export const revalidate = 600;
 const SITE = (
   process.env.WEBSITE_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://csontkovacsbence.hu")
-).replace(/\/$/, "");
+  (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://theplacestudio.hu")
+).replace(/\/+$/, "");
 
+// STRAPI_BASE lehet:
+// - https://domain
+// - https://domain/api
+// - http://localhost:1337
 const STRAPI_BASE = (
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_STRAPI_URL ||
   process.env.STRAPI_URL ||
-  "http://localhost:1337"
-).replace(/\/$/, "");
+  (process.env.NODE_ENV === "development" ? "http://localhost:1337" : SITE)
+).replace(/\/+$/, "");
+
+// Mindig "origin" legyen (ne tartalmazzon /api-t)
+const STRAPI_ORIGIN = STRAPI_BASE.replace(/\/api\/?$/, "");
 
 // --- i18n ---
 type L = "hu" | "de" | "en";
@@ -61,7 +66,13 @@ function validToken(): string | null {
 }
 
 async function sFetch(path: string, params: Record<string, any>) {
-  const url = `${STRAPI_BASE}${path}?${qs.stringify(
+  // path lehet "/api/pages" vagy "api/pages" vagy "/pages" -> mindből "pages" lesz
+  const safePath = String(path || "")
+    .replace(/^https?:\/\/[^/]+/i, "") // ha abszolút URL volt, host levág
+    .replace(/^\/+/, "")               // leading /
+    .replace(/^api\/+/, "");           // leading api/
+
+  const url = `${STRAPI_ORIGIN}/api/${safePath}?${qs.stringify(
     {
       publicationState: "live",
       ...params,
