@@ -1,4 +1,4 @@
-name: Deploy to VPS (gated + rotating backup)
+name: Deploy to VPS (gated + fast + fixed backup)
 
 on:
   workflow_run:
@@ -45,12 +45,11 @@ jobs:
             echo "=== PRECHECKS ==="
             command -v pm2 >/dev/null 2>&1 || { echo "pm2 missing"; exit 1; }
             test -f next/.env.production.local || { echo "missing next/.env.production.local"; exit 1; }
-            test -f strapi/.env.prod || test -f strapi/.env.production || test -f strapi/.env || echo "WARN: Strapi env file not found (check if you use PM2 env instead)"
 
-            echo "=== ROTATING BACKUP (overwrite) ==="
+            # Backup hely: fix, felülírós (nem nő a tárhely)
+            echo "=== FIXED BACKUP (overwrite in-place) ==="
             B="/root/backups/fullsite-latest"
             umask 077
-            rm -rf "$B"
             mkdir -p "$B"
             echo "Backup dir: $B"
 
@@ -68,31 +67,29 @@ jobs:
               git log --oneline -n 20 || true
             } > "$B/server_state.txt"
 
-            tar -czf "$B/health-template_repo.tgz" \
-              --exclude='**/node_modules' \
-              --exclude='next/.next' \
-              --exclude='**/.cache' \
-              --exclude='**/.turbo' \
-              --exclude='strapi/.tmp' \
-              --exclude='strapi/public/uploads' \
-              --exclude='strapi/data/*.tar.gz' \
-              --exclude='**/.env*' \
-              --exclude='**/*.bak*' \
-              -C /var/www health-template
-
+            # --- DB backup (sqlite) - gyors, felülírós ---
             DB_REAL="$(readlink -f strapi/.tmp/data.db 2>/dev/null || true)"
             if [ -n "${DB_REAL}" ] && [ -f "${DB_REAL}" ]; then
-              cp -a "${DB_REAL}" "$B/strapi_data.db"
+              if command -v sqlite3 >/dev/null 2>&1; then
+                sqlite3 "${DB_REAL}" ".backup '${B}/strapi_data.db'" || cp -a "${DB_REAL}" "${B}/strapi_data.db"
+              else
+                cp -a "${DB_REAL}" "${B}/strapi_data.db"
+              fi
+              echo "✅ DB backup -> $B/strapi_data.db"
             else
               echo "WARN: Strapi DB not found at strapi/.tmp/data.db"
             fi
 
+            # --- Uploads mirror backup (gyorsabb, nem tömörít, nem nő) ---
             if [ -d "strapi/public/uploads" ]; then
-              tar -czf "$B/strapi_uploads.tgz" -C strapi/public uploads
+              mkdir -p "$B/uploads"
+              rsync -a --delete "strapi/public/uploads/" "$B/uploads/"
+              echo "✅ uploads mirror -> $B/uploads (rsync --delete)"
             else
               echo "WARN: uploads folder not found"
             fi
 
+            # --- Nginx / pm2 (kicsi) ---
             tar -czf "$B/nginx_config.tgz" \
               /etc/nginx/nginx.conf \
               /etc/nginx/sites-available \
@@ -106,26 +103,92 @@ jobs:
             echo "Backup done: $(du -sh "$B" || true)"
 
             echo "=== DEPLOY CODE (exact SHA) ==="
+            OLD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
             git fetch --all --prune
             git reset --hard "$DEPLOY_SHA"
 
-            echo "=== BUILD NEXT ==="
-            cd next
-            npm ci
-            npm run build
+            # Mi változott?
+            NEED_NEXT=1
+            NEED_STRAPI=1
+            if [ -n "$OLD_SHA" ]; then
+              CHANGED="$(git diff --name-only "$OLD_SHA" "$DEPLOY_SHA" || true)"
+              echo "=== CHANGED FILES (short) ==="
+              echo "$CHANGED" | head -n 200 || true
 
-            echo "=== BUILD STRAPI ==="
-            cd ../strapi
-            npm ci
-            npm run build
+              NEED_NEXT=0
+              NEED_STRAPI=0
+              echo "$CHANGED" | grep -qE '^next/'  && NEED_NEXT=1 || true
+              echo "$CHANGED" | grep -qE '^strapi/' && NEED_STRAPI=1 || true
+            fi
 
-            echo "=== RESTART (only after successful builds) ==="
-            pm2 restart next
-            pm2 restart strapi
+            echo "NEED_NEXT=$NEED_NEXT NEED_STRAPI=$NEED_STRAPI"
+
+            install_if_needed() {
+              # param: appdir
+              APPDIR="$1"
+              cd "/var/www/health-template/$APPDIR"
+
+              LOCK="package-lock.json"
+              HASH_FILE="node_modules/.ci_lock_hash"
+
+              if [ ! -f "$LOCK" ]; then
+                echo "WARN: $APPDIR/$LOCK missing -> running npm ci"
+                npm ci
+                return 0
+              fi
+
+              CUR_HASH="$(sha256sum "$LOCK" | awk '{print $1}')"
+              OLD_HASH=""
+              [ -f "$HASH_FILE" ] && OLD_HASH="$(cat "$HASH_FILE" || true)"
+
+              if [ -d node_modules ] && [ -n "$OLD_HASH" ] && [ "$CUR_HASH" = "$OLD_HASH" ]; then
+                echo "✅ $APPDIR deps unchanged -> skip npm ci"
+              else
+                echo "→ $APPDIR deps changed or missing -> npm ci"
+                npm ci
+                mkdir -p node_modules
+                echo "$CUR_HASH" > "$HASH_FILE"
+              fi
+            }
+
+            if [ "$NEED_NEXT" -eq 1 ]; then
+              echo "=== BUILD NEXT ==="
+              install_if_needed "next"
+              cd /var/www/health-template/next
+              npm run build
+            else
+              echo "=== SKIP NEXT (no next/ changes) ==="
+            fi
+
+            if [ "$NEED_STRAPI" -eq 1 ]; then
+              echo "=== BUILD STRAPI ==="
+              install_if_needed "strapi"
+              cd /var/www/health-template/strapi
+              npm run build
+            else
+              echo "=== SKIP STRAPI (no strapi/ changes) ==="
+            fi
+
+            echo "=== RESTART (only what changed) ==="
+            if [ "$NEED_NEXT" -eq 1 ]; then
+              pm2 restart next --update-env
+            fi
+            if [ "$NEED_STRAPI" -eq 1 ]; then
+              pm2 restart strapi --update-env
+            fi
             pm2 save || true
 
             echo "=== SMOKE CHECK ==="
-            curl -fsS -I https://theplacestudio.hu/ | head -n 12
-            curl -fsS -I https://theplacestudio.hu/api/privacy-policy | head -n 12
+            # home: kövesse a 308-at
+            curl -fsS -I -L https://theplacestudio.hu/hu | head -n 12
+
+            # strapi: retry, restart után néha kell pár mp
+            for i in $(seq 1 20); do
+              code="$(curl -sS -o /dev/null -w "%{http_code}" https://theplacestudio.hu/api/global || true)"
+              echo "API code=$code (try $i)"
+              [ "$code" != "000" ] && [ "$code" -lt 500 ] && break
+              sleep 3
+            done
+            curl -fsS -I https://theplacestudio.hu/api/global | head -n 12
 
             echo "DEPLOY DONE ✅"
