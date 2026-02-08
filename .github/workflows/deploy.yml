@@ -1,4 +1,4 @@
-name: Deploy to VPS (gated + fast + fixed backup)
+name: Deploy to VPS (gated + fast + safe rollback)
 
 on:
   workflow_run:
@@ -37,9 +37,6 @@ jobs:
           script: |
             set -euo pipefail
 
-            # Ha valami elhasal, MONDJA MEG melyik parancs volt, plusz kis állapot dump
-            trap 'code=$?; echo "❌ FAILED (exit=$code) cmd: $BASH_COMMAND" >&2; echo "--- df -h ---" >&2; df -h >&2 || true; echo "--- df -i ---" >&2; df -i >&2 || true; echo "--- pm2 status ---" >&2; pm2 status >&2 || true; exit $code' ERR
-
             echo "=== Deploy SHA ==="
             echo "$DEPLOY_SHA"
             [ -n "$DEPLOY_SHA" ] || { echo "ERROR: DEPLOY_SHA is empty"; exit 1; }
@@ -55,15 +52,14 @@ jobs:
             OLD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
             git fetch --all --prune
 
-            # ha már ez fut a gépen, nincs teendő
             if [ -n "$OLD_SHA" ] && [ "$OLD_SHA" = "$DEPLOY_SHA" ]; then
               echo "No change (OLD_SHA == DEPLOY_SHA). Exiting."
               exit 0
             fi
 
-            # változásdetektálás
             NEED_NEXT=1
             NEED_STRAPI=1
+
             if [ -n "$OLD_SHA" ]; then
               CHANGED="$(git diff --name-only "$OLD_SHA" "$DEPLOY_SHA" || true)"
               echo "=== CHANGED FILES (short) ==="
@@ -77,78 +73,96 @@ jobs:
 
             echo "NEED_NEXT=$NEED_NEXT NEED_STRAPI=$NEED_STRAPI"
 
-            # ha csak workflow/docs, ne csináljon semmit
             if [ "$NEED_NEXT" -eq 0 ] && [ "$NEED_STRAPI" -eq 0 ]; then
-              echo "No next/strapi changes -> skipping backup/build/restart/smoke."
+              echo "No next/strapi changes -> skipping deploy."
               exit 0
             fi
 
-            echo "=== FIXED BACKUP (overwrite in-place) ==="
-            B="/root/backups/fullsite-latest"
-            umask 077
-            mkdir -p "$B"
+            rollback() {
+              echo "=== ROLLBACK to OLD_SHA: $OLD_SHA ==="
+              [ -n "${OLD_SHA:-}" ] || { echo "No OLD_SHA to rollback to"; return 1; }
+              git reset --hard "$OLD_SHA" || return 1
 
-            # takarítás: fixed backup NE nőjön és ne maradjon ott régi uploads/pm2 stb
-            rm -rf "$B/pm2" "$B/uploads" 2>/dev/null || true
-            rm -f "$B/server_state.txt" "$B/strapi_data.db" "$B/nginx_config.tgz" 2>/dev/null || true
-            mkdir -p "$B/pm2"
-
-            echo "Backup dir: $B"
-
-            echo "--- backup: server_state.txt ---"
-            {
-              echo "DATE: $(date -Is)"
-              echo "HOST: $(hostname)"
-              echo
-              echo "PM2 STATUS:"
-              pm2 status || true
-              echo
-              echo "GIT STATUS:"
-              git status -sb || true
-              echo
-              echo "LAST COMMITS:"
-              git log --oneline -n 20 || true
-            } > "$B/server_state.txt"
-
-            # DB backup: gyors + best-effort (NE bukjon el emiatt)
-            echo "--- backup: sqlite db (best-effort) ---"
-            DB_REAL="$(readlink -f strapi/.tmp/data.db 2>/dev/null || true)"
-            if [ -n "${DB_REAL}" ] && [ -f "${DB_REAL}" ]; then
-              if command -v sqlite3 >/dev/null 2>&1; then
-                sqlite3 "${DB_REAL}" ".backup '${B}/strapi_data.db'" || true
+              # build csak amit piszkáltunk
+              if [ "$NEED_NEXT" -eq 1 ]; then
+                cd /var/www/health-template/next
+                npm run build || true
               fi
-              # ha a .backup nem jött létre (vagy nincs sqlite3), essünk vissza cp-re
-              [ -f "${B}/strapi_data.db" ] || cp -a "${DB_REAL}" "${B}/strapi_data.db" || true
-              echo "✅ DB backup -> $B/strapi_data.db"
-            else
-              echo "WARN: Strapi DB not found (strapi/.tmp/data.db)"
-            fi
+              if [ "$NEED_STRAPI" -eq 1 ]; then
+                cd /var/www/health-template/strapi
+                npm run build || true
+              fi
 
-            # uploads backup csak akkor, ha strapi is változott (különben feleslegesen lassú)
-            if [ "$NEED_STRAPI" -eq 1 ] && [ -d "strapi/public/uploads" ]; then
-              echo "--- backup: uploads mirror (rsync) ---"
-              mkdir -p "$B/uploads"
-              rsync -a --delete "strapi/public/uploads/" "$B/uploads/"
-              echo "✅ uploads mirror -> $B/uploads"
-            else
-              echo "uploads backup skipped (no strapi deploy)"
-            fi
+              if [ "$NEED_NEXT" -eq 1 ]; then pm2 restart next --update-env || true; fi
+              if [ "$NEED_STRAPI" -eq 1 ]; then pm2 restart strapi --update-env || true; fi
+              pm2 save || true
+              echo "ROLLBACK DONE ✅"
+            }
 
-            echo "--- backup: nginx + pm2 ---"
-            tar -czf "$B/nginx_config.tgz" \
-              /etc/nginx/nginx.conf \
-              /etc/nginx/sites-available \
-              /etc/nginx/sites-enabled 2>/dev/null || true
+            echo "=== FIXED BACKUP (best-effort, never fails deploy) ==="
+            (
+              set +e
+              B="/root/backups/fullsite-latest"
+              umask 077
+              mkdir -p "$B"
 
-            cp -a /root/.pm2/dump.pm2 "$B/pm2/" 2>/dev/null || true
-            pm2 jlist > "$B/pm2/pm2_jlist.json" 2>/dev/null || true
+              # ne nőjön: fixed dir takarítás
+              rm -rf "$B/pm2" "$B/uploads" 2>/dev/null
+              rm -f "$B/server_state.txt" "$B/strapi_data.db" "$B/nginx_config.tgz" 2>/dev/null
+              mkdir -p "$B/pm2"
 
-            echo "Backup done: $(du -sh "$B" 2>/dev/null || true)"
+              {
+                echo "DATE: $(date -Is)"
+                echo "HOST: $(hostname)"
+                echo
+                echo "PM2 STATUS:"
+                pm2 status || true
+                echo
+                echo "GIT STATUS:"
+                git status -sb || true
+                echo
+                echo "LAST COMMITS:"
+                git log --oneline -n 20 || true
+              } > "$B/server_state.txt" || true
+
+              DB_REAL="$(readlink -f strapi/.tmp/data.db 2>/dev/null || true)"
+              if [ -n "${DB_REAL}" ] && [ -f "${DB_REAL}" ]; then
+                if command -v sqlite3 >/dev/null 2>&1; then
+                  sqlite3 "${DB_REAL}" ".backup '${B}/strapi_data.db'" || true
+                fi
+                [ -f "${B}/strapi_data.db" ] || cp -a "${DB_REAL}" "${B}/strapi_data.db" || true
+                echo "✅ DB backup -> $B/strapi_data.db"
+              else
+                echo "WARN: Strapi DB not found (strapi/.tmp/data.db)"
+              fi
+
+              if [ "$NEED_STRAPI" -eq 1 ] && [ -d "strapi/public/uploads" ]; then
+                if command -v rsync >/dev/null 2>&1; then
+                  mkdir -p "$B/uploads"
+                  rsync -a --delete "strapi/public/uploads/" "$B/uploads/" || true
+                  echo "✅ uploads mirror -> $B/uploads"
+                else
+                  echo "WARN: rsync missing, skipping uploads mirror"
+                fi
+              else
+                echo "uploads backup skipped (no strapi deploy)"
+              fi
+
+              tar -czf "$B/nginx_config.tgz" \
+                /etc/nginx/nginx.conf \
+                /etc/nginx/sites-available \
+                /etc/nginx/sites-enabled 2>/dev/null || true
+
+              cp -a /root/.pm2/dump.pm2 "$B/pm2/" 2>/dev/null || true
+              pm2 jlist > "$B/pm2/pm2_jlist.json" 2>/dev/null || true
+
+              echo "Backup done: $(du -sh "$B" 2>/dev/null || true)"
+              exit 0
+            ) || true
 
             echo "=== DEPLOY CODE (exact SHA) ==="
             git reset --hard "$DEPLOY_SHA"
 
-            # lock hash alapú npm ci skip (hash fájl kint, nem node_modules-ban)
             install_if_needed() {
               APPDIR="$1"
               cd "/var/www/health-template/$APPDIR"
@@ -156,7 +170,6 @@ jobs:
               LOCK="package-lock.json"
               HASH_DIR="/var/www/health-template/.ci"
               HASH_FILE="${HASH_DIR}/${APPDIR}_lock_hash"
-
               mkdir -p "$HASH_DIR"
 
               if [ ! -f "$LOCK" ]; then
@@ -202,20 +215,28 @@ jobs:
             pm2 save || true
 
             echo "=== SMOKE CHECK ==="
-            # Next (direkt /hu, hogy ne 308-azzunk)
+            # Next: /hu (ne 308)
             home_code="$(curl -sS -o /dev/null -w "%{http_code}" -L https://theplacestudio.hu/hu || true)"
             echo "HOME code=$home_code"
-            [ "$home_code" -ge 200 ] && [ "$home_code" -lt 500 ]
+            if [ "$home_code" -lt 200 ] || [ "$home_code" -ge 500 ]; then
+              echo "SMOKE FAIL: home"
+              rollback || true
+              exit 1
+            fi
 
-            # Strapi API: retry, restart után kellhet pár mp
+            # Strapi: retry
+            ok=0
             for i in $(seq 1 20); do
               code="$(curl -sS -o /dev/null -w "%{http_code}" https://theplacestudio.hu/api/global || true)"
               echo "API code=$code (try $i)"
-              [ "$code" -ge 200 ] && [ "$code" -lt 500 ] && break
+              if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then ok=1; break; fi
               sleep 2
             done
-            final_code="$(curl -sS -o /dev/null -w "%{http_code}" https://theplacestudio.hu/api/global || true)"
-            echo "API final_code=$final_code"
-            [ "$final_code" -ge 200 ] && [ "$final_code" -lt 500 ]
+
+            if [ "$ok" -ne 1 ]; then
+              echo "SMOKE FAIL: api"
+              rollback || true
+              exit 1
+            fi
 
             echo "DEPLOY DONE ✅"
