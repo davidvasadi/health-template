@@ -20,21 +20,21 @@ const Labels: Record<string, { read: string }> = {
 
 export const BlogCard = ({ article, locale }: { article: Article; locale: string }) => {
   const readLabel = Labels[locale]?.read || Labels.en.read;
+  const href = `/${locale}/blog/${article.slug}`;
 
   return (
     <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={spring} className="h-full">
-      <Link
-        href={`/${locale}/blog/${article.slug}`}
+      {/* OUTER CARD WRAPPER (nem Link!) */}
+      <div
         className="
           group grid grid-cols-1 md:grid-rows-2 rounded-3xl overflow-hidden
           bg-white ring-1 ring-neutral-200 hover:ring-neutral-300
           transition-shadow shadow-sm hover:shadow-lg
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/50
+          focus-within:outline-none focus-within:ring-2 focus-within:ring-breaker-bay-400/50
         "
       >
-        {/* KÉP — mobilon 16:10 (padding-top), md+-on oszlop teljes magasságát kitölti */}
+        {/* KÉP — NEM kattintható */}
         <div className="relative bg-neutral-100 md:h-full md:min-h-[300px] lg:min-h-[340px]">
-          {/* mobil/tablet arány (plugin nélkül) */}
           <div className="block md:hidden" aria-hidden style={{ paddingTop: "62.5%" }} />
           {article.image ? (
             <>
@@ -48,7 +48,6 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
                   transition-transform duration-300 group-hover:scale-[1.02]
                 "
               />
-              {/* finom alsó gradient a felirathoz/fókuszhoz */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent md:hidden" />
             </>
           ) : (
@@ -56,9 +55,12 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
           )}
         </div>
 
-        {/* TARTALOM — 3 sáv: chips / (cím+leírás) / meta mindig alul */}
-        <div className="p-5 md:p-7 grid grid-rows-[auto_1fr_auto] gap-3 h-full">
-          {/* kategória chipek */}
+        {/* TARTALOM — EZ kattintható */}
+        <Link
+          href={href}
+          className="p-5 md:p-7 grid grid-rows-[auto_1fr_auto] gap-3 h-full outline-none"
+          aria-label={`${article.title} – ${readLabel}`}
+        >
           <div className="flex gap-1.5 flex-wrap">
             {article.categories?.map((c, i) => (
               <span
@@ -70,7 +72,6 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
             ))}
           </div>
 
-          {/* cím + leírás (inline clamp → nincs plugin függés) */}
           <div className="min-w-0">
             <h3
               className="text-neutral-900 text-xl md:text-2xl font-bold tracking-tight leading-snug group-hover:text-breaker-bay-700 transition-colors"
@@ -99,7 +100,6 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
             ) : null}
           </div>
 
-          {/* meta */}
           <div className="mt-1 flex items-center gap-2 text-neutral-500 text-xs md:text-sm">
             <span>{article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}</span>
             <span className="h-1 w-1 rounded-full bg-neutral-300" />
@@ -108,8 +108,8 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
               {readLabel}
             </span>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </motion.div>
   );
 };
