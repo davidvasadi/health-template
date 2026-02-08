@@ -25,6 +25,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_KEY }}
+          port: ${{ secrets.VPS_PORT }}
           script: |
             set -euo pipefail
 
