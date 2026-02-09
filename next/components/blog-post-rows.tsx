@@ -419,6 +419,13 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
               const chips = allCats.slice(0, chipLimit);
               const extra = Math.max(0, allCats.length - chipLimit);
 
+              const href = `/${locale}/blog/${(a as any).slug}`;
+              const title = String((a as any).title || "");
+              const dateText =
+                (a as any).publishedAt && !Number.isNaN(new Date((a as any).publishedAt).getTime())
+                  ? format(new Date((a as any).publishedAt), "MMMM dd, yyyy", { locale: dfLocale })
+                  : "";
+
               return (
                 <motion.li
                   key={(a as any).slug + i}
@@ -427,10 +434,141 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                     show: { opacity: 1, y: 0, transition: spring },
                   }}
                 >
-                  <Link
-                    href={`/${locale}/blog/${(a as any).slug}`}
+                  {/* =========================
+                      MOBILE (<sm): NOT full-clickable
+                      Only the CTA opens the article.
+                      ========================= */}
+                  <div
                     className="
-                      group block h-full rounded-3xl
+                      sm:hidden
+                      h-full rounded-3xl overflow-hidden
+                      bg-white/90 border border-neutral-200/60
+                      shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]
+                    "
+                  >
+                    {/* Content (non-clickable) */}
+                    <div className="flex flex-col gap-4 p-5">
+                      {/* Media */}
+                      <div>
+                        <div
+                          className="
+                            relative w-full rounded-2xl overflow-hidden
+                            bg-neutral-100 border border-neutral-200/60
+                          "
+                        >
+                          {/* 16:9 arány mobilon (plugin nélkül) */}
+                          <div aria-hidden style={{ paddingTop: "56.25%" }} />
+
+                          {thumb ? (
+                            <>
+                              <BlurImage
+                                src={thumb}
+                                alt={title || "thumbnail"}
+                                width={1200}
+                                height={675}
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
+                              <div className="pointer-events-none absolute inset-0">
+                                <div className="absolute inset-0 ring-1 ring-white/20" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10 opacity-70" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-neutral-600 font-semibold">{initials}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Text */}
+                      <div className="min-w-0">
+                        {firstCategory ? (
+                          <p className="text-[11px] tracking-[0.14em] uppercase text-neutral-500">{firstCategory}</p>
+                        ) : null}
+
+                        <p className="mt-1 text-[17px] font-semibold tracking-tight leading-[1.15] text-neutral-900">
+                          {title}
+                        </p>
+
+                        <p className="mt-2 text-[13px] text-neutral-600 leading-[1.6]">
+                          {(a as any).description ? truncate((a as any).description, 150) : ""}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12px] text-neutral-500/90">
+                          <span suppressHydrationWarning>{dateText}</span>
+
+                          <span className="inline-block h-1 w-1 rounded-full bg-neutral-300" />
+
+                          <span className="flex flex-wrap gap-1.5">
+                            {chips.map((c: any, idx: number) => (
+                              <span
+                                key={(c?.name || "cat") + idx}
+                                className="rounded-full px-2 py-0.5 bg-neutral-100/80 text-neutral-700 border border-neutral-200/60"
+                              >
+                                {c?.name}
+                              </span>
+                            ))}
+                            {extra > 0 && (
+                              <span className="rounded-full px-2 py-0.5 bg-neutral-100/70 text-neutral-500 border border-neutral-200/60">
+                                +{extra}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA bar (clickable) */}
+                    <div className="border-t border-neutral-200/60 bg-neutral-50/80 px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={href}
+                          aria-label={`${t.read}: ${title}`}
+                          className="
+                            inline-flex items-center justify-center
+                            min-h-[44px]
+                            px-4 rounded-full
+                            bg-white/90 border border-neutral-200/60
+                            text-neutral-900 text-[13px] font-medium
+                            shadow-[0_10px_28px_rgba(0,0,0,0.06)]
+                            active:scale-[0.99]
+                            transition
+                            focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500/35
+                          "
+                        >
+                          <span>{t.read}</span>
+                          <span aria-hidden className="ml-2 inline-flex items-center text-neutral-500">
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+    <path
+      d="M10 7l5 5-5 5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+</span>
+
+
+                        </Link>
+
+                        {/* opcionális “hint”: jobbra egy nyugodt meta (nem kattintható) */}
+                        <span className="ml-auto text-[12px] text-neutral-500/90" suppressHydrationWarning>
+                          {dateText}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* =========================
+                      DESKTOP (>=sm): full card clickable
+                      ========================= */}
+                  <Link
+                    href={href}
+                    className="
+                      hidden sm:block
+                      group h-full rounded-3xl
                       bg-white/90 border border-neutral-200/60
                       shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]
                       hover:bg-white hover:border-neutral-300/60
@@ -440,7 +578,6 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500/35
                     "
                   >
-                    {/* ✅ MOBIL: kép felül, SM+: kép balra */}
                     <div className="flex flex-col sm:flex-row gap-4 p-5 md:p-6">
                       {/* Media */}
                       <div className="sm:shrink-0">
@@ -451,14 +588,11 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                             sm:w-[120px] sm:h-[90px]
                           "
                         >
-                          {/* 16:9 arány mobilon (plugin nélkül) */}
-                          <div className="block sm:hidden" aria-hidden style={{ paddingTop: "56.25%" }} />
-
                           {thumb ? (
                             <>
                               <BlurImage
                                 src={thumb}
-                                alt={(a as any)?.title || "thumbnail"}
+                                alt={title || "thumbnail"}
                                 width={1200}
                                 height={675}
                                 className={cn(
@@ -484,13 +618,11 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                       {/* Text */}
                       <div className="min-w-0 flex-1">
                         {firstCategory ? (
-                          <p className="text-[11px] tracking-[0.14em] uppercase text-neutral-500">
-                            {firstCategory}
-                          </p>
+                          <p className="text-[11px] tracking-[0.14em] uppercase text-neutral-500">{firstCategory}</p>
                         ) : null}
 
                         <p className="mt-1 text-[17px] md:text-[18px] font-semibold tracking-tight leading-[1.15] text-neutral-900 group-hover:text-breaker-bay-800 transition-colors">
-                          {(a as any).title}
+                          {title}
                         </p>
 
                         <p className="mt-2 text-[13px] md:text-[14px] text-neutral-600 leading-[1.6]">
@@ -498,11 +630,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                         </p>
 
                         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12px] text-neutral-500/90">
-                          <span suppressHydrationWarning>
-                            {(a as any).publishedAt
-                              ? format(new Date((a as any).publishedAt), "MMMM dd, yyyy", { locale: dfLocale })
-                              : ""}
-                          </span>
+                          <span suppressHydrationWarning>{dateText}</span>
 
                           <span className="hidden sm:inline-block h-1 w-1 rounded-full bg-neutral-300" />
 
@@ -522,7 +650,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                             )}
                           </span>
 
-                          {/* ✅ mobilon is legyen “Tovább” (nem csak sm+) */}
+                          {/* Desktopon maradhat “Read” jelzés (vizuális, de teljes kártya katt) */}
                           <span className="ml-auto inline-flex items-center text-neutral-700">
                             <span className="relative inline-block font-medium">
                               <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-800 transition-all duration-300 group-hover:w-full" />

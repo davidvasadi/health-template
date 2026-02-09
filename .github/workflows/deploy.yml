@@ -1,11 +1,10 @@
 name: Deploy to VPS (gated + fast + safe)
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'next/**'
-      - 'strapi/**'
+  workflow_run:
+    workflows: ["Build (Next + Strapi)"]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -17,10 +16,15 @@ permissions:
 
 jobs:
   deploy:
+    # Csak akkor fusson, ha:
+    # - kézzel indítod (workflow_dispatch), VAGY
+    # - a Build workflow sikeres volt (workflow_run + success)
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 70
     env:
-      DEPLOY_SHA: ${{ github.sha }}
+      # workflow_run esetén a Build head_sha-ja, különben fallback github.sha
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       - name: Debug trigger
@@ -28,6 +32,8 @@ jobs:
           echo "event=${{ github.event_name }}"
           echo "ref=${{ github.ref }}"
           echo "sha=${{ github.sha }}"
+          echo "deploy_sha=${{ env.DEPLOY_SHA }}"
+          echo "workflow_run_conclusion=${{ github.event.workflow_run.conclusion }}"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
