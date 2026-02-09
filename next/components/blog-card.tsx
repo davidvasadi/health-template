@@ -18,6 +18,7 @@ const Labels: Record<string, { read: string }> = {
   de: { read: "Mehr" },
 };
 
+/** CTA "pill" – VISUAL ONLY (nem Link), hover csak desktopon */
 function ReadPillVisual({ label }: { label: string }) {
   return (
     <span
@@ -54,9 +55,45 @@ function ReadPillVisual({ label }: { label: string }) {
   );
 }
 
+/** CTA "pill" – CLICKABLE (Link) mobilra */
+function ReadPillLink({ label, href, ariaLabel }: { label: string; href: string; ariaLabel: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={ariaLabel}
+      className="
+        group
+        shrink-0
+        inline-flex items-center justify-center
+        min-h-[44px] px-4 rounded-full
+        bg-white/90 border border-neutral-200/60
+        text-neutral-900 text-[13px] font-medium
+        shadow-[0_10px_28px_rgba(0,0,0,0.06)]
+        active:scale-[0.99]
+        transition
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-400/50
+      "
+    >
+      <span>{label}</span>
+      <span aria-hidden className="ml-2 inline-flex items-center text-neutral-500">
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+          <path
+            d="M10 7l5 5-5 5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </Link>
+  );
+}
+
 export const BlogCard = ({ article, locale }: { article: Article; locale: string }) => {
   const readLabel = Labels[locale]?.read || Labels.en.read;
   const href = `/${locale}/blog/${article.slug}`;
+  const dateText = article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : "";
 
   return (
     <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={spring} className="h-full">
@@ -91,10 +128,68 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
           )}
         </div>
 
-        {/* TARTALOM — EZ kattintható */}
+        {/* =========================
+            MOBILE (<md): NEM link az egész content
+            CSAK a CTA gomb visz át
+           ========================= */}
+        <div className="md:hidden p-5 grid grid-rows-[auto_1fr_auto] gap-3 h-full">
+          <div className="flex gap-1.5 flex-wrap">
+            {article.categories?.map((c, i) => (
+              <span
+                key={c.name + i}
+                className="text-[11px] font-semibold uppercase rounded-full bg-neutral-100 text-neutral-700 px-2 py-0.5 ring-1 ring-neutral-200"
+              >
+                {c.name}
+              </span>
+            ))}
+          </div>
+
+          <div className="min-w-0">
+            <h3
+              className="text-neutral-900 text-xl font-bold tracking-tight leading-snug"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical" as any,
+                overflow: "hidden",
+              }}
+            >
+              <Balancer>{article.title}</Balancer>
+            </h3>
+
+            {article.description ? (
+              <p
+                className="mt-2 text-neutral-600 text-sm leading-relaxed"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical" as any,
+                  overflow: "hidden",
+                }}
+              >
+                {truncate(article.description, 220)}
+              </p>
+            ) : null}
+          </div>
+
+          {/* ✅ CTA BAL, dátum JOBB — csak a gomb kattintható */}
+          <div className="mt-2 flex items-center gap-3">
+            <ReadPillLink
+              href={href}
+              label={readLabel}
+              ariaLabel={`${readLabel}: ${article.title}`}
+            />
+            <span className="ml-auto text-neutral-500 text-xs">{dateText}</span>
+          </div>
+        </div>
+
+        {/* =========================
+            DESKTOP (>=md): marad minden úgy ahogy volt
+            a teljes tartalom kattintható
+           ========================= */}
         <Link
           href={href}
-          className="p-5 md:p-7 grid grid-rows-[auto_1fr_auto] gap-3 h-full outline-none"
+          className="hidden md:grid p-5 md:p-7 grid-rows-[auto_1fr_auto] gap-3 h-full outline-none"
           aria-label={`${article.title} – ${readLabel}`}
         >
           <div className="flex gap-1.5 flex-wrap">
@@ -136,13 +231,10 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
             ) : null}
           </div>
 
-          {/* ✅ CTA BAL OLDALT, dátum JOBBRA */}
+          {/* ✅ CTA BAL OLDALT, dátum JOBBRA (vizuál), de mivel az egész Link, nested a-t nem csinálunk */}
           <div className="mt-2 flex items-center gap-3">
             <ReadPillVisual label={readLabel} />
-
-            <span className="ml-auto text-neutral-500 text-xs md:text-sm">
-              {article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}
-            </span>
+            <span className="ml-auto text-neutral-500 text-xs md:text-sm">{dateText}</span>
           </div>
         </Link>
       </div>
