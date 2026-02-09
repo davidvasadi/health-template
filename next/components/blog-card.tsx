@@ -18,6 +18,42 @@ const Labels: Record<string, { read: string }> = {
   de: { read: "Mehr" },
 };
 
+function ReadPillVisual({ label }: { label: string }) {
+  return (
+    <span
+      aria-hidden
+      className="
+        shrink-0
+        inline-flex items-center justify-center
+        min-h-[44px] px-4 rounded-full
+        bg-white/90 border border-neutral-200/60
+        text-neutral-900 text-[13px] font-medium
+        shadow-[0_10px_28px_rgba(0,0,0,0.06)]
+        transition
+        group-hover:bg-white group-hover:border-neutral-300/60
+      "
+    >
+      <span>{label}</span>
+
+      {/* ✅ a te chevronod (nincs kör) */}
+      <span
+        aria-hidden
+        className="ml-2 inline-flex items-center text-neutral-500 transition-transform group-hover:translate-x-[1px]"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+          <path
+            d="M10 7l5 5-5 5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </span>
+  );
+}
+
 export const BlogCard = ({ article, locale }: { article: Article; locale: string }) => {
   const readLabel = Labels[locale]?.read || Labels.en.read;
   const href = `/${locale}/blog/${article.slug}`;
@@ -100,12 +136,12 @@ export const BlogCard = ({ article, locale }: { article: Article; locale: string
             ) : null}
           </div>
 
-          <div className="mt-1 flex items-center gap-2 text-neutral-500 text-xs md:text-sm">
-            <span>{article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}</span>
-            <span className="h-1 w-1 rounded-full bg-neutral-300" />
-            <span className="relative inline-block">
-              <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-700 transition-all duration-300 group-hover:w-full" />
-              {readLabel}
+          {/* ✅ CTA BAL OLDALT, dátum JOBBRA */}
+          <div className="mt-2 flex items-center gap-3">
+            <ReadPillVisual label={readLabel} />
+
+            <span className="ml-auto text-neutral-500 text-xs md:text-sm">
+              {article.publishedAt ? format(new Date(article.publishedAt), "MMMM dd, yyyy") : ""}
             </span>
           </div>
         </Link>

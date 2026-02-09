@@ -1,41 +1,120 @@
-name: Ship It ✅ (Deploy)
+name: ship-it 🚀
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'next/**'
+      - 'strapi/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'next/**'
+      - 'strapi/**'
+      - '.github/workflows/**'
   workflow_dispatch:
-    
 
 concurrency:
-  group: deploy-main
+  group: ship-it-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: "20"
+
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      next: ${{ steps.filter.outputs.next }}
+      strapi: ${{ steps.filter.outputs.strapi }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            next:
+              - 'next/**'
+            strapi:
+              - 'strapi/**'
+
+      - name: Summary
+        run: |
+          echo "next_changed=${{ steps.filter.outputs.next }}"
+          echo "strapi_changed=${{ steps.filter.outputs.strapi }}"
+
+  next-build:
+    name: next-build
+    needs: changes
+    if: ${{ needs.changes.outputs.next == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: next
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: next/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+  strapi-build:
+    name: strapi-build
+    needs: changes
+    if: ${{ needs.changes.outputs.strapi == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: strapi
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: strapi/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
   deploy:
+    name: deploy
+    needs: [changes, next-build, strapi-build]
     runs-on: ubuntu-latest
     timeout-minutes: 70
 
-    # ✅ csak akkor fusson, ha a checkbox true
-    if: ${{ inputs.deploy_enabled }}
+    # ✅ FONTOS: itt NEM használunk több ${{
+    # }} blokkot, hanem egyetlen expression stringet adunk meg.
+    if: >-
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      (needs.changes.outputs.next == 'true' || needs.changes.outputs.strapi == 'true') &&
+      (needs.changes.outputs.next != 'true' || needs.next-build.result == 'success') &&
+      (needs.changes.outputs.strapi != 'true' || needs.strapi-build.result == 'success')
 
     steps:
-      - name: Resolve deploy SHA
-        run: |
-          echo "DEPLOY_SHA=${{ github.sha }}" >> $GITHUB_ENV
-          echo "SOURCE=workflow_dispatch" >> $GITHUB_ENV
-
-      - name: Debug trigger
-        run: |
-          echo "source=${SOURCE}"
-          echo "event=${{ github.event_name }}"
-          echo "ref=${{ github.ref }}"
-          echo "DEPLOY_SHA=${DEPLOY_SHA}"
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
-          DEPLOY_SHA: ${{ env.DEPLOY_SHA }}
+          DEPLOY_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -285,7 +364,9 @@ jobs:
               local source="$2"
               local prev="${target}.prev"
               rm -rf "$prev" 2>/dev/null || true
-              if [ -e "$target" ]; then mv "$target" "$prev"; fi
+              if [ -e "$target" ]; then
+                mv "$target" "$prev"
+              fi
               mv "$source" "$target"
             }
 
