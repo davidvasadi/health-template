@@ -537,18 +537,19 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                             focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500/35
                           "
                         >
+                          {/* arrow button  */}
                           <span>{t.read}</span>
                           <span aria-hidden className="ml-2 inline-flex items-center text-neutral-500">
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-    <path
-      d="M10 7l5 5-5 5"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-</span>
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                              <path
+                                d="M10 7l5 5-5 5"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
 
 
                         </Link>
