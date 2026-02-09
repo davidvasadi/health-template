@@ -536,7 +536,7 @@ export const Experience = (props: ExperienceProps) => {
      * - felső/alsó padding a design alapján
      */
     <motion.section ref={sectionRef} className="bg-white py-14 sm:py-18 lg:py-24">
-      <Container>
+      <Container className="max-w-7xl mx-auto px-4 md:px-10 xl:px-4 py-10 ">
         {/* =========================================================
             1) FEJLÉC RÉSZ (anim: fadeInUp + parallax)
            ========================================================= */}

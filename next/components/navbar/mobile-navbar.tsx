@@ -119,9 +119,9 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
       {/* ───────────────────────── FIXED HEADER ───────────────────────── */}
       <div
         className={cn(
-          "mobile-navbar-scope fixed top-0 left-0 right-0 z-50",
+          "mobile-navbar-scope w-full",
           "flex items-center justify-between",
-          "mx-5 mt-[max(env(safe-area-inset-top),10px)] px-3 py-2",
+          "px-3 py-2",
           "rounded-xl",
           "text-breaker-bay-950",
           "transition-[background,backdrop-filter] duration-300"

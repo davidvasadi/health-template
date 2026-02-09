@@ -32,7 +32,7 @@ function useLocale(localeProp?: string): SupportedLocale {
   return normalizeLocale(localeProp || params?.locale || seg0);
 }
 
-function getImageUrl(a: Article): string | undefined {
+function getThumbUrl(a: Article): string | undefined {
   const url = (a as any)?.image?.url;
   return url ? strapiImage(url) : undefined;
 }
@@ -50,6 +50,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+/** Apple-ish segmented */
 function Segmented({
   value,
   onChange,
@@ -191,6 +192,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
       ...a,
       __categoriesText: (a?.categories || []).map((c: any) => c?.name).filter(Boolean).join(" "),
     }));
+
     return new FuzzySearch(enriched as any[], ["title", "description", "__categoriesText"], {
       caseSensitive: false,
     });
@@ -227,7 +229,9 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
     return list as Article[];
   }, [articles, debouncedSearch, searcher, category, sort]);
 
-  useEffect(() => setVisible(10), [debouncedSearch, category, sort]);
+  useEffect(() => {
+    setVisible(10);
+  }, [debouncedSearch, category, sort]);
 
   const shown = filteredAndSorted.slice(0, visible);
   const canLoadMore = visible < filteredAndSorted.length;
@@ -243,14 +247,18 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
 
   return (
     <section className="w-full py-12 md:py-16">
-      {/* Sticky header */}
+      {/* Apple-ish sticky header */}
       <div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 px-4 md:-mx-0 md:px-0">
         <div className="rounded-3xl bg-white/60 backdrop-blur-xl border border-neutral-200/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
           <div className="p-4 md:p-5">
             <div className="flex flex-col gap-3">
+              {/* Title row */}
               <div className="flex items-baseline justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-neutral-900" suppressHydrationWarning>
+                  <h2
+                    className="text-2xl md:text-3xl font-semibold tracking-tight text-neutral-900"
+                    suppressHydrationWarning
+                  >
                     {t.heading}
                   </h2>
                   <p className="mt-1 text-[12px] md:text-[13px] text-neutral-500/90" suppressHydrationWarning>
@@ -262,46 +270,81 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className="shrink-0 text-[13px] md:text-sm px-4 py-2 rounded-full bg-white/80 border border-neutral-200/60 text-neutral-700 hover:text-neutral-900 hover:bg-white transition"
+                    className="
+                      shrink-0 text-[13px] md:text-sm
+                      px-4 py-2 rounded-full
+                      bg-white/80 border border-neutral-200/60
+                      text-neutral-700 hover:text-neutral-900
+                      hover:bg-white transition
+                    "
                   >
                     {t.reset}
                   </button>
                 )}
               </div>
 
+              {/* Controls */}
               <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                {/* Search */}
+                {/* Search pill + clear */}
                 <div className="relative w-full lg:w-[360px]">
-                  <span aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[14px]">
+                  <span
+                    aria-hidden
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[14px]"
+                  >
                     ⌕
                   </span>
+
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t.placeholder}
                     aria-label={t.placeholder}
                     suppressHydrationWarning
-                    className="w-full rounded-full bg-white/80 border border-neutral-200/60 pl-9 pr-10 py-2.5 text-[13px] md:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-breaker-bay-500/35"
+                    className="
+                      w-full rounded-full
+                      bg-white/80 border border-neutral-200/60
+                      pl-9 pr-10 py-2.5
+                      text-[13px] md:text-sm text-neutral-900 placeholder-neutral-400
+                      focus:outline-none focus:ring-2 focus:ring-breaker-bay-500/35
+                    "
                   />
+
                   {search.trim() && (
                     <button
                       type="button"
                       onClick={() => setSearch("")}
                       aria-label="Clear search"
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-neutral-100/80 border border-neutral-200/60 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition flex items-center justify-center"
+                      className="
+                        absolute right-2.5 top-1/2 -translate-y-1/2
+                        h-7 w-7 rounded-full
+                        bg-neutral-100/80 border border-neutral-200/60
+                        text-neutral-600 hover:text-neutral-900
+                        hover:bg-neutral-100 transition
+                        flex items-center justify-center
+                      "
                     >
                       ×
                     </button>
                   )}
                 </div>
 
-                <Segmented value={sort} onChange={setSort} labels={{ newest: t.sortNewest, oldest: t.sortOldest, title: t.sortTitle }} />
+                <div className="flex items-center justify-between gap-3">
+                  <Segmented
+                    value={sort}
+                    onChange={setSort}
+                    labels={{ newest: t.sortNewest, oldest: t.sortOldest, title: t.sortTitle }}
+                  />
+                </div>
               </div>
 
-              {/* Category chips */}
+              {/* Category chips row (scrollable) */}
               <div className="relative">
                 <div
-                  className="flex items-center gap-2 overflow-x-auto py-1.5 pr-2 [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className="
+                    flex items-center gap-2 overflow-x-auto
+                    py-1.5 pr-2
+                    [-ms-overflow-style:none] [scrollbar-width:none]
+                  "
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
                   <style jsx>{`
@@ -350,7 +393,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
         </div>
       </div>
 
-      {/* Content */}
+      {/* List */}
       {filteredAndSorted.length === 0 ? (
         <div className="mt-6 rounded-3xl bg-white border border-neutral-200/60 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-8 text-center">
           <p className="text-neutral-900 font-medium">{t.noResultsTitle}</p>
@@ -358,15 +401,15 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
         </div>
       ) : (
         <>
-          {/* ✅ Medium image cards (not tiny, not huge) */}
+          {/* mobil: 1 oszlop, desktop: 2 oszlop */}
           <motion.ul
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.045 } } }}
-            className="mt-6 grid grid-cols-1 gap-3 md:gap-4"
+            className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4"
           >
             {shown.map((a, i) => {
-              const img = getImageUrl(a as any);
+              const thumb = getThumbUrl(a as any);
               const initials = getInitials((a as any)?.title);
 
               const allCats = ((a as any).categories || []) as Array<{ name: string }>;
@@ -387,7 +430,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                   <Link
                     href={`/${locale}/blog/${(a as any).slug}`}
                     className="
-                      group block rounded-3xl
+                      group block h-full rounded-3xl
                       bg-white/90 border border-neutral-200/60
                       shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]
                       hover:bg-white hover:border-neutral-300/60
@@ -397,30 +440,42 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-breaker-bay-500/35
                     "
                   >
-                    <div className="flex gap-4 p-5 md:p-6">
-                      {/* ✅ medium image (3:2) */}
-                      <div className="shrink-0">
-                        <div className="relative w-[96px] h-[72px] md:w-[120px] md:h-[90px] rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-200/60">
-                          {img ? (
+                    {/* ✅ MOBIL: kép felül, SM+: kép balra */}
+                    <div className="flex flex-col sm:flex-row gap-4 p-5 md:p-6">
+                      {/* Media */}
+                      <div className="sm:shrink-0">
+                        <div
+                          className="
+                            relative w-full rounded-2xl overflow-hidden
+                            bg-neutral-100 border border-neutral-200/60
+                            sm:w-[120px] sm:h-[90px]
+                          "
+                        >
+                          {/* 16:9 arány mobilon (plugin nélkül) */}
+                          <div className="block sm:hidden" aria-hidden style={{ paddingTop: "56.25%" }} />
+
+                          {thumb ? (
                             <>
                               <BlurImage
-                                src={img}
-                                alt={(a as any)?.title || "image"}
-                                width={800}
-                                height={600}
+                                src={thumb}
+                                alt={(a as any)?.title || "thumbnail"}
+                                width={1200}
+                                height={675}
                                 className={cn(
-                                  "absolute inset-0 h-full w-full object-cover transition duration-700",
-                                  reduceMotion ? "" : "group-hover:brightness-[1.03] group-hover:contrast-[1.02] group-hover:scale-[1.01]"
+                                  "absolute inset-0 h-full w-full object-cover transition duration-500",
+                                  reduceMotion
+                                    ? ""
+                                    : "group-hover:brightness-[1.03] group-hover:contrast-[1.02] group-hover:scale-[1.01]"
                                 )}
                               />
                               <div className="pointer-events-none absolute inset-0">
-                                <div className="absolute inset-0 ring-1 ring-white/25" />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10 opacity-60" />
+                                <div className="absolute inset-0 ring-1 ring-white/20" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10 opacity-70" />
                               </div>
                             </>
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-neutral-600 font-semibold text-sm">{initials}</span>
+                              <span className="text-neutral-600 font-semibold">{initials}</span>
                             </div>
                           )}
                         </div>
@@ -438,7 +493,7 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                           {(a as any).title}
                         </p>
 
-                        <p className="mt-2 text-[13px] md:text-[14px] text-neutral-600 leading-[1.6] max-w-2xl">
+                        <p className="mt-2 text-[13px] md:text-[14px] text-neutral-600 leading-[1.6]">
                           {(a as any).description ? truncate((a as any).description, 150) : ""}
                         </p>
 
@@ -467,7 +522,8 @@ export const BlogPostRows: React.FC<{ articles: Article[]; locale?: string }> = 
                             )}
                           </span>
 
-                          <span className="ml-auto hidden sm:inline-flex items-center text-neutral-700">
+                          {/* ✅ mobilon is legyen “Tovább” (nem csak sm+) */}
+                          <span className="ml-auto inline-flex items-center text-neutral-700">
                             <span className="relative inline-block font-medium">
                               <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-neutral-800 transition-all duration-300 group-hover:w-full" />
                               {t.read}

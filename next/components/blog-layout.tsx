@@ -23,7 +23,7 @@ function BackLinkSimple({ locale }: { locale: string }) {
 
   return (
     <div className="flex items-center gap-2 px-2 py-4">
-      <Link href={href} className="flex items-center gap-2 group" aria-label={label}>
+      <Link href={href} className="flex items-center gap-2  group" aria-label={label}>
         <IconArrowLeft className="h-4 w-4 text-neutral-900 group-hover:text-breaker-bay-700 transition-colors" />
         <span className="text-sm text-neutral-900 group-hover:text-breaker-bay-700 transition-colors">
           {label}
@@ -43,7 +43,7 @@ export function BlogLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Container className="mt-12 md:mt-16 lg:mt-24">
+    <Container className="max-w-7xl mx-auto px-4 md:px-10 xl:px-4 py-20 ">
       {/* egyszerű, lokalizált vissza link */}
       <BackLinkSimple locale={locale} />
 
