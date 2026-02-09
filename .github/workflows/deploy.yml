@@ -3,8 +3,8 @@ name: Deploy to VPS (gated + fast + safe)
 on:
   workflow_run:
     workflows: ["Build (Next + Strapi)"]
-    branches: [main]
-    types: [completed]
+    branches: [ main ]
+    types: [ completed ]
   workflow_dispatch:
 
 concurrency:
@@ -16,24 +16,33 @@ permissions:
 
 jobs:
   deploy:
-    # Csak akkor fusson, ha:
-    # - kézzel indítod (workflow_dispatch), VAGY
-    # - a Build workflow sikeres volt (workflow_run + success)
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 70
-    env:
-      # workflow_run esetén a Build head_sha-ja, különben fallback github.sha
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+    # ✅ csak akkor fusson le automatikusan, ha a Build sikeres volt
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
+      - name: Resolve deploy SHA
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "DEPLOY_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+            echo "SOURCE=workflow_run" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_SHA=${{ github.sha }}" >> $GITHUB_ENV
+            echo "SOURCE=workflow_dispatch" >> $GITHUB_ENV
+          fi
+
       - name: Debug trigger
         run: |
+          echo "source=${SOURCE}"
           echo "event=${{ github.event_name }}"
           echo "ref=${{ github.ref }}"
-          echo "sha=${{ github.sha }}"
-          echo "deploy_sha=${{ env.DEPLOY_SHA }}"
-          echo "workflow_run_conclusion=${{ github.event.workflow_run.conclusion }}"
+          echo "DEPLOY_SHA=${DEPLOY_SHA}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "build_conclusion=${{ github.event.workflow_run.conclusion }}"
+            echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          fi
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -100,7 +109,6 @@ jobs:
 
             BUILD_DIR=""
             cleanup_worktree(){
-              # best-effort cleanup; NEVER fail deploy
               set +e
               if [ -n "${BUILD_DIR:-}" ] && [ -d "${BUILD_DIR:-}" ]; then
                 ( cd "$REPO" && git worktree remove --force "$BUILD_DIR" >/dev/null 2>&1 ) || true
@@ -116,7 +124,6 @@ jobs:
               STAGE="exit"
               log "EXIT rc=$rc (last_stage=$last)"
               cleanup_worktree || true
-              # IMPORTANT: no 'exit' here -> no silent status flip
               return 0
             }
             trap on_exit EXIT
@@ -246,9 +253,6 @@ jobs:
               cp -a "$REPO/strapi/.env" "$BUILD_DIR/strapi/.env" || true
             fi
 
-            # deps strategy:
-            # - ha lock nem változott és van live node_modules -> symlink (gyors, biztonságos)
-            # - ha lock változott / nincs live nm -> npm ci a build dirben, és később node_modules swap
             SWAP_NEXT_NM=0
             SWAP_STRAPI_NM=0
 
@@ -280,7 +284,6 @@ jobs:
               run_capture "strapi_build" bash -lc "cd '$BUILD_DIR/strapi' && npm run build"
             fi
 
-            # STOP ONLY NOW (build already done -> prod didn't stop during build)
             STAGE="stop-procs"
             if [ "$NEED_NEXT" -eq 1 ]; then pm2 stop next || true; fi
             if [ "$NEED_STRAPI" -eq 1 ]; then pm2 stop strapi || true; fi
