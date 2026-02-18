@@ -23,15 +23,22 @@ type Props = {
 type SupportedLocale = "hu" | "en" | "de";
 
 function resolveLocale(): SupportedLocale {
-  if (typeof window !== "undefined") {
-    const htmlLang = document?.documentElement?.lang?.toLowerCase?.() || "";
-    const seg = window?.location?.pathname?.split?.("/")?.[1]?.toLowerCase?.() || "";
-    const raw = htmlLang || seg;
-    if (raw.startsWith("hu")) return "hu";
-    if (raw.startsWith("de")) return "de";
-  }
+  if (typeof window === "undefined") return "en";
+
+  const seg = window.location.pathname.split("/")[1]?.toLowerCase() || "";
+  if (seg === "hu" || seg.startsWith("hu")) return "hu";
+  if (seg === "de" || seg.startsWith("de")) return "de";
+  if (seg === "en" || seg.startsWith("en")) return "en";
+
+  // fallback: html lang (ha valamiért nincs locale prefix az URL-ben)
+  const htmlLang = (document.documentElement.lang || "").toLowerCase();
+  if (htmlLang.startsWith("hu")) return "hu";
+  if (htmlLang.startsWith("de")) return "de";
+  if (htmlLang.startsWith("en")) return "en";
+
   return "en";
 }
+
 
 const L = {
   en: {
