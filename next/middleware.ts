@@ -17,6 +17,11 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const { pathname } = url;
 
+  // ✅ public preview fájlok – ne locale-ozd, engedd át
+  if (pathname.startsWith("/_preview/")) {
+    return NextResponse.next();
+  }
+
   // technikai fájlok – root és lokalizált változatok is
   if (
     pathname.startsWith("/_next/") ||
@@ -53,8 +58,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // minden tartalom, kivéve a technikai útvonalak
-    "/((?!api|_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml).*)",
+    // ✅ minden tartalom, kivéve a technikai útvonalak + preview
+    "/((?!api|_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml|_preview/).*)",
     // lokalizált technikai fájlok – explicit engedjük át
     "/:locale(hu|en|de)/(robots.txt|sitemap.xml|sitemap-:any*.xml|server-sitemap.xml)",
   ],
