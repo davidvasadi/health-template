@@ -62,8 +62,12 @@ export function PracticeCard({
 }) {
   const href = `/${locale}/${baseSlug}/${it.slug}`;
 
-  const typeValue = String(it.iconCards?.type?.value ?? it.iconCards?.type?.text ?? "");
-  const clockValue = String(it.iconCards?.clock?.value ?? it.iconCards?.clock?.text ?? "");
+  const typeValue = String(
+    it.iconCards?.type?.value ?? it.iconCards?.type?.text ?? ""
+  );
+  const clockValue = String(
+    it.iconCards?.clock?.value ?? it.iconCards?.clock?.text ?? ""
+  );
 
   const diffCard = findDifficultyCard(it.cards, it.iconCards);
   const diffValue = String(diffCard?.value ?? diffCard?.text ?? "").trim();
@@ -82,11 +86,17 @@ export function PracticeCard({
     : "text-base font-semibold tracking-tight";
 
   return (
-    <Link
-      href={href as never}
-      className={cn("group block h-full outline-none", focusRing, className)}
-      aria-label={`${it.name} ${t.open}`}
-    >
+    <div className={cn("group relative h-full outline-none", className)}>
+      {/* ✅ Desktop: teljes kártya kattintható (overlay link) */}
+      <Link
+        href={href as never}
+        className={cn(
+          "hidden md:block absolute inset-0 z-10",
+          focusRing
+        )}
+        aria-label={`${it.name} ${t.open}`}
+      />
+
       <div className={cn(bentoItem, videoCard, "h-full")}>
         {/* Media */}
         <div className="absolute inset-0">
@@ -116,46 +126,88 @@ export function PracticeCard({
           ) : null}
 
           {clockValue ? (
-            <Micro icon={<IconClock className="h-3.5 w-3.5" />}>{clockValue}</Micro>
+            <Micro icon={<IconClock className="h-3.5 w-3.5" />}>
+              {clockValue}
+            </Micro>
           ) : null}
 
           {typeValue ? (
-            <Micro icon={<IconTools className="h-3.5 w-3.5" />}>{typeValue}</Micro>
+            <Micro icon={<IconTools className="h-3.5 w-3.5" />}>
+              {typeValue}
+            </Micro>
           ) : null}
 
           {diffValue ? (
-            <Micro icon={<IconGauge className="h-3.5 w-3.5" />} className={cn(diffTone.wrap)}>
+            <Micro
+              icon={<IconGauge className="h-3.5 w-3.5" />}
+              className={cn(diffTone.wrap)}
+            >
               {diffValue}
-              <span className={cn("ml-2 inline-block h-1.5 w-1.5 rounded-full", diffTone.dot)} />
+              <span
+                className={cn(
+                  "ml-2 inline-block h-1.5 w-1.5 rounded-full",
+                  diffTone.dot
+                )}
+              />
             </Micro>
           ) : null}
         </div>
 
         {/* Bottom content */}
         <div className={cn("absolute inset-x-0 bottom-0", pad)}>
-          <h3 className={cn(titleClass, "text-white leading-tight drop-shadow")}>{it.name}</h3>
+          <h3 className={cn(titleClass, "text-white leading-tight drop-shadow")}>
+            {it.name}
+          </h3>
 
           {/* LEÍRÁS: itt NE jelenjen meg, csak a videó megnyitása után (külön file kezeli) */}
 
           {/* CTA */}
           <div className={cn("mt-6 flex items-center gap-4", !isHero && "mt-4")}>
-            <div
+            {/* ✅ Mobil: CSAK a CTA legyen kattintható */}
+            <Link
+              href={href as never}
               className={cn(
-                "w-12 h-12 shrink-0 bg-[rgba(0,121,128,1)] rounded-full flex items-center justify-center text-white transition-transform shadow-lg shadow-[rgba(0,121,128,0.30)]",
-                "group-hover:scale-110"
+                "md:hidden relative z-20 inline-flex items-center gap-4",
+                focusRing
               )}
+              aria-label={`${it.name} ${t.open}`}
             >
-              <IconPlayerPlayFilled className="h-6 w-6" />
+              <div
+                className={cn(
+                  "w-12 h-12 shrink-0 bg-[rgba(0,121,128,1)] rounded-full flex items-center justify-center text-white transition-transform shadow-lg shadow-[rgba(0,121,128,0.30)]",
+                  "group-hover:scale-110"
+                )}
+              >
+                <IconPlayerPlayFilled className="h-6 w-6" />
+              </div>
+
+              <span className="text-white text-sm font-semibold uppercase tracking-wide">
+                {isHero ? t.start : t.open}
+              </span>
+
+              <IconChevronRight className="h-5 w-5 text-white/80" />
+            </Link>
+
+            {/* ✅ Desktop: vizuálisan ugyanaz, a katt az overlay link-en van */}
+            <div className="hidden md:flex items-center gap-4">
+              <div
+                className={cn(
+                  "w-12 h-12 shrink-0 bg-[rgba(0,121,128,1)] rounded-full flex items-center justify-center text-white transition-transform shadow-lg shadow-[rgba(0,121,128,0.30)]",
+                  "group-hover:scale-110"
+                )}
+              >
+                <IconPlayerPlayFilled className="h-6 w-6" />
+              </div>
+
+              <span className="text-white text-sm font-semibold uppercase tracking-wide">
+                {isHero ? t.start : t.open}
+              </span>
+
+              <IconChevronRight className="h-5 w-5 text-white/80" />
             </div>
-
-            <span className="text-white text-sm font-semibold uppercase tracking-wide">
-              {isHero ? t.start : t.open}
-            </span>
-
-            <IconChevronRight className="h-5 w-5 text-white/80" />
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

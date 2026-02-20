@@ -1,5 +1,6 @@
 // next/app/[locale]/(marketing)/practices/page.tsx
 import { Metadata } from "next";
+
 import { Container } from "@/components/container";
 import { AmbientColor } from "@/components/decorations/ambient-color";
 import fetchContentType from "@/lib/strapi/fetchContentType";
@@ -7,9 +8,11 @@ import { generateMetadataObject } from "@/lib/shared/metadata";
 import ClientSlugHandler from "../ClientSlugHandler";
 import { PracticeItems } from "@/components/practices/practice-items";
 
+import DynamicZoneManager from "@/components/dynamic-zone/manager";
+
 const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "");
 
-// ✅ v4/v5 normalize helper
+// v4/v5 normalize helper
 const get = (x: any) => x?.attributes ?? x;
 
 /** relation normalize: { data: [...] } or [...] */
@@ -21,9 +24,8 @@ function relArray(rel: any) {
 const PRACTICES_UID = "practices";
 
 const PRACTICES_PAGE_UID_CANDIDATES = [
-  "practice-page",     // ez a legvalószínűbb
+  "practice-page",
   "practices-page",
-
 ] as const;
 
 async function getPracticesPageSingle(locale: string) {
@@ -35,6 +37,7 @@ async function getPracticesPageSingle(locale: string) {
         populate: {
           localizations: true,
           seo: { populate: "metaImage" },
+
           categories: true,
           practices: {
             populate: {
@@ -48,6 +51,9 @@ async function getPracticesPageSingle(locale: string) {
               seo: { populate: "metaImage" },
             },
           },
+
+          faq: { populate: "*" },
+          cta: { populate: "*" },
         },
       },
       true,
@@ -55,13 +61,26 @@ async function getPracticesPageSingle(locale: string) {
     );
 
     const rec = get(raw);
-    // ha van bármi értelmes adat, elfogadjuk
-    if (rec && (rec.heading || rec.slug || rec.seo || rec.localizations)) return { uid, rec };
+    if (
+      rec &&
+      (rec.heading ||
+        rec.slug ||
+        rec.seo ||
+        rec.localizations ||
+        rec.faq ||
+        rec.cta)
+    ) {
+      return { uid, rec };
+    }
   }
   return { uid: null as any, rec: null as any };
 }
 
-export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
   const { rec } = await getPracticesPageSingle(params.locale);
 
   const baseSlug = norm(rec?.slug || rec?.Slug || "practices");
@@ -72,12 +91,17 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   });
 }
 
-export default async function PracticesPage({ params }: { params: { locale: string } }) {
+export default async function PracticesPage({
+  params,
+}: {
+  params: { locale: string };
+}) {
   const { rec } = await getPracticesPageSingle(params.locale);
   const practicesPage = get(rec);
 
-  // ✅ base slug a single type-ból
-  const baseSlug = norm(practicesPage?.slug || practicesPage?.Slug || "practices");
+  const baseSlug = norm(
+    practicesPage?.slug || practicesPage?.Slug || "practices"
+  );
 
   // 1) single type-ban kiválasztott practices
   const selectedFromSingle = relArray(practicesPage?.practices).map(get);
@@ -104,7 +128,7 @@ export default async function PracticesPage({ params }: { params: { locale: stri
     practices = (practicesRes?.data ?? []).map(get);
   }
 
-  // ✅ localized base slugs a nyelvváltóhoz (szintén normalize-olva!)
+  // localized base slugs a nyelvváltóhoz
   const localizedSlugs: Record<string, string> = {
     [practicesPage?.locale || params.locale]: baseSlug,
   };
@@ -117,20 +141,39 @@ export default async function PracticesPage({ params }: { params: { locale: stri
   // categories a single type-ból
   const categories = relArray(practicesPage?.categories).map(get);
 
+  // DZ tömbök (ha nincs, üres)
+  const faqDZ = Array.isArray(practicesPage?.faq) ? practicesPage.faq : [];
+  const ctaDZ = Array.isArray(practicesPage?.cta) ? practicesPage.cta : [];
+
   return (
-    <div className="relative overflow-hidden w-full">
+    // ✅ csak X-en rejtsünk, így nem lesz jobbra-balra húzható az oldal
+    <div className="relative w-full overflow-x-hidden">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
       <AmbientColor />
+
+      {/* ✅ A “normál” oldal tartalom marad Container-ben */}
       <Container className="pb-16 pt-40">
         <PracticeItems
-          heading={practicesPage?.heading || practicesPage?.Heading || "Gyakorlatok"}
-          sub_heading={practicesPage?.sub_heading || practicesPage?.Sub_heading || ""}
+          heading={
+            practicesPage?.heading || practicesPage?.Heading || "Gyakorlatok"
+          }
+          sub_heading={
+            practicesPage?.sub_heading || practicesPage?.Sub_heading || ""
+          }
           practices={practices}
           locale={params.locale}
           categories={categories}
-          baseSlug={baseSlug}  // ✅ EZ MOST TÉNYLEG "gyakorlatok" LESZ HU-N
+          baseSlug={baseSlug}
         />
       </Container>
+
+      {/* ✅ DZ kint a Container-ből, de a viewport szélességére “clampelve” */}
+      <div className="relative w-full overflow-x-hidden">
+        <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-visible">
+          <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} />
+          <DynamicZoneManager dynamicZone={ctaDZ} locale={params.locale} />
+        </div>
+      </div>
     </div>
   );
 }

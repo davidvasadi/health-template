@@ -59,6 +59,28 @@
       },
       "component": "shared.seo",
       "repeatable": false
+    },
+    "faq": {
+      "type": "dynamiczone",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      },
+      "components": [
+        "dynamic-zone.faq"
+      ]
+    },
+    "cta": {
+      "type": "dynamiczone",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      },
+      "components": [
+        "dynamic-zone.cta"
+      ]
     }
   }
 }
