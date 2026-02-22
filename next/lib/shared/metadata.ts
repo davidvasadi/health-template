@@ -1,52 +1,54 @@
 // lib/shared/metadata.ts
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
 
-type Locale = "hu" | "en" | "de";
-const LOCALES: Locale[] = ["hu", "en", "de"];
+type Locale = 'hu' | 'en' | 'de';
+const LOCALES: Locale[] = ['hu', 'en', 'de'];
+
+const BRAND = 'The Place Studio';
 
 const toStr = (v: unknown): string => {
-  if (typeof v === "string") return v;
-  if (v == null) return "";
-  if (Array.isArray(v)) return v.map(toStr).join(" ");
-  if (typeof v === "object") return "";
+  if (typeof v === 'string') return v;
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.map(toStr).join(' ');
+  if (typeof v === 'object') return '';
   return String(v);
 };
 
 const SITE_RAW = toStr(
-  process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplacestudio.hu"
+  process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://theplacestudio.hu'
 ).trim();
 
-const SITE = (SITE_RAW || "https://theplacestudio.hu").replace(/\/+$/, "");
+const SITE = (SITE_RAW || 'https://theplacestudio.hu').replace(/\/+$/, '');
 
 const OLD_HOSTS = new Set([
-  "csontkovacsbence.hu",
-  "www.csontkovacsbence.hu",
-  "peldadomain.hu",
-  "www.peldadomain.hu",
-  "localhost",
-  "localhost:3000",
-  "localhost:1337",
-  "127.0.0.1",
-  "127.0.0.1:1337",
+  'csontkovacsbence.hu',
+  'www.csontkovacsbence.hu',
+  'peldadomain.hu',
+  'www.peldadomain.hu',
+  'localhost',
+  'localhost:3000',
+  'localhost:1337',
+  '127.0.0.1',
+  '127.0.0.1:1337',
 ]);
 
 const ensureLeadingSlash = (p: unknown) => {
   const s = toStr(p).trim();
-  if (!s) return "/";
-  return s.startsWith("/") ? s : `/${s}`;
+  if (!s) return '/';
+  return s.startsWith('/') ? s : `/${s}`;
 };
 
 const ensureTrailingSlash = (p: unknown) => {
   const s = toStr(p).trim();
-  if (!s) return "/";
-  return s.endsWith("/") ? s : `${s}/`;
+  if (!s) return '/';
+  return s.endsWith('/') ? s : `${s}/`;
 };
 
 function safeSiteUrl(): URL {
   try {
     return new URL(SITE);
   } catch {
-    return new URL("https://theplacestudio.hu");
+    return new URL('https://theplacestudio.hu');
   }
 }
 
@@ -65,11 +67,11 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
   if (/^(mailto:|tel:|javascript:)/i.test(u)) return undefined;
 
   // __NEXT_DATA__ / JSON escape
-  u = u.replace(/\\\//g, "/");
+  u = u.replace(/\\\//g, '/');
 
-  if (u.startsWith("/")) u = `${SITE}${u}`;
-  if (u.startsWith("//")) u = `${safeSiteUrl().protocol}${u}`;
-  if (!/^https?:\/\//i.test(u)) u = `${SITE}/${u.replace(/^\/+/, "")}`;
+  if (u.startsWith('/')) u = `${SITE}${u}`;
+  if (u.startsWith('//')) u = `${safeSiteUrl().protocol}${u}`;
+  if (!/^https?:\/\//i.test(u)) u = `${SITE}/${u.replace(/^\/+/, '')}`;
 
   try {
     const site = safeSiteUrl();
@@ -84,14 +86,12 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
     }
 
     url.protocol = site.protocol;
-    url.hash = "";
+    url.hash = '';
 
     // Oldalakhoz trailing slash OK, assethez NEM
     if (asset) {
-      // általánosan vágjuk le a végéről a /-t, hogy ne legyen .jpg/ semmi
-      url.pathname = url.pathname.replace(/\/+$/, "");
-      // ha üres lenne (pl. https://domain/), maradjon /
-      if (!url.pathname) url.pathname = "/";
+      url.pathname = url.pathname.replace(/\/+$/, '');
+      if (!url.pathname) url.pathname = '/';
     } else {
       url.pathname = ensureTrailingSlash(url.pathname);
     }
@@ -103,25 +103,25 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
 }
 
 const joinUrl = (base: string, path: unknown) =>
-  `${base.replace(/\/+$/, "")}/${toStr(path).replace(/^\/+/, "")}`;
+  `${base.replace(/\/+$/, '')}/${toStr(path).replace(/^\/+/, '')}`;
 
 function pathForLocale(pathname: unknown, locale: Locale): string {
   const p = ensureLeadingSlash(pathname);
-  const parts = p.split("/");
+  const parts = p.split('/');
   if (parts.length >= 2 && (LOCALES as string[]).includes(parts[1])) {
     parts[1] = locale;
-    return parts.join("/");
+    return parts.join('/');
   }
   return `/${locale}${p}`;
 }
 
-function parseRobots(metaRobots?: unknown): Metadata["robots"] {
+function parseRobots(metaRobots?: unknown): Metadata['robots'] {
   const s = toStr(metaRobots).toLowerCase();
   if (!s) return { index: true, follow: true };
   const tokens = s.split(/[,\s]+/).filter(Boolean);
   return {
-    index: !tokens.includes("noindex"),
-    follow: !tokens.includes("nofollow"),
+    index: !tokens.includes('noindex'),
+    follow: !tokens.includes('nofollow'),
   };
 }
 
@@ -129,8 +129,8 @@ export function generateMetadataObject(
   seo: any,
   opts: { locale: Locale; pathname?: unknown }
 ): Metadata {
-  const locale = (opts?.locale ?? "hu") as Locale;
-  const pathname = typeof opts?.pathname === "string" ? opts.pathname : `/${locale}/`;
+  const locale = (opts?.locale ?? 'hu') as Locale;
+  const pathname = typeof opts?.pathname === 'string' ? opts.pathname : `/${locale}/`;
 
   const canonicalFromStrapi = normalizeToSite(
     seo?.canonicalURL ?? seo?.canonicalUrl ?? seo?.canonical ?? seo?.canonical_url,
@@ -143,14 +143,14 @@ export function generateMetadataObject(
     `${SITE}/${locale}/`;
 
   const title =
-    (typeof seo?.metaTitle === "string" && seo.metaTitle.trim()) ||
-    (typeof seo?.title === "string" && seo.title.trim()) ||
-    "The Place Studio";
+    (typeof seo?.metaTitle === 'string' && seo.metaTitle.trim()) ||
+    (typeof seo?.title === 'string' && seo.title.trim()) ||
+    BRAND;
 
   const description =
-    (typeof seo?.metaDescription === "string" && seo.metaDescription.trim()) ||
-    (typeof seo?.description === "string" && seo.description.trim()) ||
-    "";
+    (typeof seo?.metaDescription === 'string' && seo.metaDescription.trim()) ||
+    (typeof seo?.description === 'string' && seo.description.trim()) ||
+    '';
 
   const robots = parseRobots(seo?.metaRobots);
 
@@ -170,22 +170,30 @@ export function generateMetadataObject(
 
   return {
     metadataBase: safeSiteUrl(),
+
+    // ✅ brand jel
+    applicationName: BRAND,
+
     title,
     description,
     robots,
+
     alternates: {
       canonical,
       languages,
     },
+
     openGraph: {
-      type: "website",
+      type: 'website',
       url: canonical,
       title,
       description,
+      siteName: BRAND, // ✅ brandname added
       ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
+
     twitter: {
-      card: "summary_large_image",
+      card: 'summary_large_image',
       title,
       description,
       ...(ogImage ? { images: [ogImage] } : {}),
