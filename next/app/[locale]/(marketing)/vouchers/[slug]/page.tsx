@@ -139,11 +139,20 @@ export default async function VoucherDetailPage({
   // 3) A VouchersFlow csak listát fogad, ezért 1 elemre szűkítjük
   const vouchers = [voucher].map(getItem);
 
+  // ✅ structured data a voucher seo mezőjéből
+  const structuredData = voucher?.seo?.structuredData ?? null;
+
   return (
     <div className="relative overflow-hidden w-full">
       {/* nyelvváltó: innen a LISTA oldalra menjen (mint a practices detailnél) */}
       <ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
-
+      {/* ✅ structured data hozzáadva */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
       <Container className="pb-16 pt-32 md:pt-40">
         <VouchersFlow page={page} vouchers={vouchers} locale={params.locale} />

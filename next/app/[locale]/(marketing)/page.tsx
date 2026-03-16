@@ -25,15 +25,15 @@ export async function generateMetadata({
   );
 
   const seo = pageData?.seo;
-return generateMetadataObject(seo, {
-  locale: params.locale as "hu" | "en" | "de",
-  pathname: `/${params.locale}/`,
-});
-
+  return generateMetadataObject(seo, {
+    locale: params.locale as "hu" | "en" | "de",
+    pathname: `/${params.locale}/`,
+  });
 }
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
 
+  // ✅ eredeti fetch – deepPopulate middleware kezeli a képeket
   const pageData = await fetchContentType(
     'pages',
     {
@@ -44,6 +44,22 @@ export default async function HomePage({ params }: { params: { locale: string } 
     },
     true
   );
+
+  // ✅ külön fetch csak a structuredData-hoz
+  const seoData = await fetchContentType(
+    'pages',
+    {
+      filters: {
+        slug: "homepage",
+        locale: params.locale,
+      },
+      populate: "seo",
+    },
+    true
+  );
+
+  // ✅ seo belerakjuk a pageData-ba
+  if (seoData?.seo) pageData.seo = seoData.seo;
 
   const localizedSlugs = pageData.localizations?.reduce(
     (acc: Record<string, string>, localization: any) => {

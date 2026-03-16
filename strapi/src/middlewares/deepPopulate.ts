@@ -18,11 +18,12 @@ interface Options {
 const { CREATED_BY_ATTRIBUTE, UPDATED_BY_ATTRIBUTE } = contentTypes.constants;
 
 const extractPathSegment = (url: string) => url.match(/\/([^/?]+)(?:\?|$)/)?.[1] || '';
-
+//Módosított sorok a következők:
 const getDeepPopulate = (uid: UID.Schema, opts: Options = {}) => {
   const model = strapi.getModel(uid);
+  if (!model) return {}; // ✅ ez a sor hiányzott
   const attributes = Object.entries(model.attributes);
-
+//módosítás vége 
   return attributes.reduce((acc: any, [attributeName, attribute]) => {
     switch (attribute.type) {
       case 'relation': {

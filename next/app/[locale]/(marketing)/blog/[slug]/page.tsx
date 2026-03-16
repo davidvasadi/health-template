@@ -23,7 +23,6 @@ export async function generateMetadata({
     true
   );
 
-  // Csak azok a locale-ok kerülnek hreflang-be, amikhez van fordítás
   const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
     [params.locale]: `/${params.locale}/blog/${params.slug}/`,
   };
@@ -54,6 +53,7 @@ export default async function SingleArticlePage({
         slug: params.slug,
         locale: params.locale,
       },
+      populate: "seo", // ✅ seo populate hozzáadva
     },
     true,
   );
@@ -70,9 +70,19 @@ export default async function SingleArticlePage({
     { [params.locale]: params.slug }
   );
 
+  // ✅ structured data a cikk seo mezőjéből
+  const structuredData = article?.seo?.structuredData ?? null;
+
   return (
     <BlogLayout article={article} locale={params.locale}>
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      {/* ✅ structured data hozzáadva */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <BlocksRenderer content={article.content} />
     </BlogLayout>
   );

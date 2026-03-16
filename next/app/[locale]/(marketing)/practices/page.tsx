@@ -12,10 +12,8 @@ import DynamicZoneManager from "@/components/dynamic-zone/manager";
 
 const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "");
 
-// v4/v5 normalize helper
 const get = (x: any) => x?.attributes ?? x;
 
-/** relation normalize: { data: [...] } or [...] */
 function relArray(rel: any) {
   const d = rel?.data ?? rel;
   return Array.isArray(d) ? d : [];
@@ -37,7 +35,6 @@ async function getPracticesPageSingle(locale: string) {
         populate: {
           localizations: true,
           seo: { populate: "metaImage" },
-
           categories: true,
           practices: {
             populate: {
@@ -51,7 +48,6 @@ async function getPracticesPageSingle(locale: string) {
               seo: { populate: "metaImage" },
             },
           },
-
           faq: { populate: "*" },
           cta: { populate: "*" },
         },
@@ -145,13 +141,21 @@ export default async function PracticesPage({
   const faqDZ = Array.isArray(practicesPage?.faq) ? practicesPage.faq : [];
   const ctaDZ = Array.isArray(practicesPage?.cta) ? practicesPage.cta : [];
 
+  // ✅ structured data a seo mezőjéből
+  const structuredData = practicesPage?.seo?.structuredData ?? null;
+
   return (
-    // ✅ csak X-en rejtsünk, így nem lesz jobbra-balra húzható az oldal
     <div className="relative w-full overflow-x-hidden">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      {/* ✅ structured data hozzáadva */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
 
-      {/* ✅ A “normál” oldal tartalom marad Container-ben */}
       <Container className="pb-16 pt-40">
         <PracticeItems
           heading={
@@ -167,7 +171,6 @@ export default async function PracticesPage({
         />
       </Container>
 
-      {/* ✅ DZ kint a Container-ből, de a viewport szélességére “clampelve” */}
       <div className="relative w-full overflow-x-hidden">
         <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-visible">
           <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} />

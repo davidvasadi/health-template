@@ -19,10 +19,8 @@ import ClientSlugHandler from "../ClientSlugHandler";
 
 const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "");
 
-// v4/v5 normalize helper
 const get = (x: any) => x?.attributes ?? x;
 
-/** relation normalize: { data: [...] } or [...] */
 function relArray(rel: any) {
   const d = rel?.data ?? rel;
   return Array.isArray(d) ? d : [];
@@ -93,13 +91,21 @@ export default async function Blog({
     ? blogPage.dynamic_zone
     : [];
 
+  // ✅ structured data a blog-page seo mezőjéből
+  const structuredData = blogPage?.seo?.structuredData ?? null;
+
   return (
-    // ✅ csak X-en rejtsünk (ne legyen jobbra-balra húzható), de ne vágjuk le a CTA háttereket
     <div className="relative overflow-x-hidden py-20 md:py-0">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      {/* ✅ structured data hozzáadva */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
 
-      {/* ✅ A BLOG LISTA MARAD Container-ben */}
       <Container className="pb-20">
         <div className="flex flex-col items-center">
           <div className="relative z-20 py-10 md:pt-40">
@@ -128,7 +134,6 @@ export default async function Blog({
         </div>
       </Container>
 
-      {/* ✅ DZ KINT VAN A Container-ből, full-bleed, de viewport szélességre clampelve */}
       <div className="relative w-full overflow-x-hidden">
         <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-visible">
           <DynamicZoneManager dynamicZone={dynamicZone} locale={params.locale} />

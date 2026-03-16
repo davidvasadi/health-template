@@ -110,11 +110,20 @@ export default async function PracticeDetailPage({
     redirect(`/${params.locale}/${base}`);
   }
 
+  // ✅ structured data a practice seo mezőjéből
+  const structuredData = practice?.seo?.structuredData ?? null;
+
   return (
     <div className="relative overflow-hidden w-full">
       {/* ✅ nyelvváltáskor innen a LISTA oldalra fog menni az adott nyelven */}
       <ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
-
+      {/* ✅ structured data hozzáadva */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
       <Container className="py-20 md:py-40">
         <SinglePractice practice={practice} locale={params.locale} />

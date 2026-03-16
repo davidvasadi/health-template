@@ -49,7 +49,6 @@ export async function generateMetadata({
 
   const baseSlug = norm(rec?.slug || rec?.Slug || "products");
 
-  // ✅ localized base slugok összegyűjtése
   const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
     [rec?.locale || params.locale]: `/${rec?.locale || params.locale}/${baseSlug}/`,
   };
@@ -63,7 +62,7 @@ export async function generateMetadata({
   return generateMetadataObject(rec?.seo, {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${baseSlug}/`,
-    localizedPathnames, // ✅
+    localizedPathnames,
   });
 }
 
@@ -90,10 +89,17 @@ export default async function Products({ params }: { params: { locale: string } 
   }
 
   const featured = products.filter((p: any) => !!p?.featured);
+  const structuredData = productPage?.seo?.structuredData ?? null;
 
   return (
     <div className="relative overflow-hidden w-full">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
       <Container className="pt-40 pb-40">
         <Featured products={featured} locale={params.locale} baseSlug={baseSlug} />

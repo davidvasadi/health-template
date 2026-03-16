@@ -46,11 +46,6 @@ async function getProductsBaseLocalized(locale: string) {
   return { [locale]: "products" };
 }
 
-async function getProductsBase(locale: string) {
-  const map = await getProductsBaseLocalized(locale);
-  return norm(map[locale] || "products") || "products";
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -65,7 +60,6 @@ export async function generateMetadata({
     true
   );
 
-  // ✅ product detail: csak az aktuális locale (nincs keresztfordítás)
   const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
     [params.locale]: `/${params.locale}/${base}/${params.slug}/`,
   };
@@ -73,7 +67,7 @@ export async function generateMetadata({
   return generateMetadataObject(pageData?.seo, {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${base}/${params.slug}/`,
-    localizedPathnames, // ✅
+    localizedPathnames,
   });
 }
 
@@ -103,10 +97,17 @@ export default async function SingleProductPage({
     redirect(`/${params.locale}/${base}`);
   }
 
+  const structuredData = product?.seo?.structuredData ?? null;
+
   return (
     <div className="relative overflow-hidden w-full">
-      {/* ✅ nyelvváltáskor a LISTA oldalra visz az adott nyelven */}
       <ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
       <AmbientColor />
       <Container className="py-20 md:py-40">
         <SingleProduct product={product} />
