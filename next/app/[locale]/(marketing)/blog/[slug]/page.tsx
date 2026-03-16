@@ -1,3 +1,4 @@
+// app/[locale]/(marketing)/blog/[slug]/page.tsx
 import React from "react";
 import { Metadata } from "next";
 
@@ -22,9 +23,22 @@ export async function generateMetadata({
     true
   );
 
+  // Csak azok a locale-ok kerülnek hreflang-be, amikhez van fordítás
+  const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
+    [params.locale]: `/${params.locale}/blog/${params.slug}/`,
+  };
+
+  for (const loc of article?.localizations ?? []) {
+    if (loc.locale && loc.slug) {
+      localizedPathnames[loc.locale as "hu" | "en" | "de"] =
+        `/${loc.locale}/blog/${loc.slug}/`;
+    }
+  }
+
   return generateMetadataObject(article?.seo, {
     locale: params.locale as "hu" | "en" | "de",
-    pathname: `/${params.locale}/blog/${params.slug}`,
+    pathname: `/${params.locale}/blog/${params.slug}/`,
+    localizedPathnames,
   });
 }
 

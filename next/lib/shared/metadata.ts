@@ -53,8 +53,8 @@ function safeSiteUrl(): URL {
 }
 
 type NormalizeOpts = {
-  trailingSlash?: boolean; // canonical/oldalakhoz true
-  asset?: boolean; // képekhez true (SOHA nincs trailing slash)
+  trailingSlash?: boolean;
+  asset?: boolean;
 };
 
 function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | undefined {
@@ -66,7 +66,6 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
 
   if (/^(mailto:|tel:|javascript:)/i.test(u)) return undefined;
 
-  // __NEXT_DATA__ / JSON escape
   u = u.replace(/\\\//g, '/');
 
   if (u.startsWith('/')) u = `${SITE}${u}`;
@@ -88,7 +87,6 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
     url.protocol = site.protocol;
     url.hash = '';
 
-    // Oldalakhoz trailing slash OK, assethez NEM
     if (asset) {
       url.pathname = url.pathname.replace(/\/+$/, '');
       if (!url.pathname) url.pathname = '/';
@@ -127,7 +125,13 @@ function parseRobots(metaRobots?: unknown): Metadata['robots'] {
 
 export function generateMetadataObject(
   seo: any,
-  opts: { locale: Locale; pathname?: unknown }
+  opts: {
+    locale: Locale;
+    pathname?: unknown;
+    // Ha megadod → csak ezekre a locale-okra generál hreflang taget
+    // Ha nincs megadva → minden locale-ra generál (főoldal, static page-ek)
+    localizedPathnames?: Partial<Record<Locale, string>>;
+  }
 ): Metadata {
   const locale = (opts?.locale ?? 'hu') as Locale;
   const pathname = typeof opts?.pathname === 'string' ? opts.pathname : `/${locale}/`;
@@ -154,7 +158,6 @@ export function generateMetadataObject(
 
   const robots = parseRobots(seo?.metaRobots);
 
-  // OG image: assetként kezeljük -> NINCS trailing slash
   const rawImg =
     seo?.metaImage?.url ??
     seo?.metaImage?.data?.attributes?.url ??
@@ -162,18 +165,38 @@ export function generateMetadataObject(
 
   const ogImage = normalizeToSite(rawImg, { asset: true, trailingSlash: false });
 
+  // ── Hreflang languages összeállítása ──────────────────────────────────────
   const languages: Record<string, string> = {};
-  for (const l of LOCALES) {
-    const p = pathForLocale(pathname, l);
-    languages[l] = normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${l}/`;
+
+  if (opts.localizedPathnames) {
+    // ✅ Csak azokra a locale-okra generálunk hreflang-et, amikhez van fordítás
+    for (const l of LOCALES) {
+      const p = opts.localizedPathnames[l];
+      if (p) {
+        languages[l] =
+          normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${l}/`;
+      }
+    }
+    // Az aktuális locale mindig legyen benne (biztonság)
+    if (!languages[locale]) {
+      const p = pathForLocale(pathname, locale);
+      languages[locale] =
+        normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${locale}/`;
+    }
+  } else {
+    // 📌 Régi viselkedés: nincs localizedPathnames → minden locale-ra generál
+    // Ezt a főoldalon és static page-eken használjuk ahol minden nyelv létezik
+    for (const l of LOCALES) {
+      const p = pathForLocale(pathname, l);
+      languages[l] =
+        normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${l}/`;
+    }
   }
+  // ─────────────────────────────────────────────────────────────────────────
 
   return {
     metadataBase: safeSiteUrl(),
-
-    // ✅ brand jel
     applicationName: BRAND,
-
     title,
     description,
     robots,
@@ -188,7 +211,7 @@ export function generateMetadataObject(
       url: canonical,
       title,
       description,
-      siteName: BRAND, // ✅ brandname added
+      siteName: BRAND,
       ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
 

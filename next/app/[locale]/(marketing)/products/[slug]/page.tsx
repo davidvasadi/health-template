@@ -20,10 +20,6 @@ function relArray(rel: any) {
 const PRODUCTS_UID = "products";
 const PRODUCTS_PAGE_UID_CANDIDATES = ["product-page", "products-page"] as const;
 
-/**
- * Base slug map a nyelvváltóhoz (mint practices-nél):
- * { hu: "szolgaltatasok", en: "products", de: "leistungen" }
- */
 async function getProductsBaseLocalized(locale: string) {
   for (const uid of PRODUCTS_PAGE_UID_CANDIDATES) {
     const recRaw: any = await fetchContentType(
@@ -60,7 +56,8 @@ export async function generateMetadata({
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
-  const base = await getProductsBase(params.locale);
+  const baseMap = await getProductsBaseLocalized(params.locale);
+  const base = norm(baseMap[params.locale] || "products") || "products";
 
   const pageData = await fetchContentType(
     PRODUCTS_UID,
@@ -68,9 +65,15 @@ export async function generateMetadata({
     true
   );
 
+  // ✅ product detail: csak az aktuális locale (nincs keresztfordítás)
+  const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
+    [params.locale]: `/${params.locale}/${base}/${params.slug}/`,
+  };
+
   return generateMetadataObject(pageData?.seo, {
     locale: params.locale as "hu" | "en" | "de",
-    pathname: `/${params.locale}/${base}/${params.slug}`,
+    pathname: `/${params.locale}/${base}/${params.slug}/`,
+    localizedPathnames, // ✅
   });
 }
 
@@ -79,7 +82,6 @@ export default async function SingleProductPage({
 }: {
   params: { slug: string; locale: string };
 }) {
-  // ✅ Mint practices detail: a detail oldalon is beállítjuk a base map-et
   const baseMap = await getProductsBaseLocalized(params.locale);
   const base = norm(baseMap[params.locale] || "products") || "products";
 
@@ -98,15 +100,13 @@ export default async function SingleProductPage({
   );
 
   if (!product) {
-    // ha nincs ilyen termék ezen a nyelven -> listaoldal
     redirect(`/${params.locale}/${base}`);
   }
 
   return (
     <div className="relative overflow-hidden w-full">
-      {/* ✅ nyelvváltáskor innen a LISTA oldalra fog menni az adott nyelven */}
-<ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
-
+      {/* ✅ nyelvváltáskor a LISTA oldalra visz az adott nyelven */}
+      <ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
       <AmbientColor />
       <Container className="py-20 md:py-40">
         <SingleProduct product={product} />

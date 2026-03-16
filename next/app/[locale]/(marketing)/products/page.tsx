@@ -19,7 +19,6 @@ function relArray(rel: any) {
 const PRODUCTS_UID = "products";
 const PRODUCTS_PAGE_UID_CANDIDATES = ["product-page", "products-page"] as const;
 
-// ugyanaz a minta, mint practices-nél: candidates + v4/v5 localizations normalize
 async function getProductsPageSingle(locale: string) {
   for (const uid of PRODUCTS_PAGE_UID_CANDIDATES) {
     const raw = await fetchContentType(
@@ -50,9 +49,21 @@ export async function generateMetadata({
 
   const baseSlug = norm(rec?.slug || rec?.Slug || "products");
 
+  // ✅ localized base slugok összegyűjtése
+  const localizedPathnames: Partial<Record<"hu" | "en" | "de", string>> = {
+    [rec?.locale || params.locale]: `/${rec?.locale || params.locale}/${baseSlug}/`,
+  };
+  for (const loc of relArray(rec?.localizations).map(get)) {
+    const s = norm(loc?.slug || loc?.Slug);
+    if (s && loc?.locale) {
+      localizedPathnames[loc.locale as "hu" | "en" | "de"] = `/${loc.locale}/${s}/`;
+    }
+  }
+
   return generateMetadataObject(rec?.seo, {
     locale: params.locale as "hu" | "en" | "de",
-    pathname: `/${params.locale}/${baseSlug}`,
+    pathname: `/${params.locale}/${baseSlug}/`,
+    localizedPathnames, // ✅
   });
 }
 
@@ -62,7 +73,6 @@ export default async function Products({ params }: { params: { locale: string } 
 
   const baseSlug = norm(productPage?.slug || productPage?.Slug || "products");
 
-  // termékek listája
   const productsRes = await fetchContentType(
     PRODUCTS_UID,
     { locale: params.locale, populate: { images: { populate: "*" } } },
@@ -70,7 +80,6 @@ export default async function Products({ params }: { params: { locale: string } 
   );
   const products = (productsRes?.data ?? []).map(get);
 
-  // localized base slugs a nyelvváltóhoz – STRAPI v4/v5 kompatibilis
   const localizedSlugs: Record<string, string> = {
     [productPage?.locale || params.locale]: baseSlug,
   };

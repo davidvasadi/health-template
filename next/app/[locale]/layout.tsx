@@ -1,3 +1,4 @@
+// app/[locale]/layout.tsx
 import React from "react";
 import { Metadata } from "next";
 import { Inter } from "next/font/google";
