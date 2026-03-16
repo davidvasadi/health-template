@@ -62,6 +62,9 @@ export async function generateMetadata({
 }: {
   params: { locale: string; slug: string };
 }): Promise<Metadata> {
+  // ✅ base slug lekérése
+  const base = await getPracticesBase(params.locale);
+
   const pageData = await fetchContentType(
     PRACTICES_UID,
     { filters: { slug: params.slug, locale: params.locale }, populate: "seo.metaImage" },
@@ -70,7 +73,7 @@ export async function generateMetadata({
 
   return generateMetadataObject(pageData?.seo, {
     locale: params.locale as "hu" | "en" | "de",
-    pathname: `/${params.locale}/${params.slug}`,
+    pathname: `/${params.locale}/${base}/${params.slug}`, // ✅ javított
   });
 }
 
@@ -110,7 +113,7 @@ export default async function PracticeDetailPage({
   return (
     <div className="relative overflow-hidden w-full">
       {/* ✅ nyelvváltáskor innen a LISTA oldalra fog menni az adott nyelven */}
-<ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
+      <ClientSlugHandler localizedSlugs={{ [params.locale]: base }} />
 
       <AmbientColor />
       <Container className="py-20 md:py-40">

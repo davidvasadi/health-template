@@ -1,10 +1,32 @@
 import React from "react";
+import { Metadata } from "next";
 
 import { BlogLayout } from "@/components/blog-layout";
 import fetchContentType from "@/lib/strapi/fetchContentType";
+import { generateMetadataObject } from "@/lib/shared/metadata";
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 import ClientSlugHandler from "../../ClientSlugHandler";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string; locale: string };
+}): Promise<Metadata> {
+  const article = await fetchContentType(
+    "articles",
+    {
+      filters: { slug: params.slug, locale: params.locale },
+      populate: "seo.metaImage",
+    },
+    true
+  );
+
+  return generateMetadataObject(article?.seo, {
+    locale: params.locale as "hu" | "en" | "de",
+    pathname: `/${params.locale}/blog/${params.slug}`,
+  });
+}
 
 export default async function SingleArticlePage({
   params,
@@ -17,7 +39,7 @@ export default async function SingleArticlePage({
       filters: {
         slug: params.slug,
         locale: params.locale,
-      }
+      },
     },
     true,
   );
