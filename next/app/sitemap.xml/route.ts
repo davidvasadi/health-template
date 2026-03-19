@@ -9,63 +9,26 @@ const SITE = (
   (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://theplacestudio.hu")
 ).replace(/\/+$/, "");
 
-const STRAPI_BASE = (
+const STRAPI_ORIGIN = (
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_STRAPI_URL ||
   process.env.STRAPI_URL ||
   (process.env.NODE_ENV === "development" ? "http://localhost:1337" : SITE)
-).replace(/\/+$/, "");
-
-const STRAPI_ORIGIN = STRAPI_BASE.replace(/\/api\/?$/, "");
+).replace(/\/+$/, "").replace(/\/api\/?$/, "");
 
 type L = "hu" | "de" | "en";
 const LOCALES: L[] = ["hu", "de", "en"];
 
-const xml = (literals: TemplateStringsArray, ...values: any[]) =>
-  literals.reduce((acc, lit, i) => acc + lit + (values[i] ?? ""), "");
-
-const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "").toLowerCase();
-
-// ✅ Minden URL-hez trailing slash
-const withSlash = (url: string) => url.replace(/\/?$/, "/");
-
-function urlNode(
-  loc: string,
-  opts?: {
-    lastmod?: string;
-    changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-    priority?: number;
-    alternates?: { hreflang: string; href: string }[];
-  }
-) {
-  const alt = (opts?.alternates ?? [])
-    .map((a) => `<xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${a.href}" />`)
-    .join("");
-
-  return xml`<url>
-<loc>${loc}</loc>
-${alt}
-${opts?.lastmod ? `<lastmod>${opts.lastmod}</lastmod>` : ""}
-${opts?.changefreq ? `<changefreq>${opts.changefreq}</changefreq>` : ""}
-${typeof opts?.priority === "number" ? `<priority>${opts.priority}</priority>` : ""}
-</url>`;
-}
+const siteUrl = (path: string) =>
+  `${SITE}/${path}`.replace(/([^:])\/\/+/g, "$1/").replace(/\/$/, "");
 
 function validToken(): string | null {
   const t = process.env.STRAPI_TOKEN ?? "";
-  if (!t) return null;
-  if (/PASTE_YOUR_API_TOKEN/i.test(t)) return null;
-  if (t.length < 20) return null;
-  return t;
+  return t && !/PASTE_YOUR_API_TOKEN/i.test(t) && t.length >= 20 ? t : null;
 }
 
-async function sFetch(path: string, params: Record<string, any>) {
-  const safePath = String(path || "")
-    .replace(/^https?:\/\/[^/]+/i, "")
-    .replace(/^\/+/, "")
-    .replace(/^api\/+/, "");
-
-  const url = `${STRAPI_ORIGIN}/api/${safePath}?${qs.stringify(
+async function sFetch(path: string, params: Record<string, unknown>) {
+  const endpoint = `${STRAPI_ORIGIN}/api/${path.replace(/^\/+|^api\/+/, "")}?${qs.stringify(
     { publicationState: "live", ...params },
     { encodeValuesOnly: true }
   )}`;
@@ -73,451 +36,327 @@ async function sFetch(path: string, params: Record<string, any>) {
   const token = validToken();
 
   if (token) {
-    const res = await fetch(url, {
+    const res = await fetch(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
-      next: { revalidate },
+      ...({ next: { revalidate } } as object),
     });
     if (res.ok) return res.json();
-    if (res.status !== 401) throw new Error(`Strapi ${res.status} → ${url}`);
+    if (res.status !== 401) throw new Error(`Strapi ${res.status} → ${endpoint}`);
   }
 
-  const res2 = await fetch(url, { next: { revalidate } });
-  if (!res2.ok) throw new Error(`Strapi ${res2.status} → ${url}`);
-  return res2.json();
+  const res = await fetch(endpoint, {
+    ...({ next: { revalidate } } as object),
+  });
+  if (!res.ok) throw new Error(`Strapi ${res.status} → ${endpoint}`);
+  return res.json();
 }
 
-function attrs(x: any) {
-  return x?.attributes ?? x ?? {};
-}
-function getLocale(x: any): L | string | undefined {
-  const a = attrs(x);
-  return a?.locale ?? x?.locale;
-}
-function getSlug(x: any): string | undefined {
-  const a = attrs(x);
-  return a?.slug ?? x?.slug;
-}
-function getUpdatedAt(x: any): string | undefined {
-  const a = attrs(x);
-  return a?.updatedAt ?? x?.updatedAt;
-}
-function getPublishedAt(x: any): string | undefined {
-  const a = attrs(x);
-  return a?.publishedAt ?? x?.publishedAt;
-}
-function getLocalizations(x: any): any[] {
-  const a = attrs(x);
-  const locs =
-    a?.localizations?.data ??
-    a?.localizations ??
-    x?.localizations?.data ??
-    x?.localizations ??
-    [];
-  return Array.isArray(locs) ? locs : [];
+const getAttrs = (x: unknown) => (x as any)?.attributes ?? (x as any) ?? {};
+const getSlug = (x: unknown): string | undefined => {
+  const a = getAttrs(x);
+  return (a?.slug ?? a?.Slug)?.replace(/^\/|\/$/g, "");
+};
+const getLocale = (x: unknown): L | undefined => getAttrs(x)?.locale;
+const getUpdatedAt = (x: unknown): string | undefined =>
+  getAttrs(x)?.updatedAt ?? getAttrs(x)?.publishedAt;
+const getLocalizations = (x: unknown): unknown[] => {
+  const l = getAttrs(x)?.localizations;
+  const arr = l?.data ?? l;
+  return Array.isArray(arr) ? arr : [];
+};
+function lastmod(item: unknown) {
+  return new Date(getUpdatedAt(item) ?? Date.now()).toISOString();
 }
 
-function lastmodOf(item?: any) {
-  const d = getUpdatedAt(item) || getPublishedAt(item) || new Date().toISOString();
-  return new Date(d).toISOString();
-}
-
-async function getProductsBaseLocalized(): Promise<Record<L, string>> {
-  const map: Record<L, string> = { hu: "szolgaltatasok", en: "products", de: "leistungen" };
-
+// product-page: mezőnév "Slug" (nagy S) – ez a Strapi sémában így van definiálva
+async function fetchProductPageSlugs(): Promise<Partial<Record<L, string>>> {
+  const map: Partial<Record<L, string>> = {};
   try {
-    const json = await sFetch("/api/product-page", {
-      fields: ["slug", "locale"],
-      populate: { localizations: { fields: ["slug", "locale"] } },
+    const json = await sFetch("product-page", {
+      fields: ["Slug", "locale"],
+      populate: { localizations: { fields: ["Slug", "locale"] } },
       locale: "hu",
     });
-
-    const root = Array.isArray(json?.data) ? json.data[0] : json?.data;
-    const rootAttrs = attrs(root);
-    const rootLoc = (rootAttrs?.locale ?? root?.locale) as L | undefined;
-    const rootSlug = norm(rootAttrs?.slug ?? root?.slug);
-    if (rootLoc && rootSlug) map[rootLoc] = rootSlug;
-
-    for (const l of getLocalizations(root).map(attrs)) {
-      const lng = l?.locale as L | undefined;
-      const slug = norm(l?.slug);
-      if (lng && slug) map[lng] = slug;
-    }
-  } catch {
-    // fallback marad
-  }
-
-  return map;
-}
-
-async function getPracticesBaseLocalized(): Promise<Record<L, string>> {
-  const map: Record<L, string> = { hu: "gyakorlatok", en: "practices", de: "practices" };
-  const candidates = ["practice-page", "practices-page"] as const;
-
-  for (const uid of candidates) {
-    try {
-      for (const lng of LOCALES) {
-        const json = await sFetch(`/api/${uid}`, {
-          fields: ["slug", "locale"],
-          populate: { localizations: { fields: ["slug", "locale"] } },
-          locale: lng,
-        });
-
-        const root = Array.isArray(json?.data) ? json.data[0] : json?.data;
-        if (!root) continue;
-
-        const rootAttrs = attrs(root);
-        const rootLoc = (rootAttrs?.locale ?? root?.locale) as L | undefined;
-        const rootSlug = norm(rootAttrs?.slug ?? root?.slug);
-        if (rootLoc && rootSlug) map[rootLoc] = rootSlug;
-
-        for (const l of getLocalizations(root).map(attrs)) {
-          const loc = l?.locale as L | undefined;
-          const slug = norm(l?.slug);
-          if (loc && slug) map[loc] = slug;
-        }
-      }
-      if (map.hu) return map;
-    } catch {
-      // next candidate
-    }
-  }
-
-  return map;
-}
-
-async function getVouchersBaseLocalized(): Promise<Record<L, string>> {
-  const map: Record<L, string> = { hu: "vouchers", en: "vouchers", de: "vouchers" };
-
-  try {
-    const json = await sFetch("/api/voucher-page", {
-      fields: ["slug", "locale"],
-      populate: { localizations: { fields: ["slug", "locale"] } },
-      locale: "hu",
-    });
-
     const root = Array.isArray(json?.data) ? json.data[0] : json?.data;
     if (!root) return map;
-
-    const rootAttrs = attrs(root);
-    const rootLoc = (rootAttrs?.locale ?? root?.locale) as L | undefined;
-    const rootSlug = norm(rootAttrs?.slug ?? root?.slug);
-    if (rootLoc && rootSlug) map[rootLoc] = rootSlug;
-
-    for (const l of getLocalizations(root).map(attrs)) {
+    const rootLocale = getLocale(root);
+    const rootSlug = getSlug(root);
+    if (rootLocale && rootSlug) map[rootLocale] = rootSlug;
+    for (const l of getLocalizations(root).map(getAttrs)) {
       const lng = l?.locale as L | undefined;
-      const slug = norm(l?.slug);
-      if (lng && slug) map[lng] = slug;
+      const s = (l?.Slug ?? l?.slug)?.replace(/^\/|\/$/g, "") as string | undefined;
+      if (lng && s) map[lng] = s;
     }
   } catch {
-    // fallback marad
+    // ha Strapi nem válaszol, üres map
   }
-
   return map;
 }
 
-function dedupeHreflang(list: { hreflang: string; href: string }[]) {
-  const seen = new Set<string>();
-  return list.filter((a) => (seen.has(a.hreflang) ? false : (seen.add(a.hreflang), true)));
-}
-
-function altsForIndex(
-  kind: "blog" | "products" | "practices",
-  bases: { products: Record<L, string>; practices: Record<L, string> }
-) {
-  const hrefFor = (lng: L) => {
-    if (kind === "blog") return withSlash(`${SITE}/${lng}/blog`);
-    if (kind === "products") return withSlash(`${SITE}/${lng}/${bases.products[lng] || "products"}`);
-    return withSlash(`${SITE}/${lng}/${bases.practices[lng] || "practices"}`);
-  };
-
-  return dedupeHreflang([
-    ...LOCALES.map((lng) => ({ hreflang: lng, href: hrefFor(lng) })),
-    { hreflang: "x-default", href: hrefFor("hu") },
-  ]);
-}
-
-function altsFromLocalizations(
-  kind: "article" | "product" | "practice",
-  bases: { products: Record<L, string>; practices: Record<L, string> },
-  current: { locale: L; slug: string },
-  localizations: any[]
-) {
-  const hrefFor = (lng: L, slug: string) => {
-    if (kind === "article") return withSlash(`${SITE}/${lng}/blog/${slug}`);
-    if (kind === "product") return withSlash(`${SITE}/${lng}/${bases.products[lng] || "products"}/${slug}`);
-    return withSlash(`${SITE}/${lng}/${bases.practices[lng] || "practices"}/${slug}`);
-  };
-
-  const list: { hreflang: string; href: string }[] = [];
-  list.push({ hreflang: current.locale, href: hrefFor(current.locale, current.slug) });
-
-  for (const l of localizations.map(attrs)) {
-    const lng = l?.locale as L | undefined;
-    const slug = l?.slug as string | undefined;
-    if (!lng || !slug) continue;
-    list.push({ hreflang: lng, href: hrefFor(lng, slug) });
+// practice-page és voucher-page: mezőnév "slug" (kis s)
+async function fetchSingletonSlugs(apiPath: string): Promise<Partial<Record<L, string>>> {
+  const map: Partial<Record<L, string>> = {};
+  try {
+    const json = await sFetch(apiPath, {
+      fields: ["slug", "locale"],
+      populate: { localizations: { fields: ["slug", "locale"] } },
+      locale: "hu",
+    });
+    const root = Array.isArray(json?.data) ? json.data[0] : json?.data;
+    if (!root) return map;
+    const rootLocale = getLocale(root);
+    const rootSlug = getSlug(root);
+    if (rootLocale && rootSlug) map[rootLocale] = rootSlug;
+    for (const l of getLocalizations(root).map(getAttrs)) {
+      const lng = l?.locale as L | undefined;
+      const s = l?.slug?.replace(/^\/|\/$/g, "") as string | undefined;
+      if (lng && s) map[lng] = s;
+    }
+  } catch {
+    // ha Strapi nem válaszol, üres map
   }
-
-  const huAlt = list.find((x) => x.hreflang === "hu")?.href ?? hrefFor(current.locale, current.slug);
-  list.push({ hreflang: "x-default", href: huAlt });
-
-  return dedupeHreflang(list);
+  return map;
 }
 
-async function fetchCollection(path: string, locale: L, pageSize = 1000) {
-  return sFetch(path, {
-    locale,
-    "pagination[pageSize]": pageSize,
+async function fetchCollection(apiPath: string, lng: L) {
+  return sFetch(apiPath, {
+    locale: lng,
+    "pagination[pageSize]": 1000,
     sort: ["updatedAt:desc"],
     fields: ["slug", "locale", "updatedAt", "publishedAt"],
     populate: { localizations: { fields: ["slug", "locale"] } },
   });
 }
 
+function dedupeAlts(list: { hreflang: string; href: string }[]) {
+  const seen = new Set<string>();
+  return list.filter(({ hreflang }) =>
+    seen.has(hreflang) ? false : (seen.add(hreflang), true)
+  );
+}
+
+function urlNode(loc: string, opts: {
+  lastmod?: string;
+  changefreq?: string;
+  priority?: number;
+  alternates?: { hreflang: string; href: string }[];
+}) {
+  const alts = (opts.alternates ?? [])
+    .map((a) => `<xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${a.href}" />`)
+    .join("");
+  return `<url>
+<loc>${loc}</loc>
+${alts}
+${opts.lastmod ? `<lastmod>${opts.lastmod}</lastmod>` : ""}
+${opts.changefreq ? `<changefreq>${opts.changefreq}</changefreq>` : ""}
+${typeof opts.priority === "number" ? `<priority>${opts.priority}</priority>` : ""}
+</url>`;
+}
+
 export async function GET() {
   const nodes: string[] = [];
   const seen = new Set<string>();
 
-  const productsBase = await getProductsBaseLocalized();
-  const practicesBase = await getPracticesBaseLocalized();
-  const vouchersBase = await getVouchersBaseLocalized();
+  const add = (loc: string, opts: Parameters<typeof urlNode>[1]) => {
+    if (seen.has(loc)) return;
+    seen.add(loc);
+    nodes.push(urlNode(loc, opts));
+  };
 
-  // HOME
-  const homeAlternates = dedupeHreflang([
-    ...LOCALES.map((lng) => ({ hreflang: lng, href: withSlash(`${SITE}/${lng}`) })),
-    { hreflang: "x-default", href: withSlash(`${SITE}/hu`) },
+  const [productsBase, practicesBase, vouchersBase] = await Promise.all([
+    fetchProductPageSlugs(),
+    fetchSingletonSlugs("practice-page"),
+    fetchSingletonSlugs("voucher-page"),
   ]);
 
+  // ── HOME ──────────────────────────────────────────────────────────────
+  const homeAlts = dedupeAlts([
+    ...LOCALES.map((lng) => ({ hreflang: lng, href: siteUrl(lng) })),
+    { hreflang: "x-default", href: siteUrl("hu") },
+  ]);
   for (const lng of LOCALES) {
-    const loc = withSlash(`${SITE}/${lng}`);
-    if (!seen.has(loc)) {
-      seen.add(loc);
-      nodes.push(urlNode(loc, {
-        lastmod: new Date().toISOString(),
-        changefreq: "weekly",
-        priority: 1,
-        alternates: homeAlternates,
-      }));
+    add(siteUrl(lng), { lastmod: new Date().toISOString(), changefreq: "weekly", priority: 1, alternates: homeAlts });
+  }
+
+  // ── INDEX OLDALAK ─────────────────────────────────────────────────────
+  for (const lng of LOCALES) {
+    // Blog
+    add(siteUrl(`${lng}/blog`), {
+      lastmod: new Date().toISOString(), changefreq: "weekly", priority: 0.8,
+      alternates: dedupeAlts([
+        ...LOCALES.map((l) => ({ hreflang: l, href: siteUrl(`${l}/blog`) })),
+        { hreflang: "x-default", href: siteUrl("hu/blog") },
+      ]),
+    });
+
+    // Szolgáltatások
+    const productSlug = productsBase[lng];
+    if (productSlug) {
+      add(siteUrl(`${lng}/${productSlug}`), {
+        lastmod: new Date().toISOString(), changefreq: "weekly", priority: 0.8,
+        alternates: dedupeAlts([
+          ...LOCALES.filter((l) => productsBase[l]).map((l) => ({ hreflang: l, href: siteUrl(`${l}/${productsBase[l]}`) })),
+          { hreflang: "x-default", href: siteUrl(`hu/${productsBase.hu}`) },
+        ]),
+      });
+    }
+
+    // Gyakorlatok
+    const practiceSlug = practicesBase[lng];
+    if (practiceSlug) {
+      add(siteUrl(`${lng}/${practiceSlug}`), {
+        lastmod: new Date().toISOString(), changefreq: "weekly", priority: 0.8,
+        alternates: dedupeAlts([
+          ...LOCALES.filter((l) => practicesBase[l]).map((l) => ({ hreflang: l, href: siteUrl(`${l}/${practicesBase[l]}`) })),
+          { hreflang: "x-default", href: siteUrl(`hu/${practicesBase.hu}`) },
+        ]),
+      });
+    }
+
+    // Vouchers
+    const voucherSlug = vouchersBase[lng];
+    if (voucherSlug) {
+      add(siteUrl(`${lng}/${voucherSlug}`), {
+        lastmod: new Date().toISOString(), changefreq: "monthly", priority: 0.7,
+        alternates: dedupeAlts([
+          ...LOCALES.filter((l) => vouchersBase[l]).map((l) => ({ hreflang: l, href: siteUrl(`${l}/${vouchersBase[l]}`) })),
+          { hreflang: "x-default", href: siteUrl(`hu/${vouchersBase.hu}`) },
+        ]),
+      });
     }
   }
 
-  // INDEX OLDALAK
-  for (const lng of LOCALES) {
-    // blog index
-    {
-      const loc = withSlash(`${SITE}/${lng}/blog`);
-      if (!seen.has(loc)) {
-        seen.add(loc);
-        nodes.push(urlNode(loc, {
-          lastmod: new Date().toISOString(),
-          changefreq: "weekly",
-          priority: 0.8,
-          alternates: altsForIndex("blog", { products: productsBase, practices: practicesBase }),
-        }));
-      }
-    }
+  // ── PAGES ─────────────────────────────────────────────────────────────
+  const singletonSlugs = new Set([
+    ...Object.values(productsBase),
+    ...Object.values(practicesBase),
+    ...Object.values(vouchersBase),
+  ]);
 
-    // products index
-    {
-      const base = productsBase[lng] || "products";
-      const loc = withSlash(`${SITE}/${lng}/${base}`);
-      if (!seen.has(loc)) {
-        seen.add(loc);
-        nodes.push(urlNode(loc, {
-          lastmod: new Date().toISOString(),
-          changefreq: "weekly",
-          priority: 0.8,
-          alternates: altsForIndex("products", { products: productsBase, practices: practicesBase }),
-        }));
-      }
-    }
-
-    // practices index
-    {
-      const base = practicesBase[lng] || "practices";
-      const loc = withSlash(`${SITE}/${lng}/${base}`);
-      if (!seen.has(loc)) {
-        seen.add(loc);
-        nodes.push(urlNode(loc, {
-          lastmod: new Date().toISOString(),
-          changefreq: "weekly",
-          priority: 0.8,
-          alternates: altsForIndex("practices", { products: productsBase, practices: practicesBase }),
-        }));
-      }
-    }
-
-    // vouchers index
-    {
-      const base = vouchersBase[lng] || "vouchers";
-      const loc = withSlash(`${SITE}/${lng}/${base}`);
-      if (!seen.has(loc)) {
-        seen.add(loc);
-        nodes.push(urlNode(loc, {
-          lastmod: new Date().toISOString(),
-          changefreq: "monthly",
-          priority: 0.7,
-          alternates: dedupeHreflang([
-            ...LOCALES.map((x) => ({ hreflang: x, href: withSlash(`${SITE}/${x}/${vouchersBase[x] || "vouchers"}`) })),
-            { hreflang: "x-default", href: withSlash(`${SITE}/hu/${vouchersBase.hu || "vouchers"}`) },
-          ]),
-        }));
-      }
-    }
-  }
-
-  // PAGES
   try {
     for (const lng of LOCALES) {
-      const pagesJson = await fetchCollection("/api/pages", lng);
-      const pages: any[] = pagesJson?.data ?? [];
+      const items: unknown[] = (await fetchCollection("pages", lng))?.data ?? [];
+      for (const item of items) {
+        const s = getSlug(item);
+        const l = getLocale(item);
+        if (!s || !l) continue;
+        if (["home", "homepage", "kezdooldal"].includes(s.toLowerCase())) continue;
+        if (singletonSlugs.has(s)) continue;
 
-      for (const item of pages) {
-        const slug = getSlug(item);
-        const locale = getLocale(item) as L | undefined;
-        if (!slug || !locale) continue;
-        if (["home", "homepage", "kezdooldal"].includes(slug.toLowerCase())) continue;
+        const loc = siteUrl(`${l}/${s}`);
+        const isKey = ["contact", "kapcsolat", "pricing", "arak", "gyik", "faq",
+                       "kontakt", "preise", "contact-us", "team", "csapat"].includes(s.toLowerCase());
+        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug);
+        const huSlug = locs.find((x) => x.locale === "hu")?.slug ?? s;
 
-        const loc = withSlash(`${SITE}/${locale}/${slug}`);
-        if (seen.has(loc)) continue;
-        seen.add(loc);
-
-        const isKey = ["contact", "kapcsolat", "pricing", "arak", "gyik", "faq"].includes(slug.toLowerCase());
-
-        // ✅ x-default: a HU locale slug-ját keressük meg a localizations-ból
-        const allLocs = [
-          { locale, slug },
-          ...getLocalizations(item).map(attrs).filter((l) => l?.locale && l?.slug).map((l) => ({ locale: l.locale as L, slug: l.slug as string })),
-        ];
-        const huSlug = allLocs.find((x) => x.locale === "hu")?.slug ?? slug;
-
-        nodes.push(urlNode(loc, {
-          lastmod: lastmodOf(item),
+        add(loc, {
+          lastmod: lastmod(item),
           changefreq: isKey ? "monthly" : "weekly",
           priority: isKey ? 0.7 : 0.6,
-          alternates: dedupeHreflang([
-            { hreflang: locale, href: withSlash(`${SITE}/${locale}/${slug}`) },
-            ...getLocalizations(item)
-              .map(attrs)
-              .filter((l) => l?.locale && l?.slug)
-              .map((l) => ({ hreflang: l.locale, href: withSlash(`${SITE}/${l.locale}/${l.slug}`) })),
-            { hreflang: "x-default", href: withSlash(`${SITE}/hu/${huSlug}`) }, // ✅ helyes HU slug
+          alternates: dedupeAlts([
+            { hreflang: l, href: siteUrl(`${l}/${s}`) },
+            ...locs.map((x) => ({ hreflang: x.locale, href: siteUrl(`${x.locale}/${x.slug}`) })),
+            { hreflang: "x-default", href: siteUrl(`hu/${huSlug}`) },
           ]),
-        }));
+        });
       }
     }
   } catch (e) {
-    console.error("[sitemap] pages fetch failed:", e);
+    console.error("[sitemap] pages:", e);
   }
 
-  // ARTICLES
+  // ── ARTICLES ──────────────────────────────────────────────────────────
   try {
     for (const lng of LOCALES) {
-      const articlesJson = await fetchCollection("/api/articles", lng);
-      const items: any[] = articlesJson?.data ?? [];
-
-      for (const a of items) {
-        const slug = getSlug(a);
-        const locale = getLocale(a) as L | undefined;
-        if (!slug || !locale) continue;
-
-        const loc = withSlash(`${SITE}/${locale}/blog/${slug}`);
-        if (seen.has(loc)) continue;
-        seen.add(loc);
-
-        nodes.push(urlNode(loc, {
-          lastmod: lastmodOf(a),
-          changefreq: "weekly",
-          priority: 0.6,
-          alternates: altsFromLocalizations(
-            "article",
-            { products: productsBase, practices: practicesBase },
-            { locale, slug },
-            getLocalizations(a)
-          ),
-        }));
+      const items: unknown[] = (await fetchCollection("articles", lng))?.data ?? [];
+      for (const item of items) {
+        const s = getSlug(item);
+        const l = getLocale(item);
+        if (!s || !l) continue;
+        const loc = siteUrl(`${l}/blog/${s}`);
+        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug);
+        const huSlug = locs.find((x) => x.locale === "hu")?.slug ?? s;
+        add(loc, {
+          lastmod: lastmod(item), changefreq: "weekly", priority: 0.6,
+          alternates: dedupeAlts([
+            { hreflang: l, href: siteUrl(`${l}/blog/${s}`) },
+            ...locs.map((x) => ({ hreflang: x.locale, href: siteUrl(`${x.locale}/blog/${x.slug}`) })),
+            { hreflang: "x-default", href: siteUrl(`hu/blog/${huSlug}`) },
+          ]),
+        });
       }
     }
   } catch (e) {
-    console.error("[sitemap] articles fetch failed:", e);
+    console.error("[sitemap] articles:", e);
   }
 
-  // PRODUCTS
+  // ── PRODUCTS ──────────────────────────────────────────────────────────
   try {
     for (const lng of LOCALES) {
-      const productsJson = await fetchCollection("/api/products", lng);
-      const items: any[] = productsJson?.data ?? [];
-
-      for (const p of items) {
-        const slug = getSlug(p);
-        const locale = getLocale(p) as L | undefined;
-        if (!slug || !locale) continue;
-
-        const base = productsBase[locale] || "products";
-        const loc = withSlash(`${SITE}/${locale}/${base}/${slug}`);
-        if (seen.has(loc)) continue;
-        seen.add(loc);
-
-        nodes.push(urlNode(loc, {
-          lastmod: lastmodOf(p),
-          changefreq: "weekly",
-          priority: 0.6,
-          alternates: altsFromLocalizations(
-            "product",
-            { products: productsBase, practices: practicesBase },
-            { locale, slug },
-            getLocalizations(p)
-          ),
-        }));
+      const base = productsBase[lng];
+      if (!base) continue;
+      const items: unknown[] = (await fetchCollection("products", lng))?.data ?? [];
+      for (const item of items) {
+        const s = getSlug(item);
+        const l = getLocale(item);
+        if (!s || !l) continue;
+        const loc = siteUrl(`${l}/${base}/${s}`);
+        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug);
+        const huSlug = locs.find((x) => x.locale === "hu")?.slug ?? s;
+        add(loc, {
+          lastmod: lastmod(item), changefreq: "weekly", priority: 0.6,
+          alternates: dedupeAlts([
+            { hreflang: l, href: siteUrl(`${l}/${base}/${s}`) },
+            ...locs.map((x) => ({
+              hreflang: x.locale,
+              href: siteUrl(`${x.locale}/${productsBase[x.locale as L] ?? base}/${x.slug}`),
+            })),
+            { hreflang: "x-default", href: siteUrl(`hu/${productsBase.hu}/${huSlug}`) },
+          ]),
+        });
       }
     }
   } catch (e) {
-    console.error("[sitemap] products fetch failed:", e);
+    console.error("[sitemap] products:", e);
   }
 
-  // PRACTICES
+  // ── PRACTICES ─────────────────────────────────────────────────────────
   try {
     for (const lng of LOCALES) {
-      const practicesJson = await fetchCollection("/api/practices", lng);
-      const items: any[] = practicesJson?.data ?? [];
-
-      for (const pr of items) {
-        const slug = getSlug(pr);
-        const locale = getLocale(pr) as L | undefined;
-        if (!slug || !locale) continue;
-
-        const base = practicesBase[locale] || "practices";
-        const loc = withSlash(`${SITE}/${locale}/${base}/${slug}`);
-        if (seen.has(loc)) continue;
-        seen.add(loc);
-
-        nodes.push(urlNode(loc, {
-          lastmod: lastmodOf(pr),
-          changefreq: "weekly",
-          priority: 0.6,
-          alternates: altsFromLocalizations(
-            "practice",
-            { products: productsBase, practices: practicesBase },
-            { locale, slug },
-            getLocalizations(pr)
-          ),
-        }));
+      const base = practicesBase[lng];
+      if (!base) continue;
+      const items: unknown[] = (await fetchCollection("practices", lng))?.data ?? [];
+      for (const item of items) {
+        const s = getSlug(item);
+        const l = getLocale(item);
+        if (!s || !l) continue;
+        const loc = siteUrl(`${l}/${base}/${s}`);
+        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug);
+        const huSlug = locs.find((x) => x.locale === "hu")?.slug ?? s;
+        add(loc, {
+          lastmod: lastmod(item), changefreq: "weekly", priority: 0.6,
+          alternates: dedupeAlts([
+            { hreflang: l, href: siteUrl(`${l}/${base}/${s}`) },
+            ...locs.map((x) => ({
+              hreflang: x.locale,
+              href: siteUrl(`${x.locale}/${practicesBase[x.locale as L] ?? base}/${x.slug}`),
+            })),
+            { hreflang: "x-default", href: siteUrl(`hu/${practicesBase.hu}/${huSlug}`) },
+          ]),
+        });
       }
     }
   } catch (e) {
-    console.error("[sitemap] practices fetch failed:", e);
+    console.error("[sitemap] practices:", e);
   }
 
-  const body =
-    `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${nodes.join("\n")}
-</urlset>`.trim();
-
-  return new Response(body, {
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, must-revalidate",
-    },
-  });
+  return new Response(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${nodes.join("\n")}\n</urlset>`,
+    {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+      },
+    }
+  );
 }
