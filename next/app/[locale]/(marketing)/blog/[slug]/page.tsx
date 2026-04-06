@@ -46,22 +46,33 @@ export default async function SingleArticlePage({
 }: {
   params: { slug: string; locale: string };
 }) {
-const article = await fetchContentType(
-  "articles",
-  {
-    filters: {
-      slug: params.slug,
-      locale: params.locale,
-    },
-    populate: {
-      seo: {
-        populate: ["metaImage"],
+  const article = await fetchContentType(
+    "articles",
+    {
+      filters: {
+        slug: params.slug,
+        locale: params.locale,
       },
-      image: true,
+      populate: {
+  seo: {
+    populate: ["metaImage"],
+  },
+  image: true,
+  dynamic_zone: {
+    on: {
+      "dynamic-zone.related-articles": {
+        populate: {
+          articles: {
+            populate: ["image", "categories"],
+          },
+        },
+      },
     },
   },
-  true,
-);
+},
+    },
+    true,
+  );
   if (!article) {
     return <div>Blog not found</div>;
   }

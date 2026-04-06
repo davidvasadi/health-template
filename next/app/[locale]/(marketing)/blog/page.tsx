@@ -69,11 +69,18 @@ export default async function Blog({
     "articles",
     {
       locale: params.locale,
+      sort: "publishedAt:desc",
     },
     false
   );
 
   const articles = relArray(articlesRes?.data).map(get) as Article[];
+
+  // featured cikk az első, többi publishedAt szerint
+  const sorted = [
+    ...articles.filter((a) => a.featured),
+    ...articles.filter((a) => !a.featured),
+  ];
 
   const baseSlug = norm(blogPage?.slug || blogPage?.Slug || "blog");
 
@@ -86,18 +93,15 @@ export default async function Blog({
     localizedSlugs[loc.locale] = s;
   }
 
-  // ✅ Blog page DZ mező: dynamic_zone
   const dynamicZone = Array.isArray(blogPage?.dynamic_zone)
     ? blogPage.dynamic_zone
     : [];
 
-  // ✅ structured data a blog-page seo mezőjéből
   const structuredData = blogPage?.seo?.structuredData ?? null;
 
   return (
     <div className="relative overflow-x-hidden py-20 md:py-0">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
-      {/* ✅ structured data hozzáadva */}
       {structuredData && (
         <script
           type="application/ld+json"
@@ -122,7 +126,7 @@ export default async function Blog({
             </Subheading>
           </div>
 
-          {articles.slice(0, 1).map((article: Article) => (
+          {sorted.slice(0, 1).map((article: Article) => (
             <BlogCard
               article={article}
               locale={params.locale}
@@ -130,7 +134,7 @@ export default async function Blog({
             />
           ))}
 
-          <BlogPostRows articles={articles} />
+          <BlogPostRows articles={sorted.slice(1)} />
         </div>
       </Container>
 
