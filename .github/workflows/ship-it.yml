@@ -124,21 +124,6 @@ jobs:
           script_stop: true
           command_timeout: 60m
           script: |
-            set -uo pipefail
-
-            DEPLOY_SCRIPT="/tmp/deploy_${DEPLOY_SHA}.sh"
-            RUN_LOG="/tmp/deploy_${DEPLOY_SHA}_run.log"
-            RC_FILE="/tmp/deploy_${DEPLOY_SHA}.rc"
-            rm -f "$RC_FILE"; : > "$RUN_LOG"
-
-            # ── Robust launch ──────────────────────────────────────────────
-            # Write the deploy body to a file and run it in its OWN session
-            # (setsid), fully detached from the SSH channel. This makes the
-            # build immune to drone-ssh / SSH session teardown, which was
-            # signal-killing the process a few seconds into the build (the
-            # body itself runs green end-to-end when launched from a real
-            # shell). Completion is tracked via an rc-marker file.
-            cat > "$DEPLOY_SCRIPT" <<'DEPLOY_EOF'
             if [ -z "${BASH_VERSION:-}" ]; then
               echo "INFO: switching to bash..."
               exec bash -lc "$0" "$@"
@@ -462,32 +447,3 @@ jobs:
 
             log "DEPLOY DONE ✅"
             exit 0
-            DEPLOY_EOF
-
-            # Launch detached in a fresh session; capture exit code to RC_FILE.
-            # Redirect the WHOLE setsid subtree away from the SSH channel
-            # (>/dev/null 2>&1 </dev/null) so only the foreground poll loop
-            # below holds the channel — otherwise the outer bash -c keeps it
-            # open for the whole deploy and drone-ssh mis-reports exit status.
-            setsid bash -c 'bash "$0" > "$1" 2>&1; echo "$?" > "$2"' \
-              "$DEPLOY_SCRIPT" "$RUN_LOG" "$RC_FILE" >/dev/null 2>&1 </dev/null &
-            disown || true
-
-            # Foreground: stream the detached log + heartbeat until it finishes.
-            # If this SSH session itself dies, the detached deploy keeps running
-            # and completes on the server regardless.
-            POS=0; HB=0
-            while [ ! -f "$RC_FILE" ]; do
-              SIZE=$(wc -c < "$RUN_LOG" 2>/dev/null || echo 0)
-              if [ "$SIZE" -gt "$POS" ]; then
-                tail -c +$((POS+1)) "$RUN_LOG"; POS=$SIZE
-              else
-                HB=$((HB+1)); [ $((HB % 6)) -eq 0 ] && echo "… deploy running ($(date -Is))"
-              fi
-              sleep 5
-            done
-            SIZE=$(wc -c < "$RUN_LOG" 2>/dev/null || echo 0)
-            if [ "$SIZE" -gt "$POS" ]; then tail -c +$((POS+1)) "$RUN_LOG"; fi
-            RC="$(cat "$RC_FILE" 2>/dev/null || echo 1)"
-            echo "=== deploy finished rc=$RC ==="
-            if [ "$RC" = "0" ]; then exit 0; else exit 1; fi
