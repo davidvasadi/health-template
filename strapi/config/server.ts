@@ -1,4 +1,4 @@
-// CI note: deploy pipeline runs detached (setsid), channel-clean exit — see .github/workflows/ship-it.yml
+// Deploy: push to main → CI builds + swaps on the server — see .github/workflows/ship-it.yml
 export default ({ env }) => ({
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
