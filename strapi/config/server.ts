@@ -1,3 +1,4 @@
+// CI note: deploy pipeline runs detached (setsid) — see .github/workflows/ship-it.yml
 export default ({ env }) => ({
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
