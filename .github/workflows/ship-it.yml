@@ -176,8 +176,9 @@ jobs:
             BUILD_DIR=""
             cleanup_worktree(){
               set +e
-              if [ -n "${BUILD_DIR:-}" ] && [ -d "${BUILD_DIR:-}" ]; then
+              if [ -n "${BUILD_DIR:-}" ]; then
                 ( cd "$REPO" && git worktree remove --force "$BUILD_DIR" >/dev/null 2>&1 ) || true
+                rm -rf "$BUILD_DIR" 2>/dev/null
                 ( cd "$REPO" && git worktree prune >/dev/null 2>&1 ) || true
               fi
               set -e
@@ -307,9 +308,11 @@ jobs:
             DEPLOY_ROOT="$REPO/.deploy"
             BUILD_DIR="$DEPLOY_ROOT/build-$DEPLOY_SHA"
             mkdir -p "$DEPLOY_ROOT"
+            git worktree remove --force "$BUILD_DIR" 2>/dev/null || true
             rm -rf "$BUILD_DIR" 2>/dev/null || true
+            git worktree prune
 
-            git worktree add --detach "$BUILD_DIR" "$DEPLOY_SHA" >/dev/null
+            git worktree add -f --detach "$BUILD_DIR" "$DEPLOY_SHA" >/dev/null
 
             if [ -f "$REPO/next/.env.production.local" ]; then
               cp -a "$REPO/next/.env.production.local" "$BUILD_DIR/next/.env.production.local"
