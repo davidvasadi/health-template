@@ -465,8 +465,13 @@ jobs:
             DEPLOY_EOF
 
             # Launch detached in a fresh session; capture exit code to RC_FILE.
+            # Redirect the WHOLE setsid subtree away from the SSH channel
+            # (>/dev/null 2>&1 </dev/null) so only the foreground poll loop
+            # below holds the channel — otherwise the outer bash -c keeps it
+            # open for the whole deploy and drone-ssh mis-reports exit status.
             setsid bash -c 'bash "$0" > "$1" 2>&1; echo "$?" > "$2"' \
-              "$DEPLOY_SCRIPT" "$RUN_LOG" "$RC_FILE" < /dev/null &
+              "$DEPLOY_SCRIPT" "$RUN_LOG" "$RC_FILE" >/dev/null 2>&1 </dev/null &
+            disown || true
 
             # Foreground: stream the detached log + heartbeat until it finishes.
             # If this SSH session itself dies, the detached deploy keeps running
@@ -482,7 +487,7 @@ jobs:
               sleep 5
             done
             SIZE=$(wc -c < "$RUN_LOG" 2>/dev/null || echo 0)
-            [ "$SIZE" -gt "$POS" ] && tail -c +$((POS+1)) "$RUN_LOG"
+            if [ "$SIZE" -gt "$POS" ]; then tail -c +$((POS+1)) "$RUN_LOG"; fi
             RC="$(cat "$RC_FILE" 2>/dev/null || echo 1)"
             echo "=== deploy finished rc=$RC ==="
-            exit "$RC"
+            if [ "$RC" = "0" ]; then exit 0; else exit 1; fi
