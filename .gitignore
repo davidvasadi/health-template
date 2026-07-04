@@ -4,3 +4,6 @@ node_modules
 .env
 
 /trash
+
+# Local working docs — not versioned
+/docs
