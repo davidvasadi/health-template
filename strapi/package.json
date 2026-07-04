@@ -19,12 +19,12 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@strapi/core": "^5.21.0",
-    "@strapi/plugin-cloud": "5.19.0",
-    "@strapi/plugin-seo": "^2.0.4",
-    "@strapi/plugin-users-permissions": "5.19.0",
-    "@strapi/strapi": "^5.33.2",
-    "@strapi/types": "^5.21.0",
+    "@strapi/core": "5.50.0",
+    "@strapi/plugin-cloud": "5.50.0",
+    "@strapi/plugin-seo": "^2.0.9",
+    "@strapi/plugin-users-permissions": "5.50.0",
+    "@strapi/strapi": "5.50.0",
+    "@strapi/types": "5.50.0",
     "better-sqlite3": "11.7.0",
     "patch-package": "^8.0.0",
     "pluralize": "^8.0.0",
