@@ -26,6 +26,8 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
+    pathname === "/icon.svg" ||
+    pathname === "/apple-icon.png" ||
     /^\/(robots\.txt|sitemap(?:-\w+)?\.xml|server-sitemap\.xml)$/i.test(pathname) ||
     /^\/(hu|en|de)\/(robots\.txt|sitemap(?:-\w+)?\.xml|server-sitemap\.xml)$/i.test(pathname)
   ) {
@@ -59,7 +61,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // ✅ minden tartalom, kivéve a technikai útvonalak + preview
-    "/((?!api|_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml|_preview/).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml|_preview/).*)",
     // lokalizált technikai fájlok – explicit engedjük át
     "/:locale(hu|en|de)/(robots.txt|sitemap.xml|sitemap-:any*.xml|server-sitemap.xml)",
   ],
