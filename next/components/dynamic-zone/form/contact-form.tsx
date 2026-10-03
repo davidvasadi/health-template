@@ -3,6 +3,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/elements/button";
 import type { FormInput as BaseFormInput } from "./types";
+import { event as gaEvent } from "@/lib/analytics/gtag";
 
 type InputDef = BaseFormInput & {
   required?: boolean;
@@ -272,6 +273,10 @@ export function ContactForm({
       setStatus({ ok: true, msg: T.status.success });
       setErrors({});
       formEl.reset();
+      // GA4 recommended event name — ezt a GA4 automatikusan felismeri
+      // kulcseseményként, és erre tudja importálni a Google Ads a
+      // "Kapcsolat"/"Ismerős" konverziós célt (lásd docs/analytics-fix.md).
+      gaEvent("generate_lead", { form: "contact" });
       onSuccess?.(payload);
     } catch (err: any) {
       setStatus({ ok: false, msg: err?.message ? String(err.message) : T.status.failGeneric });
