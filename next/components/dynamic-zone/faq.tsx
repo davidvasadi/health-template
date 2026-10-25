@@ -65,10 +65,12 @@ export const FAQ = ({
   heading,
   sub_heading,
   faqs,
+  headingAs = "h2",
 }: {
   heading: string;
   sub_heading: string;
   faqs: FaqItem[];
+  headingAs?: "h1" | "h2";
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
@@ -135,7 +137,7 @@ export const FAQ = ({
               <IconHelpHexagonFilled className="h-6 w-6 text-breaker-bay-900" />
             </FeatureIconContainer>
 
-            <Heading as="h1" className="mt-4 text-neutral-900 tracking-tight">
+            <Heading as={headingAs} className="mt-4 text-neutral-900 tracking-tight">
               {heading}
             </Heading>
 

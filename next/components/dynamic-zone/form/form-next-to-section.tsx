@@ -27,7 +27,9 @@ export function FormNextToSection({
   section,
   Location,
   social_media_icon_links, // jöhet propként is; ha nem, section-ből olvassuk
+  headingAs = "h2",
 }: {
+  headingAs?: "h1" | "h2";
   heading: string;
   sub_heading: string;
   form: { inputs?: FormInput[] } | any;
@@ -213,7 +215,11 @@ const L = Labels[locale];
               >
                 {/* Fejléc */}
                 <div>
-                  <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight text-breaker-bay-950">{heading}</h1>
+                  {React.createElement(
+                    headingAs,
+                    { className: "mt-1 text-3xl font-bold leading-tight tracking-tight text-breaker-bay-950" },
+                    heading
+                  )}
                   <p className="mt-3 text-neutral-700 text-base leading-relaxed">{sub_heading}</p>
                   {loc && (
                     <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-breaker-bay-50 text-breaker-bay-900 px-2.5 py-1 text-xs ring-1 ring-breaker-bay-200">

@@ -64,7 +64,9 @@ export default async function fetchContentType(
       queryParams.status = "draft";
     }
 
-    const url = new URL(`api/${contentType}`, process.env.NEXT_PUBLIC_API_URL);
+    // Szerveroldalon belső címen érjük el a Strapit (pl. http://127.0.0.1:1337),
+    // különben a kérés kimegy a publikus domainre, és az nginx api_limit 503-mal dobja
+    const url = new URL(`api/${contentType}`, process.env.STRAPI_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL);
     const href = `${url.href}?${qs.stringify(queryParams)}`;
 
     const response = await fetch(href, {

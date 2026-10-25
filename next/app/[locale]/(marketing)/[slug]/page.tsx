@@ -200,10 +200,10 @@ export async function generateMetadata({
   const privacySlug = await getPrivacySlug(params.locale);
   if (params.slug === privacySlug) {
     // ✅ privacy saját localizedPathnames-szel
+    // A privacy-policy content type-nak nincs `seo` mezője (populate: seo → 400), alap meta elég
     const localizedSlugs = await getPrivacyLocalizedSlugs(params.locale);
-    const rec: any = await fetchContentType(PRIVACY_UID, { locale: params.locale, populate: { seo: { populate: "metaImage" } } }, true);
     const pathname = `/${params.locale}/${privacySlug}/`;
-    return generateMetadataObject(rec?.seo, {
+    return generateMetadataObject(undefined, {
       locale: params.locale as "hu" | "en" | "de",
       pathname,
       localizedPathnames: buildLocalizedPathnames(localizedSlugs, privacySlug),

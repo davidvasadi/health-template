@@ -155,12 +155,12 @@ export function HeroMedia({
                     "bg-black/28 backdrop-blur-sm border border-white/10"
                 )}
             >
-                <div
+                <h1
                     className="text-white font-extrabold tracking-tight leading-[1.05] text-3xl sm:text-4xl lg:text-5xl line-clamp-2"
                     style={{ textShadow: "0 10px 30px rgba(0,0,0,0.55)" }}
                 >
                     {title}
-                </div>
+                </h1>
             </div>
         </div>
     );

@@ -173,7 +173,8 @@ export default async function PracticesPage({
 
       <div className="relative w-full overflow-x-hidden">
         <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-visible">
-          <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} />
+          {/* A listaoldalnak nincs saját H1-e, a FAQ címe adja (mint eddig) */}
+          <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} promoteFirstHeading />
           <DynamicZoneManager dynamicZone={ctaDZ} locale={params.locale} />
         </div>
       </div>
