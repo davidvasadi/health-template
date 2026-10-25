@@ -147,10 +147,11 @@ function formatSlotLabel(d: Date, locale: string) {
 // Segédfüggvények — CTA (URL FIX: külső/belső/anchor + elgépelés)
 // =============================================
 function sanitizeUrl(u: string) {
+  // Csak az egy perjeles elgépelést javítjuk (https:/x → https://x), a helyes címet nem bántjuk
   return String(u || "")
-    .replace(/^https:\//i, "https://")
-    .replace(/^http:\//i, "http://")
-    .trim();
+    .trim()
+    .replace(/^https:\/(?!\/)/i, "https://")
+    .replace(/^http:\/(?!\/)/i, "http://");
 }
 
 function isExternalUrl(u: string) {
