@@ -8,6 +8,8 @@ import { ProductItems } from "@/components/products/product-items";
 import fetchContentType from "@/lib/strapi/fetchContentType";
 import { generateMetadataObject } from "@/lib/shared/metadata";
 import ClientSlugHandler from "../ClientSlugHandler";
+import { Breadcrumb, resolveBreadcrumb } from "@/components/navbar/breadcrumb";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 
 const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "").toLowerCase();
 const get = (x: any) => x?.attributes ?? x;
@@ -89,11 +91,15 @@ export default async function Products({ params }: { params: { locale: string } 
   }
 
   const featured = products.filter((p: any) => !!p?.featured);
-  const structuredData = productPage?.seo?.structuredData ?? null;
+  const crumb = await resolveBreadcrumb(params.locale, baseSlug, productPage?.heading);
+  // cég-blokk a layoutból; ha van breadcrumb, annak BreadcrumbList-je a kódból jön
+  const structuredData = cleanStructuredData(productPage?.seo?.structuredData, { stripBreadcrumb: !!crumb });
 
   return (
     <div className="relative overflow-hidden w-full">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      {/* a listaoldalnak nincs látható címe: a breadcrumb utolsó eleme adja a H1-et */}
+      <Breadcrumb crumb={crumb} asH1 />
       {structuredData && (
         <script
           type="application/ld+json"

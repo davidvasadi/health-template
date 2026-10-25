@@ -4,8 +4,10 @@ import { Metadata } from "next";
 import { Container } from "@/components/container";
 import { AmbientColor } from "@/components/decorations/ambient-color";
 import fetchContentType from "@/lib/strapi/fetchContentType";
-import { generateMetadataObject } from "@/lib/shared/metadata";
+import { generateMetadataObject, withoutCanonical } from "@/lib/shared/metadata";
 import ClientSlugHandler from "../ClientSlugHandler";
+import { Breadcrumb, resolveBreadcrumb } from "@/components/navbar/breadcrumb";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { PracticeItems } from "@/components/practices/practice-items";
 
 import DynamicZoneManager from "@/components/dynamic-zone/manager";
@@ -81,7 +83,7 @@ export async function generateMetadata({
 
   const baseSlug = norm(rec?.slug || rec?.Slug || "practices");
 
-  return generateMetadataObject(rec?.seo, {
+  return generateMetadataObject(withoutCanonical(rec?.seo), {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${baseSlug}`,
   });
@@ -142,11 +144,14 @@ export default async function PracticesPage({
   const ctaDZ = Array.isArray(practicesPage?.cta) ? practicesPage.cta : [];
 
   // ✅ structured data a seo mezőjéből
-  const structuredData = practicesPage?.seo?.structuredData ?? null;
+  const crumb = await resolveBreadcrumb(params.locale, baseSlug);
+  // cég-blokk a layoutból; ha van breadcrumb, annak BreadcrumbList-je a kódból jön
+  const structuredData = cleanStructuredData(practicesPage?.seo?.structuredData, { stripBreadcrumb: !!crumb });
 
   return (
     <div className="relative w-full overflow-x-hidden">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      <Breadcrumb crumb={crumb} />
       {/* ✅ structured data hozzáadva */}
       {structuredData && (
         <script
@@ -173,8 +178,7 @@ export default async function PracticesPage({
 
       <div className="relative w-full overflow-x-hidden">
         <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-visible">
-          {/* A listaoldalnak nincs saját H1-e, a FAQ címe adja (mint eddig) */}
-          <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} promoteFirstHeading />
+          <DynamicZoneManager dynamicZone={faqDZ} locale={params.locale} />
           <DynamicZoneManager dynamicZone={ctaDZ} locale={params.locale} />
         </div>
       </div>

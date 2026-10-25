@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconChevronLeft } from "@tabler/icons-react";
 import { Container } from "./container";
 import { Link } from "next-view-transitions";
 import { format } from "date-fns";
@@ -22,12 +22,14 @@ function BackLinkSimple({ locale }: { locale: string }) {
   const href = `/${locale}/blog`;
 
   return (
-    <div className="flex items-center gap-2 px-2 py-4">
-      <Link href={href} className="flex items-center gap-2 group" aria-label={label}>
-        <IconArrowLeft className="h-4 w-4 text-neutral-900 group-hover:text-breaker-bay-700 transition-colors" />
-        <span className="text-sm text-neutral-900 group-hover:text-breaker-bay-700 transition-colors">
-          {label}
-        </span>
+    <div className="flex items-center px-2 py-4">
+      <Link
+        href={href}
+        aria-label={label}
+        title={label}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 ring-neutral-200 shadow-sm text-breaker-bay-900 transition hover:bg-breaker-bay-50 hover:ring-breaker-bay-200"
+      >
+        <IconChevronLeft className="h-5 w-5" stroke={2} />
       </Link>
     </div>
   );

@@ -56,6 +56,7 @@ export type Plan = {
 
 export type PricingProps = {
   heading: string;
+  headingAs?: "h1" | "h2";
   sub_heading?: string;
   plans: Plan[];
 };
@@ -218,7 +219,7 @@ const fadeUp = {
    - Külső border az egész köré
    - A sectionből kiszedve a korábbi pt/pb/px wrapper paddings
 ────────────────────────────────────────────────────────────────────────────── */
-export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans }) => {
+export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans, headingAs = "h2" }) => {
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const prefersReduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
@@ -244,7 +245,7 @@ export const Pricing: React.FC<PricingProps> = ({ heading, sub_heading, plans })
           </motion.div>
 
           <motion.div variants={fadeUp} style={{ y: yHeading }}>
-            <Heading as="h2" className={cn("pt-4", t.heading)}>
+            <Heading as={headingAs} className={cn("pt-4", t.heading)}>
               {heading}
             </Heading>
           </motion.div>

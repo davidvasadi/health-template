@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "next-view-transitions";
 import { cn } from "@/lib/utils";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconChevronLeft } from "@tabler/icons-react";
 
 import { UI, baseLocale } from "./i18n";
 import { get, unwrapArrayRel, norm, localizeHref, safeLower } from "./strapi";
@@ -157,13 +157,14 @@ export function SinglePractice({
         <div className="mb-5">
           <Link
             href={`/${locale}/${safeBase}` as never}
+            aria-label={t.back}
+            title={t.back}
             className={cn(
-              "inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold text-[rgba(5,124,128,1)] hover:bg-black/5 transition",
+              "inline-flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 ring-neutral-200 shadow-sm text-breaker-bay-900 transition hover:bg-breaker-bay-50 hover:ring-breaker-bay-200",
               focusRing
             )}
           >
-            <IconArrowLeft className="h-4 w-4" />
-            {t.back}
+            <IconChevronLeft className="h-5 w-5" stroke={2} />
           </Link>
         </div>
 

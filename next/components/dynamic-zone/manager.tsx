@@ -15,8 +15,13 @@ interface Props {
   promoteFirstHeading?: boolean;
 }
 
-// Ezek a szekciók tudnak H1-et adni, ha az oldalon nincs Hero
-const HEADING_PROMOTABLE = ['dynamic-zone.faq', 'dynamic-zone.form-next-to-section'];
+// Ezek a szekciók tudnak H1-et adni, ha az oldalon nincs Hero (a zónában az első ilyen kapja)
+const HEADING_PROMOTABLE = [
+  'dynamic-zone.experience',
+  'dynamic-zone.pricing',
+  'dynamic-zone.form-next-to-section',
+  'dynamic-zone.faq',
+];
 
 // FONTOS: korábban MINDEN dynamic-zone szekció `ssr:false` volt, ami azt
 // jelentette, hogy a főoldal teljes szöveges tartalma (címsorok, FAQ,

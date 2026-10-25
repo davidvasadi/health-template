@@ -1,5 +1,6 @@
 // next/app/[locale]/(marketing)/vouchers/[slug]/page.tsx
 import { Metadata } from "next";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { notFound, redirect } from "next/navigation";
 
 import fetchContentType from "@/lib/strapi/fetchContentType";
@@ -140,7 +141,8 @@ export default async function VoucherDetailPage({
   const vouchers = [voucher].map(getItem);
 
   // ✅ structured data a voucher seo mezőjéből
-  const structuredData = voucher?.seo?.structuredData ?? null;
+  // a cég-blokkot a layout adja (központi, részletes), a Strapi-s változatot kiszűrjük
+  const structuredData = cleanStructuredData(voucher?.seo?.structuredData);
 
   return (
     <div className="relative overflow-hidden w-full">

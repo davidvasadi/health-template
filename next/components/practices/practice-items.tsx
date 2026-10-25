@@ -194,7 +194,7 @@ export function PracticeItems({
         <div className="mb-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-7">
             <div>
-              <Heading as="h2" className={cn("text-left", typo.h2)}>
+              <Heading as="h1" className={cn("text-left", typo.h2)}>
                 {heading}
               </Heading>
 

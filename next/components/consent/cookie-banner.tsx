@@ -36,9 +36,12 @@ const T = {
 
 type Locale = "hu" | "en" | "de";
 
+// Az adatkezelési oldal slugja nyelvenként (Strapi privacy-policy)
+const PRIVACY_SLUG: Record<Locale, string> = { hu: "adatkezeles", en: "privacy", de: "datenschutz" };
+
 export default function CookieBanner({
   locale = "hu",
-  privacyHref = `/${locale}/privacy`,
+  privacyHref = `/${locale}/${PRIVACY_SLUG[locale]}`,
   corner = "right", // 'right' | 'left'
 }: {
   locale?: Locale;

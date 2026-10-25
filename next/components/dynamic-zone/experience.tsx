@@ -32,6 +32,7 @@ import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 import { Container } from "@/components/container";
+import { cn } from "@/lib/utils";
 
 /**
  * StrapiImage: a projekt saját komponense (Next/Image wrapper jelleggel).
@@ -104,6 +105,7 @@ export interface ExperienceProps {
 
   badge_label?: string | null;
   heading?: string | null;
+  headingAs?: "h1" | "h2";
   sub_heading?: string | null;
 
   experience_card?: ExperienceCardData | any;
@@ -350,7 +352,8 @@ const StrapiImg = StrapiImage as unknown as React.ComponentType<any>;
  * =========================================================
  */
 export const Experience = (props: ExperienceProps) => {
-  const { locale, badge_label, heading, sub_heading } = props;
+  const { locale, badge_label, heading, sub_heading, headingAs = "h2" } = props;
+  const HeadingTag = headingAs;
 
   /**
    * Framer: reduced motion figyelés (ha valaki kikapcsolta az animációt).
@@ -535,7 +538,11 @@ export const Experience = (props: ExperienceProps) => {
      * - fehér háttér
      * - felső/alsó padding a design alapján
      */
-    <motion.section ref={sectionRef} className="bg-white py-14 sm:py-18 lg:py-24">
+    <motion.section
+      ref={sectionRef}
+      // ha ez az oldal teteje (H1), mobilon is legyen hely a navbar alatti breadcrumbnak
+      className={cn("bg-white py-14 sm:py-18 lg:py-24", headingAs === "h1" && "pt-24 sm:pt-24")}
+    >
       <Container className="max-w-7xl mx-auto px-4 md:px-10 xl:px-4 py-10 ">
         {/* =========================================================
             1) FEJLÉC RÉSZ (anim: fadeInUp + parallax)
@@ -561,9 +568,9 @@ export const Experience = (props: ExperienceProps) => {
 
           {/* nagy heading (2 sor) */}
           {(headingLine1 || headingLine2) && (
-            <h2 className="mt-5 max-w-5xl bg-clip-text bg-gradient-to-b from-neutral-800 via-white to-white text-left text-neutral-950 tracking-tight text-4xl md:text-7xl font-semibold">
+            <HeadingTag className="mt-5 max-w-5xl bg-clip-text bg-gradient-to-b from-neutral-800 via-white to-white text-left text-neutral-950 tracking-tight text-4xl md:text-7xl font-semibold">
               {headingLine1} {headingLine2}
-            </h2>
+            </HeadingTag>
           )}
 
           {/* subheading */}

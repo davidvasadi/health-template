@@ -352,7 +352,7 @@ export function Featured({
           <figure
             className="
               relative overflow-hidden rounded-2xl ring-1 ring-breaker-bay-200/50 shadow-[0_18px_60px_-26px_rgba(3,57,63,0.2)]
-              col-span-12 row-start-2 row-end-9
+              col-span-12 row-start-3 row-end-9
               md:col-span-7 md:col-start-6 md:row-start-3 md:row-end-13
               md:-translate-x-4 md:-translate-y-4 md:scale-[1.035]
             "

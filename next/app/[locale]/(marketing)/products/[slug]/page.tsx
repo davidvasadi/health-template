@@ -1,5 +1,6 @@
 // next/app/[locale]/(marketing)/products/[slug]/page.tsx
 import { Metadata } from "next";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { redirect } from "next/navigation";
 import { Container } from "@/components/container";
 import { AmbientColor } from "@/components/decorations/ambient-color";
@@ -97,7 +98,8 @@ export default async function SingleProductPage({
     redirect(`/${params.locale}/${base}`);
   }
 
-  const structuredData = product?.seo?.structuredData ?? null;
+  // a cég-blokkot a layout adja (központi, részletes), a Strapi-s változatot kiszűrjük
+  const structuredData = cleanStructuredData(product?.seo?.structuredData);
 
   return (
     <div className="relative overflow-hidden w-full">

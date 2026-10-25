@@ -1,5 +1,6 @@
 // next/app/[locale]/(marketing)/[slug]/page.tsx
 import { Metadata } from "next";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { notFound } from "next/navigation";
 
 import PageContent from "@/lib/shared/PageContent";
@@ -323,7 +324,7 @@ export default async function Page({ params }: { params: { locale: string; slug:
     const page = getSingle(pageRaw);
     if (!page) return notFound();
 
-    const safeStructuredData = sanitizeStructuredData(page?.seo?.structuredData);
+    const safeStructuredData = cleanStructuredData(sanitizeStructuredData(page?.seo?.structuredData));
 
     let vouchers = relArray(page?.vouchers).map(getItem);
 

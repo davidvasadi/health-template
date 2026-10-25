@@ -55,6 +55,10 @@ const staticRedirects = [
   { source: "/de/kapcsolat",          destination: "/de/kontakt",        permanent: true },
   { source: "/en/kapcsolat",          destination: "/en/contact-us",     permanent: true },
 
+  // Adatkezelés: a /privacy útvonal csak az angolban a valódi cím (hu/de: duplikált tartalom volt)
+  { source: "/hu/privacy",            destination: "/hu/adatkezeles",    permanent: true },
+  { source: "/de/privacy",            destination: "/de/datenschutz",    permanent: true },
+
   // Régi gyakorlatok struktúra
   { source: "/hu/gyakorlatok/:slug*", destination: "/hu/otthoni-torna-gyakorlatok/:slug*", permanent: true },
   { source: "/en/gyakorlatok/:slug*", destination: "/en",                permanent: true },

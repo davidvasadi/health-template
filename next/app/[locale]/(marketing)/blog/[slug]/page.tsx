@@ -1,5 +1,6 @@
 // app/[locale]/(marketing)/blog/[slug]/page.tsx
 import React from "react";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { Metadata } from "next";
 
 import { BlogLayout } from "@/components/blog-layout";
@@ -86,7 +87,8 @@ export default async function SingleArticlePage({
   );
 
   // ✅ structured data a cikk seo mezőjéből
-  const structuredData = article?.seo?.structuredData ?? null;
+  // a cég-blokkot a layout adja (központi, részletes), a Strapi-s változatot kiszűrjük
+  const structuredData = cleanStructuredData(article?.seo?.structuredData);
 
   return (
     <BlogLayout article={article} locale={params.locale}>

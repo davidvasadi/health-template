@@ -16,6 +16,8 @@ import { Article } from "@/types/types";
 import { generateMetadataObject } from "@/lib/shared/metadata";
 
 import ClientSlugHandler from "../ClientSlugHandler";
+import { Breadcrumb, resolveBreadcrumb } from "@/components/navbar/breadcrumb";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 
 const norm = (s?: string) => (s ?? "").replace(/^\/|\/$/g, "");
 
@@ -105,11 +107,14 @@ export default async function Blog({
     ? blogPage.dynamic_zone
     : [];
 
-  const structuredData = blogPage?.seo?.structuredData ?? null;
+  const crumb = await resolveBreadcrumb(params.locale, baseSlug);
+  // cég-blokk a layoutból; ha van breadcrumb, annak BreadcrumbList-je a kódból jön
+  const structuredData = cleanStructuredData(blogPage?.seo?.structuredData, { stripBreadcrumb: !!crumb });
 
   return (
     <div className="relative overflow-x-hidden py-20 md:py-0">
       <ClientSlugHandler localizedSlugs={localizedSlugs} />
+      <Breadcrumb crumb={crumb} />
       {structuredData && (
         <script
           type="application/ld+json"

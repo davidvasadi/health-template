@@ -1,9 +1,10 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { Container } from "@/components/container";
 import { AmbientColor } from "@/components/decorations/ambient-color";
 import fetchContentType from "@/lib/strapi/fetchContentType";
-import { generateMetadataObject } from "@/lib/shared/metadata";
+import { generateMetadataObject, withoutCanonical } from "@/lib/shared/metadata";
 import { SinglePractice } from "@/components/practices/single-practice";
 import ClientSlugHandler from "../../ClientSlugHandler";
 
@@ -71,7 +72,7 @@ export async function generateMetadata({
     true
   );
 
-  return generateMetadataObject(pageData?.seo, {
+  return generateMetadataObject(withoutCanonical(pageData?.seo), {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${base}/${params.slug}`, // ✅ javított
   });
@@ -111,7 +112,8 @@ export default async function PracticeDetailPage({
   }
 
   // ✅ structured data a practice seo mezőjéből
-  const structuredData = practice?.seo?.structuredData ?? null;
+  // a cég-blokkot a layout adja (központi, részletes), a Strapi-s változatot kiszűrjük
+  const structuredData = cleanStructuredData(practice?.seo?.structuredData);
 
   return (
     <div className="relative overflow-hidden w-full">

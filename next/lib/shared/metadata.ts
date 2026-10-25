@@ -21,6 +21,7 @@ const SITE_RAW = toStr(
 const SITE = (SITE_RAW || 'https://theplacestudio.hu').replace(/\/+$/, '');
 
 const OLD_HOSTS = new Set([
+  'www.theplacestudio.hu', // a Strapi SEO-ban néhol www-vel van megadva a canonical
   'csontkovacsbence.hu',
   'www.csontkovacsbence.hu',
   'peldadomain.hu',
@@ -121,6 +122,14 @@ function parseRobots(metaRobots?: unknown): Metadata['robots'] {
     index: !tokens.includes('noindex'),
     follow: !tokens.includes('nofollow'),
   };
+}
+
+// A Strapiban megadott canonical eldobása, hogy a valódi útvonalból számolódjon
+// (pl. gyakorlatok: a CMS-ben még a régi /hu/gyakorlatok/... cím szerepel)
+export function withoutCanonical(seo: any) {
+  if (!seo) return seo;
+  const { canonicalURL, canonicalUrl, canonical, canonical_url, ...rest } = seo;
+  return rest;
 }
 
 export function generateMetadataObject(

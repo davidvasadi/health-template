@@ -9,6 +9,7 @@ import { CartProvider } from "@/context/cart-context";
 import { ViewTransitions } from "next-view-transitions";
 import fetchContentType from "@/lib/strapi/fetchContentType";
 import CookieBanner from "@/components/consent/cookie-banner";
+import { businessJsonLd } from "@/lib/shared/structured-data";
 
 import RouteOverlay from "@/components/preload/overlay";
 
@@ -53,10 +54,12 @@ export default async function LocaleLayout({
 
           {/* app-shell wrapper (NINCS transform rajta) */}
           <div id="app-shell">
+            {/* Központi, részletes cégadatok (Chiropractor/MedicalBusiness) minden oldalon */}
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(await businessJsonLd(locale)) }} />
             <Navbar data={pageData.navbar} locale={locale} />
             {children}
             <Footer data={pageData.footer} locale={locale} />
-            <CookieBanner locale={locale as "hu" | "en" | "de"} privacyHref={`/${locale}/privacy`} />
+            <CookieBanner locale={locale as "hu" | "en" | "de"} />
           </div>
 
           {/* globális route overlay */}

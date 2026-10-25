@@ -85,7 +85,7 @@ const Labels = {
     dataPrivacy: "Adataidat bizalmasan kezeljük.",
     privacyLinkText: "Adatkezelési tájékoztató",
     // bookingNoObligation: "Az időpontfoglalás nem jár kötelezettséggel.",
-    privacyHref: "/privacy",
+    privacyHref: "/adatkezeles",
   },
   en: {
     dataPrivacy: "We handle your data confidentially.",
@@ -97,7 +97,7 @@ const Labels = {
     dataPrivacy: "Wir behandeln deine Daten vertraulich.",
     privacyLinkText: "Datenschutzerklärung",
     // bookingNoObligation: "Die Terminbuchung ist unverbindlich.",
-    privacyHref: "/privacy",
+    privacyHref: "/datenschutz",
   },
 } as const;
 
