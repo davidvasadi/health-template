@@ -65,11 +65,19 @@ export default async function Blog({
   const blogPageRaw = await getBlogPageSingle(params.locale);
   const blogPage = get(blogPageRaw);
 
+  // Csak a listához kellő mezők: populate nélkül a Strapi deepPopulate middleware
+  // a kategóriákba az összes cikket is beágyazza teljes tartalommal (~14 MB)
   const articlesRes = await fetchContentType(
     "articles",
     {
       locale: params.locale,
       sort: "publishedAt:desc",
+      fields: ["title", "slug", "description", "publishedAt", "featured", "locale"],
+      populate: {
+        image: { fields: ["url", "alternativeText", "width", "height"] },
+        categories: { fields: ["name"] },
+      },
+      pagination: { pageSize: 100 },
     },
     false
   );

@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Link } from "next-view-transitions";
 import { LocaleSwitcher } from "../locale-switcher";
+import { navHref } from "./nav-href";
 
 /* ──────────────────────────────────────────────────────────────────────────────
    Paletta + scope + CTA (Hero-azonos) + SHEEN mixin (pseudo-element)
@@ -246,7 +247,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
           <Logo locale={locale} image={logo?.image} company={logo?.company} />
           <div className="nav-links flex items-center gap-1.5">
             {leftNavbarItems.map((item) => {
-              const href = `/${locale}${item.URL}`;
+              const href = navHref(locale, item.URL);
               const active = isActive(href);
               return (
                 <NavbarItem
@@ -269,7 +270,7 @@ export const DesktopNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale 
             <Button
               key={item.text}
               as={Link}
-              href={`/${locale}${item.URL}`}
+              href={navHref(locale, item.URL)}
               className={cn(" btn-glass px-3 py-1 rounded-md", ctaClass(index))}
               {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
             >

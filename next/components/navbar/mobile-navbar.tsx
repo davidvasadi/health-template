@@ -16,6 +16,7 @@ import { IoIosMenu, IoIosClose } from "react-icons/io";
 import { Button } from "@/components/elements/button";
 import { Logo } from "@/components/logo";
 import { LocaleSwitcher } from "../locale-switcher";
+import { navHref } from "./nav-href";
 
 /* ──────────────────────────────────────────────────────────────────────────────
    Min. CSS: csak a CTA "sheen" effekt (nincs benne brand szín)
@@ -240,7 +241,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                     return (
                       <div key={navItem.text} className="flex flex-col gap-2">
                         {navItem.children.map((c) => {
-                          const href = `/${locale}${c.URL}`;
+                          const href = navHref(locale, c.URL);
                           const active = isActive(href);
                           return (
                             <Link
@@ -262,7 +263,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                       </div>
                     );
                   }
-                  const href = `/${locale}${navItem.URL}`;
+                  const href = navHref(locale, navItem.URL);
                   const active = isActive(href);
                   return (
                     <Link
@@ -289,7 +290,7 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
                   <Button
                     key={item.text}
                     as={Link}
-                    href={`/${locale}${item.URL}`}
+                    href={navHref(locale, item.URL)}
                     className={cn(ctaClass(index), "w-full")}
                     {...(item.target ? { target: item.target as "_blank" | "_self" } : {})}
                     onClick={() => setOpen(false)}
