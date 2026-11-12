@@ -1,7 +1,7 @@
 // app/[locale]/layout.tsx
 import React from "react";
 import { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { generateMetadataObject } from "@/lib/shared/metadata";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -13,10 +13,14 @@ import { businessJsonLd } from "@/lib/shared/structured-data";
 
 import RouteOverlay from "@/components/preload/overlay";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Inter a projektbe téve (2026-11): a build nem a Google Fonts-ról tölti le — a Next 14.2.5 font-letöltője egy furcsa
+// Google-válasznál elbukott, és vele a deploy is. Ugyanaz a betű, mint amit a Google adott: Inter (google/fonts, OFL),
+// opsz=14 rögzítve (a Google is ezt a példányt szolgálta ki), 400–900 vastagság, latin + latin-ext (ő, ű).
+const inter = localFont({
+  src: "../fonts/Inter-latin-var.woff2",
+  weight: "400 900",
+  style: "normal",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 export async function generateMetadata({
