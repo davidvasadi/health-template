@@ -79,8 +79,8 @@ const staticRedirects = [
   { source: "/en/videok/:slug*", destination: "/en", permanent: true },
   { source: "/de/videok/:slug*", destination: "/de", permanent: true },
 
-  // Gyökér
-  { source: "/", destination: "/hu", permanent: false },
+  // Gyökér — tartós (308): a főoldalra mutató linkek értéke így átszáll a /hu-ra (ideiglenesnél nem)
+  { source: "/", destination: "/hu", permanent: true },
 ];
 
 const nextConfig = {
