@@ -7,6 +7,9 @@ const LOCALES = i18n.locales as unknown as string[];
 const DEFAULT = (i18n.defaultLocale as unknown as string) || "hu";
 
 function safeLocale(req: NextRequest): string {
+  // Fejléc nélkül (Googlebot és más robotok nem küldenek Accept-Language-et) a Negotiator a lista elejét, az angolt adná
+  // → a nyelv nélküli régi linkek a robotot az angol oldalra vitték. Ilyenkor az alapnyelv (magyar) a helyes.
+  if (!req.headers.get("accept-language")) return DEFAULT;
   const headers: Record<string, string> = {};
   req.headers.forEach((v, k) => (headers[k] = v));
   const preferred = new Negotiator({ headers }).languages(LOCALES);
