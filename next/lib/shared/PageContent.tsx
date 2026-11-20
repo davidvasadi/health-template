@@ -3,9 +3,11 @@ import { AmbientColor } from '@/components/decorations/ambient-color';
 import DynamicZoneManager from '@/components/dynamic-zone/manager'
 import { Breadcrumb, resolveBreadcrumb } from '@/components/navbar/breadcrumb';
 import { cleanStructuredData } from '@/lib/shared/structured-data';
+import { slimStrapi } from '@/lib/strapi/slim';
 
 export default async function PageContent({ pageData }: { pageData: any }) {
-  const dynamicZone = pageData?.dynamic_zone;
+  // a szakaszok kliens-komponensek: a képek felesleges Strapi-metaadata ne kerüljön a HTML-be (lib/strapi/slim.ts)
+  const dynamicZone = slimStrapi(pageData?.dynamic_zone);
 
   const hasHero = Array.isArray(dynamicZone) && dynamicZone.some((c: any) => c?.__component === 'dynamic-zone.hero');
   const crumb = hasHero ? null : await resolveBreadcrumb(pageData?.locale, pageData?.slug ?? '');

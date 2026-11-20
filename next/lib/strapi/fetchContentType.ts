@@ -43,6 +43,9 @@ export interface Practice {
   localizations?: any[];
 }
 
+/** ennyi másodpercig adja a Next a gyorsítótárból a Strapi-tartalmat (élő oldal); előnézetben nincs gyorsítótár */
+export const CONTENT_REVALIDATE_SECONDS = 60;
+
 export function spreadStrapiData(data: StrapiResponse): StrapiData | null {
   if (Array.isArray(data.data) && data.data.length > 0) return data.data[0];
   if (!Array.isArray(data.data)) return data.data;
@@ -69,10 +72,13 @@ export default async function fetchContentType(
     const url = new URL(`api/${contentType}`, process.env.STRAPI_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL);
     const href = `${url.href}?${qs.stringify(queryParams)}`;
 
-    const response = await fetch(href, {
-      method: "GET",
-      cache: "no-store",
-    });
+    // Gyorsítótár (2026-11-20): eddig MINDEN oldalbetöltés friss Strapi-lekérést indított (cache: no-store) — a
+    // főoldalon több ugyanolyat is —, ettől volt lassú a szerverválasz (Lighthouse: ~930 ms). Most a tartalom 60 mp-ig
+    // a Next adat-gyorsítótárából jön; a Strapiban mentett változás legfeljebb ~1 perc múlva jelenik meg az oldalon.
+    // Előnézeti (draft) módban mindig friss.
+    const response = await fetch(href, isEnabled
+      ? { method: "GET", cache: "no-store" }
+      : { method: "GET", next: { revalidate: CONTENT_REVALIDATE_SECONDS } });
 
     // ✅ silent módban ne dobjunk és ne logoljunk — csak adjunk vissza null-t
     if (!response.ok) {
