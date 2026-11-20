@@ -4,6 +4,7 @@
 // - A Strapi SEO structuredData-ból a cég-típusú blokkokat (és ahol a kód generálja, a BreadcrumbList-et)
 //   kiszűrjük, hogy ne legyen több, egymásnak ellentmondó változat.
 import fetchContentType from "@/lib/strapi/fetchContentType";
+import { conditionsFor } from "./conditions";
 
 const SITE = (process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplacestudio.hu").replace(/\/+$/, "");
 
@@ -99,7 +100,8 @@ export async function businessJsonLd(locale: string) {
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",
-        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        // hétfőtől szombatig — vasárnap zárva (mint az oldal láblécében és az időpontválasztóban)
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
         opens: BUSINESS.opens,
         closes: BUSINESS.closes,
       },
@@ -112,6 +114,8 @@ export async function businessJsonLd(locale: string) {
       { "@type": "Place", name: "Újpest" },
     ],
     knowsLanguage: ["hu", "en", "de"],
+    // a kezelt panaszok — ugyanaz a lista, ami a főoldal „Mit kezelünk?” szakaszában látszik (lib/shared/conditions.ts)
+    knowsAbout: conditionsFor(loc).map((c) => c.name),
     sameAs: [...BUSINESS.sameAs, BUSINESS.mapUrl],
     founder: { "@id": `${SITE}/hu/csapat#${BUSINESS.people[0].id}` },
     employee: BUSINESS.people.map((p) => ({

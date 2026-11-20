@@ -13,6 +13,9 @@ interface Props {
   // Csak olyan oldalon kapcsoljuk be, ahol a sablon maga nem ad H1-et (CMS "pages").
   // Ha ilyenkor nincs Hero a zónában, az első FAQ/űrlap címe lesz az oldal H1-e.
   promoteFirstHeading?: boolean;
+  // Kódból (statikusan) beszúrt szakasz: az ADOTT típusú első CMS-szakasz ELÉ kerül (ha nincs ilyen, a végére).
+  // Pl. a főoldalon a „Mit kezelünk?” a vélemények elé (2026-11-20).
+  insertBefore?: { component: string; node: React.ReactNode };
 }
 
 // Ezek a szekciók tudnak H1-et adni, ha az oldalon nincs Hero (a zónában az első ilyen kapja)
@@ -50,12 +53,14 @@ const componentMapping: { [key: string]: any } = {
   'dynamic-zone.related-articles': dynamic(() => import('./related-articles').then(mod => mod.RelatedArticles))
 }
 
-const DynamicZoneManager: React.FC<Props> = ({ dynamicZone, locale, promoteFirstHeading = false }) => {
+const DynamicZoneManager: React.FC<Props> = ({ dynamicZone, locale, promoteFirstHeading = false, insertBefore }) => {
   const hasHero = dynamicZone.some((c) => c.__component === 'dynamic-zone.hero');
   const h1Index =
     promoteFirstHeading && !hasHero
       ? dynamicZone.findIndex((c) => HEADING_PROMOTABLE.includes(c.__component))
       : -1;
+
+  const insertAt = insertBefore ? dynamicZone.findIndex((c) => c.__component === insertBefore.component) : -1;
 
   return (
     <div>
@@ -69,8 +74,10 @@ const DynamicZoneManager: React.FC<Props> = ({ dynamicZone, locale, promoteFirst
           const headingProps = HEADING_PROMOTABLE.includes(componentData.__component)
             ? { headingAs: index === h1Index ? 'h1' : 'h2' }
             : {};
-          return <Component key={componentData.id} {...componentData} {...headingProps} locale={locale} />;
+          const el = <Component key={componentData.id} {...componentData} {...headingProps} locale={locale} />;
+          return index === insertAt ? <React.Fragment key={`insert-${componentData.id}`}>{insertBefore!.node}{el}</React.Fragment> : el;
         })}
+      {insertBefore && insertAt === -1 ? insertBefore.node : null}
     </div>
   );
 };

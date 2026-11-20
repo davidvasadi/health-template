@@ -1,11 +1,12 @@
 // next/lib/shared/PageContent.tsx
+import type { ReactNode } from 'react';
 import { AmbientColor } from '@/components/decorations/ambient-color';
 import DynamicZoneManager from '@/components/dynamic-zone/manager'
 import { Breadcrumb, resolveBreadcrumb } from '@/components/navbar/breadcrumb';
 import { cleanStructuredData } from '@/lib/shared/structured-data';
 import { slimStrapi } from '@/lib/strapi/slim';
 
-export default async function PageContent({ pageData }: { pageData: any }) {
+export default async function PageContent({ pageData, insertBefore }: { pageData: any; /** kódból beszúrt szakasz (DynamicZoneManager) */ insertBefore?: { component: string; node: ReactNode } }) {
   // a szakaszok kliens-komponensek: a képek felesleges Strapi-metaadata ne kerüljön a HTML-be (lib/strapi/slim.ts)
   const dynamicZone = slimStrapi(pageData?.dynamic_zone);
 
@@ -30,7 +31,7 @@ export default async function PageContent({ pageData }: { pageData: any }) {
         <AmbientColor />
         <Breadcrumb crumb={crumb} />
         {dynamicZone && (
-          <DynamicZoneManager dynamicZone={dynamicZone} locale={pageData.locale} promoteFirstHeading />
+          <DynamicZoneManager dynamicZone={dynamicZone} locale={pageData.locale} promoteFirstHeading insertBefore={insertBefore} />
         )}
       </div>
     </>

@@ -2,6 +2,8 @@
 // (ChatGPT, Perplexity, Claude stb.) gyorsan megértsék, mit kínál a The Place Studio
 // és hol találják a legfontosabb tartalmakat. A tények az oldal tartalmából és a
 // strukturált adatokból (Chiropractor / MedicalBusiness JSON-LD) származnak.
+import { conditionsFor } from "@/lib/shared/conditions";
+
 export const dynamic = "force-static";
 
 export async function GET() {
@@ -16,10 +18,15 @@ export async function GET() {
 - Cím: 1042 Budapest, József Attila utca 76–80. (bal szélső üzlethelyiség), Újpest
 - Telefon: +36 30 319 6238
 - Email: info@theplacestudio.hu
-- Nyitvatartás: minden nap 9:00–20:30, időpontfoglalással
+- Nyitvatartás: hétfőtől szombatig 9:00–20:30 (vasárnap zárva), időpontfoglalással
 - [Online időpontfoglalás](https://theplacestudio.salonic.hu/)
 - [Kapcsolat](${base}/hu/kapcsolat)
 - [Térkép (Google Maps)](https://maps.app.goo.gl/GpPv9k9LBbrpRJfu9)
+
+## Mit kezelünk
+
+${conditionsFor('hu').map((c) => `- ${c.name}: ${c.text}`).join('\n')}
+- [Részletek a főoldalon](${base}/hu#mit-kezelunk)
 
 ## Kezelések és árak
 

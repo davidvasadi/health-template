@@ -5,6 +5,7 @@ import PageContent from '@/lib/shared/PageContent';
 import fetchContentType from '@/lib/strapi/fetchContentType';
 import { generateMetadataObject } from '@/lib/shared/metadata';
 import ClientSlugHandler from './ClientSlugHandler';
+import { TreatedConditions } from '@/components/sections/treated-conditions';
 
 export async function generateMetadata({
   params,
@@ -71,6 +72,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
   return <>
     <ClientSlugHandler localizedSlugs={localizedSlugs} />
-    <PageContent pageData={pageData} />
+    {/* „Mit kezelünk?” — statikus, kódból (lib/shared/conditions.ts), a vélemények elé */}
+    <PageContent pageData={pageData} insertBefore={{ component: 'dynamic-zone.testimonials', node: <TreatedConditions locale={params.locale} /> }} />
   </>;
 }
