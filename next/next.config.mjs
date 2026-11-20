@@ -79,6 +79,13 @@ const staticRedirects = [
   { source: "/en/videok/:slug*", destination: "/en", permanent: true },
   { source: "/de/videok/:slug*", destination: "/de", permanent: true },
 
+  // Az ajándékutalvány csak magyar (Dave, 2026-11-20): az en/de szolgáltatás-változat → a magyar utalványoldal
+  // (ugyanez a lista: lib/shared/hu-only.ts)
+  { source: "/de/leistungen/geschenkgutschein-chiropraktik-budapest", destination: "/hu/ajandekutalvany", statusCode: 301 },
+  { source: "/en/products/giftvoucher-chiropractic-budapest",          destination: "/hu/ajandekutalvany", statusCode: 301 },
+  { source: "/de/products/geschenkgutschein-chiropraktik-budapest",   destination: "/hu/ajandekutalvany", statusCode: 301 },
+  { source: "/en/leistungen/giftvoucher-chiropractic-budapest",        destination: "/hu/ajandekutalvany", statusCode: 301 },
+
   // Gyökér — tartós (308): a főoldalra mutató linkek értéke így átszáll a /hu-ra (ideiglenesnél nem)
   { source: "/", destination: "/hu", permanent: true },
 ];

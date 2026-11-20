@@ -1,5 +1,6 @@
 // app/sitemap.xml/route.ts
 import qs from "qs";
+import { HU_ONLY_PRODUCT_SLUGS } from "@/lib/shared/hu-only";
 
 export const revalidate = 600;
 
@@ -300,8 +301,10 @@ export async function GET() {
         const s = getSlug(item);
         const l = getLocale(item);
         if (!s || !l) continue;
+        // csak magyar tartalom (ajándékutalvány): az en/de változat átirányít a magyarra → nem kerül a sitemapba
+        if (HU_ONLY_PRODUCT_SLUGS.has(s)) continue;
         const loc = siteUrl(`${l}/${base}/${s}`);
-        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug);
+        const locs = getLocalizations(item).map(getAttrs).filter((x) => x?.locale && x?.slug && !HU_ONLY_PRODUCT_SLUGS.has(x.slug));
         const huSlug = locs.find((x) => x.locale === "hu")?.slug ?? s;
         add(loc, {
           lastmod: lastmod(item), changefreq: "weekly", priority: 0.6,
