@@ -1,12 +1,9 @@
-"use client";
+// A preloader logójának rajzolata — közös, sima modul (nem "use client"), hogy a szerveroldali, CSS-es első-látogatás
+// preloader (first-visit-preloader.tsx) használja (a régi framer-es Preload és a RouteOverlay 2026-11-20-án kikerült).
+export type Kind = "teal" | "dark";
+export type PathDef = { d: string; kind: Kind };
 
-import React, { useMemo } from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-
-type Kind = "teal" | "dark";
-type PathDef = { d: string; kind: Kind };
-
-const PATHS: readonly PathDef[] = [
+export const PRELOAD_PATHS: readonly PathDef[] = [
   // TEAL
   {
     d: "M284.022 126.593C284.012 124.878 283.863 123.17 283.594 121.477C282.59 115.169 285.807 112.42 288.667 118.131C288.773 118.344 288.87 118.493 289.012 118.683C291.046 121.421 295.177 120.44 295.227 117.03C295.542 95.8543 279.998 79.2107 270.235 73.5607C269.384 73.0684 268.446 72.7289 267.518 72.406C255.498 68.2249 238.705 71.6422 240.031 84.2998C242.741 110.167 262.197 124.829 277.312 130.905C280.542 132.203 284.043 130.074 284.022 126.593Z",
@@ -51,105 +48,3 @@ const PATHS: readonly PathDef[] = [
     kind: "dark",
   },
 ] as const;
-
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-const makeOpacityVariants = (baseDelay: number, reduce: boolean): Variants => ({
-  hidden: { opacity: 0 },
-  show: (i: number) => ({
-    opacity: 1,
-    transition: reduce
-      ? { duration: 0.08, ease: "linear", delay: i * 0.01 }
-      : { duration: 0.18, ease: EASE, delay: baseDelay + i * 0.045 },
-  }),
-});
-
-function isSafariUA() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  const vendor = navigator.vendor || "";
-  const isApple = vendor.includes("Apple");
-  const isCriOS = ua.includes("CriOS");
-  const isFxiOS = ua.includes("FxiOS");
-  return isApple && !isCriOS && !isFxiOS;
-}
-
-export default function Preload({ tagline = "The Place Studio" }: { tagline?: string }) {
-  const reduce = useReducedMotion();
-  const safari = useMemo(() => isSafariUA(), []);
-
-  const { teal, dark } = useMemo(() => {
-    return {
-      teal: PATHS.filter((p) => p.kind === "teal"),
-      dark: PATHS.filter((p) => p.kind === "dark"),
-    };
-  }, []);
-
-  const tealVariants = useMemo(() => makeOpacityVariants(0.0, !!reduce), [reduce]);
-  const darkVariants = useMemo(() => makeOpacityVariants(reduce ? 0.02 : 0.38, !!reduce), [reduce]);
-
-  const floatA = reduce ? {} : { y: [0, -4, 0] };
-  const floatAT = reduce ? undefined : { duration: 2.6, ease: "easeInOut", repeat: Infinity };
-
-  const floatB = reduce ? {} : safari ? { y: [0, -2, 0] } : { y: [0, -2, 0] };
-  const floatBT = reduce
-    ? undefined
-    : { duration: 3.1, ease: "easeInOut", repeat: Infinity, delay: 0.12 };
-
-  return (
-    <div className="flex flex-col items-center gap-6">
-      <motion.svg
-        width="350"
-        height="334"
-        viewBox="0 0 350 334"
-        className="h-auto w-[200px] sm:w-[240px] md:w-[280px]"
-        aria-hidden="true"
-      >
-        <motion.g animate={floatA} transition={floatAT} style={{ willChange: reduce ? undefined : "transform" }}>
-          {teal.map((p, i) => (
-            <motion.path
-              key={`teal-${i}`}
-              d={p.d}
-              className="fill-[#057C80]"
-              variants={tealVariants}
-              initial="hidden"
-              animate="show"
-              custom={i}
-            />
-          ))}
-        </motion.g>
-
-        <motion.g animate={floatB} transition={floatBT} style={{ willChange: reduce ? undefined : "transform" }}>
-          {dark.map((p, i) => (
-            <motion.path
-              key={`dark-${i}`}
-              d={p.d}
-              className="fill-[#003133]"
-              variants={darkVariants}
-              initial="hidden"
-              animate="show"
-              custom={i}
-            />
-          ))}
-        </motion.g>
-      </motion.svg>
-
-      {/* TAGLINE */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={
-          reduce
-            ? { duration: 0.01 }
-            : { duration: 0.45, ease: EASE, delay: safari ? 0.35 : 0.42 }
-        }
-        className="flex flex-col items-center gap-3"
-      >
-        <p className="text-[11px] sm:text-xs font-medium uppercase tracking-[0.32em] text-[#4B5563]">
-          {tagline}
-        </p>
-        <div className="h-px w-24 bg-[#057C80]/35" />
-      </motion.div>
-    </div>
-  );
-}

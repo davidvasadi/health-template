@@ -10,7 +10,7 @@ import fetchContentType from "@/lib/strapi/fetchContentType";
 import CookieBanner from "@/components/consent/cookie-banner";
 import { businessJsonLd } from "@/lib/shared/structured-data";
 
-import RouteOverlay from "@/components/preload/overlay";
+import { FirstVisitPreloader } from "@/components/preload/first-visit-preloader";
 
 
 export async function generateMetadata({
@@ -43,8 +43,8 @@ export default async function LocaleLayout({
     <ViewTransitions>
       <CartProvider>
         <div className="bg-white">
-          {/* SSR cover: stabil, nincs fehér villanás (fix bg) */}
-          <div id="ssr-preload-cover" className="fixed inset-0 z-[9998] bg-white" />
+          {/* első látogatás: logó-preloader (CSS, munkamenetenként egyszer) — a régi fehér takaró és lapváltás-fedőréteg helyett */}
+          <FirstVisitPreloader />
 
           {/* app-shell wrapper (NINCS transform rajta) */}
           <div id="app-shell">
@@ -56,8 +56,6 @@ export default async function LocaleLayout({
             <CookieBanner locale={locale as "hu" | "en" | "de"} />
           </div>
 
-          {/* globális route overlay */}
-          <RouteOverlay />
         </div>
       </CartProvider>
     </ViewTransitions>

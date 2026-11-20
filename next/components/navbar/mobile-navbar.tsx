@@ -65,12 +65,10 @@ export const MobileNavbar = ({ leftNavbarItems, rightNavbarItems, logo, locale }
   /* Scroll figyelés: desktop/tablet esetén 80px felett jelenjen meg az üveg háttér */
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 80));
 
-  /* ✅ RouteOverlay navigáció event → zárjuk a menüt */
+  /* ✅ lapváltáskor zárjuk a menüt (korábban a RouteOverlay jelezte, ma az útvonal változása) */
   useEffect(() => {
-    const onNav = () => setOpen(false);
-    window.addEventListener("route-overlay:navigate", onNav as EventListener);
-    return () => window.removeEventListener("route-overlay:navigate", onNav as EventListener);
-  }, []);
+    setOpen(false);
+  }, [pathname]);
 
   /* ESC zárás + scroll-lock nyitott menü esetén */
   useEffect(() => {

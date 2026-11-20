@@ -22,3 +22,57 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ===== Első-látogatás preloader (components/preload/first-visit-preloader.tsx) — tisztán CSS, JS nélkül =====
+   Munkamenetenként egyszer; ha már látta (html.tps-seen), meg sem jelenik. A logó darabjai sorban KIRAJZOLÓDNAK (előbb
+   a körvonal, aztán a kitöltés) — ~2 mp, hogy látsszon —, majd felfelé kitolódik (visibility:hidden — nem fog meg
+   kattintást). */
+#tps-preloader {
+  position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.5rem; background: #fff;
+  animation: tps-pre-out .6s cubic-bezier(.76,0,.24,1) 2.45s forwards;
+}
+/* első betöltés: a preloader felfelé kitolódik, a tartalom (menüvel együtt) alulról feltolódik — ugyanaz, mint lapváltáskor
+   (::view-transition). Csak `backwards` kitöltés: a végén nem marad transform az #app-shell-en (a fixed menü miatt). */
+html:not(.tps-seen) #app-shell { animation: tps-push-in .6s cubic-bezier(.76,0,.24,1) 2.45s backwards; }
+html.tps-seen #tps-preloader { display: none; }
+#tps-preloader .tps-pre-logo { width: 200px; height: auto; overflow: visible; }
+@media (min-width: 640px) { #tps-preloader .tps-pre-logo { width: 240px; } }
+@media (min-width: 768px) { #tps-preloader .tps-pre-logo { width: 280px; } }
+/* minden darab: előbb a körvonal rajzolódik meg (stroke-dashoffset, pathLength=1), aztán kitöltődik színnel */
+#tps-preloader path { fill-opacity: 0; stroke-width: 1.6; stroke-dasharray: 1; stroke-dashoffset: 1; stroke-linejoin: round;
+  animation: tps-pre-draw .9s cubic-bezier(.65,0,.35,1) var(--d, 0ms) forwards, tps-pre-fill .45s ease calc(var(--d, 0ms) + .75s) forwards; }
+#tps-preloader .tps-pre-float-a { animation: tps-pre-float 2.6s ease-in-out infinite; will-change: transform; }
+#tps-preloader .tps-pre-float-b { animation: tps-pre-float-b 3.1s ease-in-out .12s infinite; will-change: transform; }
+#tps-preloader .tps-pre-tagline { display: flex; flex-direction: column; align-items: center; gap: .75rem;
+  opacity: 0; transform: translateY(10px); animation: tps-pre-tag .5s cubic-bezier(.22,1,.36,1) 1.25s forwards; }
+#tps-preloader .tps-pre-tagline p { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .32em; color: #4B5563; }
+@media (min-width: 640px) { #tps-preloader .tps-pre-tagline p { font-size: 12px; } }
+#tps-preloader .tps-pre-tagline span { display: block; height: 1px; width: 6rem; background: rgba(5,124,128,.35); }
+@keyframes tps-pre-draw { to { stroke-dashoffset: 0; } }
+@keyframes tps-pre-fill { to { fill-opacity: 1; stroke-opacity: 0; } }
+@keyframes tps-pre-fade { to { opacity: 0; visibility: hidden; } }
+@keyframes tps-pre-tag { to { opacity: 1; transform: none; } }
+@keyframes tps-pre-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes tps-pre-float-b { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes tps-pre-out { to { transform: translateY(-100%); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  #tps-preloader { animation: tps-pre-fade .2s ease .3s forwards; }
+  html:not(.tps-seen) #app-shell { animation: none; }
+  #tps-preloader path { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0; animation: none; }
+  #tps-preloader .tps-pre-tagline { animation-duration: .01s; animation-delay: 0s !important; }
+  #tps-preloader .tps-pre-float-a, #tps-preloader .tps-pre-float-b { animation: none; }
+}
+
+/* ===== Lapváltás: a két oldal függőlegesen „tolja” egymást (View Transitions, 2026-11-20) =====
+   A next-view-transitions <Link> a böngésző View Transitions funkciójával vált lapot: lefotózza a régi és az új oldalt.
+   Itt a régi felfelé kicsúszik, az új alulról tolja fel — az új oldal tetején a türkiz logós függöny van
+   ((marketing)/template.tsx), így a függöny tolja ki a régit, majd felhúzódik. A menü az oldallal együtt tolódik. Ahol a böngésző nem
+   támogatja (pl. Firefox), sima, azonnali lapváltás — hiba nélkül. Csökkentett mozgásnál nincs animáció. */
+@keyframes tps-push-out { to { transform: translateY(-100%); } }
+@keyframes tps-push-in { from { transform: translateY(100%); } }
+::view-transition-old(root) { animation: tps-push-out .6s cubic-bezier(.76,0,.24,1) both; }
+::view-transition-new(root) { animation: tps-push-in .6s cubic-bezier(.76,0,.24,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
