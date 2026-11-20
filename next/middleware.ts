@@ -63,8 +63,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // ✅ minden tartalom, kivéve a technikai útvonalak + preview
-    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots\\.txt|llms\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml|_preview/).*)",
+    // ✅ minden tartalom, kivéve a technikai útvonalak + preview (+ hdri/: a hero 3D gerinc stúdió-fénye, public/hdri)
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots\\.txt|llms\\.txt|sitemap\\.xml|sitemap-.*\\.xml|server-sitemap\\.xml|_preview/|hdri/).*)",
     // lokalizált technikai fájlok – explicit engedjük át
     "/:locale(hu|en|de)/(robots.txt|sitemap.xml|sitemap-:any*.xml|server-sitemap.xml)",
   ],

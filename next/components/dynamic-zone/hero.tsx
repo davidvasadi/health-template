@@ -12,7 +12,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 
 // --- Motion / Animáció ---
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion, useInView } from "framer-motion";
 const MotionSection = motion.section as unknown as React.ComponentType<any>;
 const MotionDiv = motion.div as unknown as React.ComponentType<any>;
 
@@ -58,8 +58,10 @@ const bgVariants = {
   hidden: { y: 28, opacity: 0 },
   show: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 } as const;
+// a kártya lentről enyhén felfelé úszik be — ugyanabba az irányba, mint a lapváltás ((marketing)/template.tsx); korábban
+// felülről esett be (-22 px), és a két ellentétes mozgás „ugrásnak” látszott
 const cardVariants = {
-  hidden: { y: -22, opacity: 0 },
+  hidden: { y: 10, opacity: 0 },
   show: { y: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
 } as const;
 
@@ -398,20 +400,15 @@ export const Hero = ({
   const [sceneReady, setSceneReady] = useState(false);
   const [dpr, setDpr] = useState<[number, number]>(() => {
     if (typeof window === "undefined") return [1, 1.5];
-    const max = Math.min(1.8, window.devicePixelRatio || 1.5);
+    // telefonon legfeljebb 1,5 (szemmel nem látszik, a processzornak sokat számít), gépen 1,8 — mint eddig
+    const cap = window.innerWidth < 768 ? 1.5 : 1.8;
+    const max = Math.min(cap, window.devicePixelRatio || 1.5);
     return [1, max];
   });
 
-  const [hasEnteredOnce, setHasEnteredOnce] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("heroSeen") === "1";
-  });
-  useEffect(() => {
-    if (!hasEnteredOnce && sceneReady) {
-      sessionStorage.setItem("heroSeen", "1");
-      setHasEnteredOnce(true);
-    }
-  }, [sceneReady, hasEnteredOnce]);
+  // A belépő animáció a szerveren és a böngészőben UGYANÚGY indul (2026-11-20). Korábban a böngésző a sessionStorage-ból
+  // döntötte el („láttad már?”), a szerver nem tudta — a kettő eltért (hydration), és a kártya egyet „ugrott”.
+  const hasEnteredOnce = false;
 
   const { scrollYProgress } = useScroll();
   const cardY = useTransform(scrollYProgress, [0, 1], [0, -12]);
@@ -432,21 +429,31 @@ export const Hero = ({
 
   const showScene = !reducedMotion;
 
+  // A 3D gerinc a hero-kártyával EGYSZERRE indul, mint eddig (Dave, 2026-11-20 — a késleltetett indítás után a
+  // csigolya később jött be, mint a kártya). Az optimalizálás máshol van: a stúdió-fény a saját domainről jön
+  // (spine-scene.tsx), legörgetve nem rajzol (useInView lent), telefonon kisebb a felbontás felső határa.
+  const mountScene = true;
+
+  // csak akkor rajzol, ha a hero látszik (framer useInView) — legörgetve nem fogyaszt processzort
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const heroInView = useInView(sectionRef, { margin: "200px 0px" });
+
   return (
     <MotionSection
+      ref={sectionRef}
       className="relative min-h-svh isolate overflow-hidden"
       variants={sectionVariants}
       initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
       animate={reducedMotion ? undefined : "show"}
     >
-      {showScene && (
+      {showScene && mountScene && (
         <MotionDiv
           className="absolute inset-0 -z-10"
           variants={bgVariants}
           initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
           animate={reducedMotion ? undefined : "show"}
         >
-          <SpineScene onReady={() => setSceneReady(true)} dpr={dpr} setDpr={setDpr} />
+          <SpineScene onReady={() => setSceneReady(true)} dpr={dpr} setDpr={setDpr} active={heroInView} />
         </MotionDiv>
       )}
 

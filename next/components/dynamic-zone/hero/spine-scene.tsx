@@ -122,10 +122,13 @@ export default function SpineScene({
   onReady,
   dpr,
   setDpr,
+  active = true,
 }: {
   onReady: () => void;
   dpr: number | [number, number];
   setDpr: (d: [number, number]) => void;
+  /** látszik-e a jelenet (hero.tsx, framer useInView) — ha nem, nem rajzol (nem fogyaszt processzort görgetés után) */
+  active?: boolean;
 }) {
   const createdOnce = useRef(false);
 
@@ -151,12 +154,15 @@ export default function SpineScene({
           requestAnimationFrame(onReady);
         }
       }}
-      frameloop="always"
+      frameloop={active ? "always" : "never"}
     >
       {/* @ts-ignore */}
       <color attach="background" args={["transparent"]} />
       <Suspense fallback={null}>
-        <Environment preset="studio" resolution={256} />
+        {/* Ugyanaz a stúdió-HDR, mint a preset="studio" (studio_small_03_1k.hdr) — pontosan ugyanaz a fény és csillogás —,
+            de a SAJÁT domainről (public/hdri), nem a pmndrs külső CDN-jéről (2026-11-20). A jelenet az oldal betöltése után
+            indul (hero.tsx), így ez a letöltés nem lassítja a megjelenést. */}
+        <Environment files="/hdri/studio_small_03_1k.hdr" resolution={256} />
         <Float floatIntensity={0.3} rotationIntensity={0.12} speed={0.6}>
           <SpineGroup />
         </Float>
