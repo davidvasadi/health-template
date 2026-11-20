@@ -199,13 +199,13 @@ export const FAQ = ({
                 className="group rounded-xl border border-neutral-200 bg-white shadow-sm open:bg-neutral-50 transition-colors"
               >
                 <summary className="list-none cursor-pointer select-none px-5 py-4 md:px-6 md:py-5 flex items-start gap-4">
-                  <span className="mt-0.5 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-breaker-bay-50 text-breaker-bay-600 text-xs font-semibold ring-1 ring-inset ring-breaker-bay-200">
+                  <span className="mt-0.5 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-breaker-bay-50 text-breaker-bay-800 text-xs font-semibold ring-1 ring-inset ring-breaker-bay-200">
                     {(i + 1).toString().padStart(2, "0")}
                   </span>
 
-                  <h4 className="flex-1 text-base md:text-lg font-semibold text-neutral-900">
+                  <h3 className="flex-1 text-base md:text-lg font-semibold text-neutral-900">
                     {faq.question}
-                  </h4>
+                  </h3>
 
                   {/* Link másolása */}
                   <button
