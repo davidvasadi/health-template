@@ -83,7 +83,29 @@ const staticRedirects = [
   { source: "/", destination: "/hu", permanent: true },
 ];
 
+// Biztonsági fejlécek minden oldalra (2026-11-20). Szándékosan óvatos készlet — egyik sem változtat az oldal működésén:
+// - HSTS: csak https (1 év); includeSubDomains / preload NÉLKÜL, hogy egy esetleges http-s aldomain ne sérüljön.
+// - frame-ancestors 'self' + X-Frame-Options SAMEORIGIN: más oldal nem teheti iframe-be (clickjacking); a Strapi admin
+//   előnézete ugyanezen a domainen fut (/admin), az továbbra is működik.
+// - Teljes CSP (script-src stb.) NINCS: a GA / Google Ads / beágyazott szkriptek miatt könnyen eltörne valamit.
+const securityHeaders = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+];
+
 const nextConfig = {
+  // ne árulja el a fejléc, hogy Next.js fut
+  poweredByHeader: false,
+
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "theplacestudio.hu" },
