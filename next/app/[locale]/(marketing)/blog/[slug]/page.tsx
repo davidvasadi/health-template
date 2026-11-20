@@ -4,6 +4,7 @@ import React from "react";
 import "@/app/prism.css";
 import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { BlogLayout } from "@/components/blog-layout";
 import fetchContentType from "@/lib/strapi/fetchContentType";
@@ -76,9 +77,8 @@ export default async function SingleArticlePage({
     },
     true,
   );
-  if (!article) {
-    return <div>Blog not found</div>;
-  }
+  // nem létező cikk → valódi 404 (korábban 200-as „Blog not found” szöveg ment ki — a Google ezt soft 404-nek veszi)
+  if (!article) notFound();
 
   const localizedSlugs = article.localizations?.reduce(
     (acc: Record<string, string>, localization: any) => {
