@@ -22,12 +22,12 @@ export function FirstVisitPreloader({ tagline = "The Place Studio" }: { tagline?
         <svg viewBox="0 0 350 334" className="tps-pre-logo">
           <g className="tps-pre-float-a">
             {teal.map((p, i) => (
-              <path key={`t${i}`} d={p.d} pathLength={1} fill="#057C80" stroke="#057C80" style={{ ["--d" as string]: `${i * 140}ms` }} />
+              <path key={`t${i}`} d={p.d} pathLength={1} fill="#057C80" stroke="#057C80" style={{ ["--d" as string]: `${i * 100}ms` }} />
             ))}
           </g>
           <g className="tps-pre-float-b">
             {dark.map((p, i) => (
-              <path key={`d${i}`} d={p.d} pathLength={1} fill="#003133" stroke="#003133" style={{ ["--d" as string]: `${520 + i * 110}ms` }} />
+              <path key={`d${i}`} d={p.d} pathLength={1} fill="#003133" stroke="#003133" style={{ ["--d" as string]: `${380 + i * 75}ms` }} />
             ))}
           </g>
         </svg>

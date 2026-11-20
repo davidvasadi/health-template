@@ -118,6 +118,18 @@ function SpineGroup() {
   return <group ref={g}>{vertebrae.map((v, i) => <Vertebra key={i} y={v.y} scale={v.s} seg={seg} />)}</group>;
 }
 
+function ReadySignal({ onReady, once }: { onReady: () => void; once: React.MutableRefObject<boolean> }) {
+  const cb = useRef(onReady);
+  cb.current = onReady;
+  useEffect(() => {
+    if (once.current) return;
+    once.current = true;
+    // két képkocka: az első rajzolás biztosan megtörtént, mire a belépő indul
+    requestAnimationFrame(() => requestAnimationFrame(() => cb.current()));
+  }, [once]);
+  return null;
+}
+
 export default function SpineScene({
   onReady,
   dpr,
@@ -149,23 +161,24 @@ export default function SpineScene({
       className="absolute inset-0 -z-10 pointer-events-none"
       onCreated={(state) => {
         state.gl.setClearColor(0x000000, 0);
-        if (!createdOnce.current) {
-          createdOnce.current = true;
-          requestAnimationFrame(onReady);
-        }
       }}
       frameloop={active ? "always" : "never"}
     >
       {/* @ts-ignore */}
       <color attach="background" args={["transparent"]} />
       <Suspense fallback={null}>
-        {/* Ugyanaz a stúdió-HDR, mint a preset="studio" (studio_small_03_1k.hdr) — pontosan ugyanaz a fény és csillogás —,
+        {/* Ugyanaz a stúdió-HDR, mint a preset="studio" (studio_small_03_1k.hdr, felére kicsinyítve: 1,6 MB → 0,4 MB; a
+            fényerő azonos, a jelenet úgyis 256-os felbontásban használja) — pontosan ugyanaz a fény és csillogás —,
             de a SAJÁT domainről (public/hdri), nem a pmndrs külső CDN-jéről (2026-11-20). A jelenet az oldal betöltése után
             indul (hero.tsx), így ez a letöltés nem lassítja a megjelenést. */}
-        <Environment files="/hdri/studio_small_03_1k.hdr" resolution={256} />
+        <Environment files="/hdri/studio_small_03_512.hdr" resolution={256} />
         <Float floatIntensity={0.3} rotationIntensity={0.12} speed={0.6}>
           <SpineGroup />
         </Float>
+        {/* „kész” jelzés csak akkor, ha a stúdió-fény (HDR) betöltött és a gerinc TÉNYLEG kirajzolódott — korábban már
+            a vászon létrejöttekor szólt, a gerinc pedig csak a HDR letöltése után jelent meg, így később jött be,
+            mint a hero-kártya (hero.tsx erre a jelzésre indítja a kártyát és a gerincet együtt) */}
+        <ReadySignal onReady={onReady} once={createdOnce} />
       </Suspense>
 
       <PerformanceMonitor onDecline={() => setDpr([1, 1.25])} onIncline={() => setDpr([1, 1.8])} />

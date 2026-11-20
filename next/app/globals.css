@@ -25,27 +25,27 @@ body {
 
 /* ===== Első-látogatás preloader (components/preload/first-visit-preloader.tsx) — tisztán CSS, JS nélkül =====
    Munkamenetenként egyszer; ha már látta (html.tps-seen), meg sem jelenik. A logó darabjai sorban KIRAJZOLÓDNAK (előbb
-   a körvonal, aztán a kitöltés) — ~2 mp, hogy látsszon —, majd felfelé kitolódik (visibility:hidden — nem fog meg
+   a körvonal, aztán a kitöltés) — ~1,6 mp: jól látszik, de nem tartja sokáig vissza a tartalmat (LCP) —, majd felfelé kitolódik (visibility:hidden — nem fog meg
    kattintást). */
 #tps-preloader {
   position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1.5rem; background: #fff;
-  animation: tps-pre-out .6s cubic-bezier(.76,0,.24,1) 2.45s forwards;
+  animation: tps-pre-out .6s cubic-bezier(.76,0,.24,1) 1.65s forwards;
 }
 /* első betöltés: a preloader felfelé kitolódik, a tartalom (menüvel együtt) alulról feltolódik — ugyanaz, mint lapváltáskor
    (::view-transition). Csak `backwards` kitöltés: a végén nem marad transform az #app-shell-en (a fixed menü miatt). */
-html:not(.tps-seen) #app-shell { animation: tps-push-in .6s cubic-bezier(.76,0,.24,1) 2.45s backwards; }
+html:not(.tps-seen) #app-shell { animation: tps-push-in .6s cubic-bezier(.76,0,.24,1) 1.65s backwards; }
 html.tps-seen #tps-preloader { display: none; }
 #tps-preloader .tps-pre-logo { width: 200px; height: auto; overflow: visible; }
 @media (min-width: 640px) { #tps-preloader .tps-pre-logo { width: 240px; } }
 @media (min-width: 768px) { #tps-preloader .tps-pre-logo { width: 280px; } }
 /* minden darab: előbb a körvonal rajzolódik meg (stroke-dashoffset, pathLength=1), aztán kitöltődik színnel */
 #tps-preloader path { fill-opacity: 0; stroke-width: 1.6; stroke-dasharray: 1; stroke-dashoffset: 1; stroke-linejoin: round;
-  animation: tps-pre-draw .9s cubic-bezier(.65,0,.35,1) var(--d, 0ms) forwards, tps-pre-fill .45s ease calc(var(--d, 0ms) + .75s) forwards; }
+  animation: tps-pre-draw .7s cubic-bezier(.65,0,.35,1) var(--d, 0ms) forwards, tps-pre-fill .3s ease calc(var(--d, 0ms) + .55s) forwards; }
 #tps-preloader .tps-pre-float-a { animation: tps-pre-float 2.6s ease-in-out infinite; will-change: transform; }
 #tps-preloader .tps-pre-float-b { animation: tps-pre-float-b 3.1s ease-in-out .12s infinite; will-change: transform; }
 #tps-preloader .tps-pre-tagline { display: flex; flex-direction: column; align-items: center; gap: .75rem;
-  opacity: 0; transform: translateY(10px); animation: tps-pre-tag .5s cubic-bezier(.22,1,.36,1) 1.25s forwards; }
+  opacity: 0; transform: translateY(10px); animation: tps-pre-tag .45s cubic-bezier(.22,1,.36,1) .85s forwards; }
 #tps-preloader .tps-pre-tagline p { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .32em; color: #4B5563; }
 @media (min-width: 640px) { #tps-preloader .tps-pre-tagline p { font-size: 12px; } }
 #tps-preloader .tps-pre-tagline span { display: block; height: 1px; width: 6rem; background: rgba(5,124,128,.35); }

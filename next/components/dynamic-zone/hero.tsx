@@ -438,6 +438,18 @@ export const Hero = ({
   const sectionRef = useRef<HTMLElement | null>(null);
   const heroInView = useInView(sectionRef, { margin: "200px 0px" });
 
+  // A kártya és a 3D gerinc EGYÜTT jön be (Dave, 2026-11-20): a belépő akkor indul, amikor a gerinc ténylegesen
+  // kirajzolódott (SpineScene onReady — a stúdió-fény betöltése után). Biztonsági háló: lassú netnél / gyenge gépen
+  // legkésőbb 2 mp után a kártya mindenképp bejön (a szöveg ne várjon a 3D-re). Első látogatáskor ez a preloader
+  // alatt történik, így ott nem látszik várakozás.
+  const [introFallback, setIntroFallback] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setIntroFallback(true), 2000);
+    return () => window.clearTimeout(t);
+  }, []);
+  const introGo = !showScene || sceneReady || introFallback;
+  const introAnimate = reducedMotion ? undefined : introGo ? "show" : "hidden";
+
   return (
     <MotionSection
       ref={sectionRef}
@@ -451,7 +463,7 @@ export const Hero = ({
           className="absolute inset-0 -z-10"
           variants={bgVariants}
           initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
-          animate={reducedMotion ? undefined : "show"}
+          animate={introAnimate}
         >
           <SpineScene onReady={() => setSceneReady(true)} dpr={dpr} setDpr={setDpr} active={heroInView} />
         </MotionDiv>
@@ -477,7 +489,7 @@ export const Hero = ({
           <MotionDiv
             variants={cardVariants}
             initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
-            animate={reducedMotion ? undefined : "show"}
+            animate={introAnimate}
             style={reducedMotion ? undefined : { y: cardY, scale: cardScale, willChange: "transform", transform: "translateZ(0)" }}
             className="relative"
           >
