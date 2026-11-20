@@ -59,7 +59,7 @@ type NormalizeOpts = {
 };
 
 function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | undefined {
-  const trailingSlash = opts.trailingSlash ?? true;
+  const trailingSlash = opts.trailingSlash ?? false;
   const asset = opts.asset ?? false;
 
   let u = toStr(raw).trim();
@@ -92,7 +92,9 @@ function normalizeToSite(raw?: unknown, opts: NormalizeOpts = {}): string | unde
       url.pathname = url.pathname.replace(/\/+$/, '');
       if (!url.pathname) url.pathname = '/';
     } else {
-      url.pathname = ensureTrailingSlash(url.pathname);
+      // Perjel NÉLKÜL (2026-11-20): a szerver a perjeles címet 308/301-gyel a perjel nélkülire irányítja, és a sitemap is
+      // perjel nélküli — a canonical / hreflang tehát a perjel nélküli, valódi (200-as) címre mutasson, ne egy átirányításra.
+      url.pathname = trailingSlash ? ensureTrailingSlash(url.pathname) : (url.pathname.replace(/\/+$/, '') || '/');
     }
 
     return url.toString();
@@ -147,13 +149,13 @@ export function generateMetadataObject(
 
   const canonicalFromStrapi = normalizeToSite(
     seo?.canonicalURL ?? seo?.canonicalUrl ?? seo?.canonical ?? seo?.canonical_url,
-    { trailingSlash: true }
+    { trailingSlash: false }
   );
 
   const canonical =
     canonicalFromStrapi ??
-    normalizeToSite(joinUrl(SITE, pathname), { trailingSlash: true }) ??
-    `${SITE}/${locale}/`;
+    normalizeToSite(joinUrl(SITE, pathname), { trailingSlash: false }) ??
+    `${SITE}/${locale}`;
 
   const title =
     (typeof seo?.metaTitle === 'string' && seo.metaTitle.trim()) ||
@@ -183,14 +185,14 @@ export function generateMetadataObject(
       const p = opts.localizedPathnames[l];
       if (p) {
         languages[l] =
-          normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${l}/`;
+          normalizeToSite(joinUrl(SITE, p), { trailingSlash: false }) ?? `${SITE}/${l}`;
       }
     }
     // Az aktuális locale mindig legyen benne (biztonság)
     if (!languages[locale]) {
       const p = pathForLocale(pathname, locale);
       languages[locale] =
-        normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${locale}/`;
+        normalizeToSite(joinUrl(SITE, p), { trailingSlash: false }) ?? `${SITE}/${locale}`;
     }
   } else {
     // 📌 Régi viselkedés: nincs localizedPathnames → minden locale-ra generál
@@ -198,7 +200,7 @@ export function generateMetadataObject(
     for (const l of LOCALES) {
       const p = pathForLocale(pathname, l);
       languages[l] =
-        normalizeToSite(joinUrl(SITE, p), { trailingSlash: true }) ?? `${SITE}/${l}/`;
+        normalizeToSite(joinUrl(SITE, p), { trailingSlash: false }) ?? `${SITE}/${l}`;
     }
   }
   // ─────────────────────────────────────────────────────────────────────────

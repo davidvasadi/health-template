@@ -4,6 +4,7 @@
 // - A Strapi SEO structuredData-ból a cég-típusú blokkokat (és ahol a kód generálja, a BreadcrumbList-et)
 //   kiszűrjük, hogy ne legyen több, egymásnak ellentmondó változat.
 import fetchContentType from "@/lib/strapi/fetchContentType";
+import { HU_ONLY_PRODUCT_SLUGS } from "@/lib/shared/hu-only";
 import { conditionsFor } from "./conditions";
 
 const SITE = (process.env.WEBSITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplacestudio.hu").replace(/\/+$/, "");
@@ -63,14 +64,17 @@ async function getServices(locale: Locale) {
       false,
       { silent: true }
     ),
-    fetchContentType("product-page", { locale, fields: ["slug"] }, true, { silent: true }),
+    // a mező neve a Strapiban „Slug” (nagy S) — a korábbi fields:["slug"] 400-as hibát adott, és en/de alatt a magyar
+    // „szolgaltatasok” került a címekbe (404)
+    fetchContentType("product-page", { locale, fields: ["Slug"] }, true, { silent: true }),
   ]);
-  const base = (productPage?.slug || "szolgaltatasok").replace(/^\/|\/$/g, "");
-  const items: any[] = productsRes?.data ?? [];
+  const base = (productPage?.Slug || productPage?.slug || "szolgaltatasok").replace(/^\/|\/$/g, "");
+  // a csak magyar tartalom (ajándékutalvány) en/de változata átirányít → nem kerül az ajánlatlistába
+  const items: any[] = (productsRes?.data ?? []).filter((p: any) => !HU_ONLY_PRODUCT_SLUGS.has(p?.slug));
   return items.map((p) => ({
     name: p?.name as string,
     price: typeof p?.price === "number" ? p.price : null,
-    url: `${SITE}/${locale}/${base}/${p?.slug}/`,
+    url: `${SITE}/${locale}/${base}/${p?.slug}`,
     image: p?.images?.[0]?.url as string | undefined,
   }));
 }
@@ -89,7 +93,7 @@ export async function businessJsonLd(locale: string) {
     "@id": BUSINESS_ID,
     name: BUSINESS.name,
     description: DESCRIPTION[loc],
-    url: `${SITE}/${loc}/`,
+    url: `${SITE}/${loc}`,
     logo: `${SITE}/apple-icon.png`,
     ...(image ? { image } : {}),
     telephone: BUSINESS.telephone,
@@ -151,8 +155,8 @@ export function breadcrumbJsonLd(locale: string, homeLabel: string, label: strin
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: homeLabel, item: `${SITE}/${locale}/` },
-      { "@type": "ListItem", position: 2, name: label, item: `${SITE}/${locale}/${slug}/` },
+      { "@type": "ListItem", position: 1, name: homeLabel, item: `${SITE}/${locale}` },
+      { "@type": "ListItem", position: 2, name: label, item: `${SITE}/${locale}/${slug}` },
     ],
   };
 }
@@ -171,8 +175,43 @@ const BUSINESS_TYPES = new Set([
 const typesOf = (x: any): string[] => (Array.isArray(x?.["@type"]) ? x["@type"] : x?.["@type"] ? [x["@type"]] : []);
 
 // A Strapi structuredData megtisztítása: cég-blokkok (és kérésre a BreadcrumbList) nélkül
-export function cleanStructuredData(sd: any, opts: { stripBreadcrumb?: boolean } = {}) {
-  if (!sd) return null;
+// A Strapiban kézzel írt strukturált adatban maradt elavult címek → a mai, valódi (200-as) cím (2026-11-20).
+// (slug-cserék, átnevezett útvonalak; a régi címek ma 404-et vagy átirányítást adnak)
+const STALE_PATHS: Record<string, string> = {
+  "/de/blog/eingeklemmter-nerv-unterer-ruecken-behandlung": "/de/blog/eingeklemmter-nerv-unterer-ruecken-ursachen-symptome-behandlung",
+  "/en/blog/pinched-nerve-lower-back-treatment": "/en/blog/pinched-nerve-lower-back-causes-symptoms-treatment",
+  "/en/blog/frozen-shoulder-chiropractic-treatment": "/en/blog/frozen-shoulder-syndrome-chiropractic",
+  "/en/services": "/en/products",
+  "/de/products": "/de/leistungen",
+  // a /blog/ hiányzott a címből, vagy régi slug
+  "/de/ischias-oder-hexenschuss-schmerzfreie-komplex-therapie-budapest": "/de/blog/ischias-oder-hexenschuss-schmerzfreie-komplex-therapie-budapest",
+  "/en/sciatica-lumbago-treatment-budapest": "/en/blog/sciatica-lumbago-pain-free-complex-therapy-budapest",
+  "/lumbago-isiasz-kezeles-budapest": "/hu/blog/lumbago-isiasz-kezeles-budapest",
+  // nem létező logó-fájl (a middleware a /hu/logo.png-re irányítja) → a feltöltött logó (élesben 200)
+  "/logo.png": "/uploads/logo_018c92a763.svg",
+};
+const SITE_HOSTS = /^https?:\/\/(?:www\.)?(?:theplacestudio\.hu|csontkovacsbence\.hu)(?=\/|$)/i;
+
+/** egy saját oldalra mutató cím rendbetétele: https + fő domain, perjel nélkül, régi útvonal → mai */
+function fixSiteUrl(u: string): string {
+  if (!SITE_HOSTS.test(u)) return u;
+  const [main, hash] = u.split("#");
+  let path = main.replace(SITE_HOSTS, "") || "/";
+  if (path !== "/") path = path.replace(/\/+$/, "");
+  path = path.replace(/^\/hu\/gyakorlatok(?=\/|$)/, "/hu/otthoni-torna-gyakorlatok");
+  path = STALE_PATHS[path] ?? path;
+  return `${SITE}${path === "/" ? "/" : path}${hash !== undefined ? `#${hash}` : ""}`;
+}
+function fixUrlsDeep(x: any): any {
+  if (typeof x === "string") return fixSiteUrl(x);
+  if (Array.isArray(x)) return x.map(fixUrlsDeep);
+  if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, fixUrlsDeep(v)]));
+  return x;
+}
+
+export function cleanStructuredData(raw: any, opts: { stripBreadcrumb?: boolean } = {}) {
+  if (!raw) return null;
+  const sd = fixUrlsDeep(raw);
   const drop = (x: any) => {
     const t = typesOf(x);
     if (t.some((k) => BUSINESS_TYPES.has(k))) return true;

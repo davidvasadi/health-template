@@ -75,6 +75,8 @@ export async function generateMetadata({
   return generateMetadataObject(withoutCanonical(pageData?.seo), {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${base}/${params.slug}`, // ✅ javított
+    // a gyakorlatok csak magyarul léteznek: hreflang csak a saját nyelvre (különben en/de 404-es címeket hirdetne)
+    localizedPathnames: { [params.locale]: `/${params.locale}/${base}/${params.slug}` },
   });
 }
 
