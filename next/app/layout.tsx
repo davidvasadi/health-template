@@ -7,6 +7,19 @@ import "./globals.css";
 import { SlugProvider } from "./context/SlugContext";
 import GAViews from "@/lib/analytics/ga-views";
 import { Suspense } from "react";
+import localFont from "next/font/local";
+
+// Inter a <body>-n, hogy MINDENHOL ez legyen (a body-ba portált panelek, pl. a nyelvválasztó, és a 404-es oldal is;
+// korábban csak a [locale] layout egy belső div-jén volt).
+// A projektbe téve (2026-11): a build nem a Google Fonts-ról tölti le — a Next 14.2.5 font-letöltője egy furcsa
+// Google-válasznál elbukott, és vele a deploy is. Ugyanaz a betű, mint amit a Google adott: Inter (google/fonts, OFL),
+// opsz=14 rögzítve (a Google is ezt a példányt szolgálta ki), 400–900 vastagság, latin + latin-ext (ő, ű).
+const inter = localFont({
+  src: "./fonts/Inter-latin-var.woff2",
+  weight: "400 900",
+  style: "normal",
+  display: "swap",
+});
 export const viewport: Viewport = {
   
   themeColor: "#FAFAFA",
@@ -97,7 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
 
-      <body suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <SlugProvider>
           {children}
         <Suspense fallback={null}>
