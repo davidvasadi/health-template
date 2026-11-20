@@ -47,6 +47,8 @@ const LaunchStyles = () => (
 
     .chip { background: var(--breaker-50); border: 1px solid rgba(0,159,163,.35); color: var(--breaker-800); }
     .chip-breathe { animation: breathe 4.8s ease-in-out infinite; }
+    /* telefonon / tableten nincs „lélegzés”: az árnyék-animáció minden képkockában újrafestést kér → görgetéskor szaggatott */
+    @media (hover: none) and (pointer: coarse) { .chip-breathe { animation: none; } }
 
     .num-gradient{
       background: linear-gradient(180deg, var(--breaker-900) 0%, var(--breaker-700) 70%, var(--breaker-600) 100%);
@@ -76,7 +78,10 @@ function useSafariLow() {
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const mem = (navigator as any).deviceMemory ?? 4;
     const cores = navigator.hardwareConcurrency ?? 4;
-    setLow(isSafari && (isIOS || mem <= 4 || cores <= 4));
+    // minden érintőképernyős eszköz (telefon, tablet) is a könnyített hátteret kapja: a nagy, elmosott, görgetéssel mozgó
+    // fénygömbök Androidon is szaggatták a görgetést (korábban csak a Safari kapta a könnyített változatot)
+    const touch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    setLow(touch || (isSafari && (isIOS || mem <= 4 || cores <= 4)));
   }, []);
   return low;
 }
@@ -193,20 +198,11 @@ function MobileStickySection({
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
 
-  // Stabil mobil offset → 0..1 progress a szekción belül
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 92%", "end 8%"] });
-
-  // 1) Mission number — gyors felbukkanás + nagyobb parallax
-  const numOpacity   = useTransform(scrollYProgress, [0.08, 0.18], [0, 1]);
-  const numRevealY   = useTransform(scrollYProgress, [0.08, 0.18], [30, 0]);
-  const numParallaxY = useTransform(scrollYProgress, [0, 1], [0, -60]);
-  const numY         = useTransform([numRevealY, numParallaxY], ([reveal, parallax]: number[]) => reveal + parallax);
-
-  // 2) Title + Description — együtt, lassabb
-  const tdOpacity  = useTransform(scrollYProgress, [0.20, 0.44], [0, 1]);
-  const tdRevealY  = useTransform(scrollYProgress, [0.20, 0.44], [22, 0]);
-  const tdParallax = useTransform(scrollYProgress, [0, 1], [0, -24]);
-  const tdY        = useTransform([tdRevealY, tdParallax], ([reveal, parallax]: number[]) => reveal + parallax);
+  // Telefonon a megjelenés / eltűnés IDŐALAPÚ (whileInView), nem görgetéshez kötött: korábban minden görgetési képkockában
+  // JS számolta az átlátszóságot és az eltolást (useScroll + useTransform), ez iPhone-on szaggatott. Így a böngésző a
+  // grafikus kártyán, simán játssza le — a mozdulat ugyanaz (alulról beúszik, a szám előbb, a szöveg utána).
+  const view = { once: false, amount: 0.5 } as const;
+  const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
     <div ref={ref} className="relative min-h-[60svh]">
@@ -214,14 +210,25 @@ function MobileStickySection({
       <div className="sticky top-0 h-[60svh] flex flex-col justify-center">
         <div className="w-full px-6">
           {/* 1) MISSION NUMBER */}
-          <motion.div style={reduce ? undefined : { opacity: numOpacity, y: numY, willChange: "transform,opacity" }} className="mb-3">
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 30 }}
+            whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+            viewport={view}
+            transition={{ duration: 0.5, ease }}
+            className="mb-3"
+          >
             {missionNumber != null && (
               <p className="num-gradient text-4xl font-extrabold tracking-tight leading-none">{missionNumber}</p>
             )}
           </motion.div>
 
           {/* 2) TITLE + DESCRIPTION */}
-          <motion.div style={reduce ? undefined : { opacity: tdOpacity, y: tdY, willChange: "transform,opacity" }}>
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 22 }}
+            whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+            viewport={view}
+            transition={{ duration: 0.6, ease, delay: 0.12 }}
+          >
             <div className="flex items-center gap-3">
               <div className="chip chip-breathe h-10 w-10 rounded-xl flex items-center justify-center">
                 <IconRocket className="h-5 w-5 text-[color:var(--breaker-700)]" />
@@ -290,6 +297,7 @@ export const Launches = ({ heading, sub_heading, launches }: { heading: string; 
   // Guard: csak akkor állítsunk state-et, ha TÉNYLEG másik szakaszba léptünk
   const lastIdxRef = useRef(-1);
   useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    if (safariLow) return; // telefonon nincs háttérváltás → felesleges állapotfrissítés se legyen görgetés közben
     const idx = bps.reduce((acc, bp, i) => (Math.abs(latest - bp) < Math.abs(latest - bps[acc]) ? i : acc), 0);
     if (idx !== lastIdxRef.current) {
       lastIdxRef.current = idx;
@@ -312,7 +320,10 @@ export const Launches = ({ heading, sub_heading, launches }: { heading: string; 
     <motion.section
       ref={ref}
       className="relative w-full h-full pt-20 md:pt-10"
-      animate={{ background: gradient }}
+      // gépen a háttér-színátmenet szakaszonként lágyan vált; telefonon (safariLow = érintőképernyő / gyenge Safari)
+      // állandó — a teljes szakasz háttérének animálása görgetés közben ott szaggatott
+      style={safariLow ? { background: backgrounds[0] } : undefined}
+      animate={safariLow ? undefined : { background: gradient }}
       transition={{ duration: 0.5 }}
     >
       <LaunchStyles />

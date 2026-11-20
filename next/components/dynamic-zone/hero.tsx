@@ -413,6 +413,9 @@ export const Hero = ({
   const { scrollYProgress } = useScroll();
   const cardY = useTransform(scrollYProgress, [0, 1], [0, -12]);
   const cardScale = useTransform(scrollYProgress, [0, 1], [1, 0.997]);
+  // érintőképernyő (telefon / tablet): ott nincs görgetéshez kötött kártya-mozgás
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => { setIsTouch(window.matchMedia("(hover: none) and (pointer: coarse)").matches); }, []);
 
   const explicitNext = useMemo(() => coerceNextDate(nextSlotDate), [nextSlotDate]);
   const nextSlot = useMemo(() => {
@@ -490,7 +493,10 @@ export const Hero = ({
             variants={cardVariants}
             initial={reducedMotion ? undefined : hasEnteredOnce ? false : "hidden"}
             animate={introAnimate}
-            style={reducedMotion ? undefined : { y: cardY, scale: cardScale, willChange: "transform", transform: "translateZ(0)" }}
+            // a görgetéshez kötött apró mozgás (12 px / 0,3%) csak gépen: telefonon a címsor be-/kicsúszásakor az oldal
+            // magassága változik, ettől ez a mozgás ugrált; a fix `transform: translateZ(0)` pedig ütközött a framer
+            // saját transformjával — kivéve
+            style={reducedMotion || isTouch ? undefined : { y: cardY, scale: cardScale, willChange: "transform" }}
             className="relative"
           >
             {!reducedMotion && (

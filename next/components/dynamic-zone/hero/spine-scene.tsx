@@ -19,16 +19,25 @@ import { Environment, Float, PerformanceMonitor } from "@react-three/drei";
 function useScrollProgress() {
   const ref = useRef(0);
   useEffect(() => {
+    // Mobilon görgetéskor a böngésző címsora be-/kicsúszik, és ezzel a window.innerHeight is változik → korábban a
+    // görgetési arány (és vele a gerinc helyzete / forgása) hirtelen ugrott. Ezért a magasságot csak induláskor és
+    // tényleges szélesség-változáskor (pl. elforgatás) vesszük fel, a címsor mozgása nem számít.
+    let h = window.innerHeight;
+    let w = window.innerWidth;
     const calc = () => {
-      const p = window.scrollY / Math.max(1, window.innerHeight);
+      const p = window.scrollY / Math.max(1, h);
       ref.current = Math.max(0, Math.min(1, p));
+    };
+    const onResize = () => {
+      if (window.innerWidth !== w) { w = window.innerWidth; h = window.innerHeight; }
+      calc();
     };
     calc();
     window.addEventListener("scroll", calc, { passive: true });
-    window.addEventListener("resize", calc);
+    window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("scroll", calc);
-      window.removeEventListener("resize", calc);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
   return ref;
@@ -163,6 +172,9 @@ export default function SpineScene({
         state.gl.setClearColor(0x000000, 0);
       }}
       frameloop={active ? "always" : "never"}
+      // görgetéskor NE mérje újra a vásznat (alapból minden görgetésnél újramér → mobilon ugrálás); átméretezésnél is
+      // csak kis késleltetéssel (a mobil címsor be-/kicsúszása ne rángassa)
+      resize={{ scroll: false, debounce: { scroll: 0, resize: 200 } }}
     >
       {/* @ts-ignore */}
       <color attach="background" args={["transparent"]} />
@@ -181,7 +193,16 @@ export default function SpineScene({
         <ReadySignal onReady={onReady} once={createdOnce} />
       </Suspense>
 
-      <PerformanceMonitor onDecline={() => setDpr([1, 1.25])} onIncline={() => setDpr([1, 1.8])} />
+      {/* Felbontás-igazítás a gép teljesítményéhez. Korábban görgetés közben (mobilon leesik a képkockaszám) oda-vissza
+          váltott 1,25 és 1,8 között — minden váltásnál újrarajzolta a vásznat más felbontással: ez látszott „ugrásnak /
+          nagyításnak”, és telefonon a felső határt (1,5) is átlépte. Most: legfeljebb 1–2 váltás, a telefonos plafon
+          tartva, és ha ingadozik, végleg az alacsonyabbon marad. */}
+      <PerformanceMonitor
+        flipflops={2}
+        onDecline={() => setDpr([1, 1.25])}
+        onIncline={() => setDpr([1, typeof window !== "undefined" && window.innerWidth < 768 ? 1.5 : 1.8])}
+        onFallback={() => setDpr([1, 1.25])}
+      />
     </Canvas>
   );
 }
