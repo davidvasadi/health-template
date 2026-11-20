@@ -8,7 +8,7 @@ import { notFound } from "next/navigation";
 
 import { BlogLayout } from "@/components/blog-layout";
 import fetchContentType from "@/lib/strapi/fetchContentType";
-import { generateMetadataObject } from "@/lib/shared/metadata";
+import { generateMetadataObject, withoutCanonical } from "@/lib/shared/metadata";
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 import ClientSlugHandler from "../../ClientSlugHandler";
@@ -38,7 +38,8 @@ export async function generateMetadata({
     }
   }
 
-  return generateMetadataObject(article?.seo, {
+  // a canonical mindig a cikk valódi címe — a Strapiban néhány cikknél a slug-csere előtti (ma 404-es) cím maradt
+  return generateMetadataObject(withoutCanonical(article?.seo), {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/blog/${params.slug}/`,
     localizedPathnames,

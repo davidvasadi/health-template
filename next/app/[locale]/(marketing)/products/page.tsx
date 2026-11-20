@@ -6,7 +6,7 @@ import { Container } from "@/components/container";
 import { Featured } from "@/components/products/featured";
 import { ProductItems } from "@/components/products/product-items";
 import fetchContentType from "@/lib/strapi/fetchContentType";
-import { generateMetadataObject } from "@/lib/shared/metadata";
+import { generateMetadataObject, withoutCanonical } from "@/lib/shared/metadata";
 import ClientSlugHandler from "../ClientSlugHandler";
 import { Breadcrumb, resolveBreadcrumb } from "@/components/navbar/breadcrumb";
 import { cleanStructuredData } from "@/lib/shared/structured-data";
@@ -61,7 +61,8 @@ export async function generateMetadata({
     }
   }
 
-  return generateMetadataObject(rec?.seo, {
+  // a canonical mindig a valódi cím (pl. /de/leistungen/) — a Strapiban a régi /de/products/ maradt beírva
+  return generateMetadataObject(withoutCanonical(rec?.seo), {
     locale: params.locale as "hu" | "en" | "de",
     pathname: `/${params.locale}/${baseSlug}/`,
     localizedPathnames,
