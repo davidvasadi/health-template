@@ -314,7 +314,9 @@ export const TestimonialsSlider = ({
                       playsInline
                       preload="metadata"
                       controls={controlsOn}
-                      poster={posterSrc ?? undefined}
+                      // a poszter a lenti, optimalizált képrétegből jön (StrapiImage) — a <video poster> ugyanazt a képet
+                      // eredeti, 1005×1184-es méretben is letöltötte volna (Lighthouse: ~90 KB fölösleges)
+                      poster={showPosterOverlay ? undefined : posterSrc ?? undefined}
                       className="absolute inset-0 h-full w-full object-contain bg-white"
                       onPlay={() => setHasPlayed(true)}
                     />

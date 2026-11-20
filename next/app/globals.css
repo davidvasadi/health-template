@@ -1,7 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "./prism.css";
+/* a kódkiemelés (prism.css) csak a blogcikkekben kell — ott töltődik be (blog/[slug]/page.tsx), nem minden oldalon */
 
 :root {
   --foreground-rgb: 255, 255, 255;

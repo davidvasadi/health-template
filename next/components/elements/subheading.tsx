@@ -5,7 +5,9 @@ import Balancer from "react-wrap-balancer";
 
 export const Subheading = ({
   className,
-  as: Tag = "h2",
+  // alapból bekezdés (2026-11-20): korábban h2 volt, így minden alcím H2-ként került az oldal címsor-szerkezetébe
+  // (a főoldalon 23 H2) — SEO-szempontból zavaros. Ha valahol tényleg címsor kell, `as="h2"`.
+  as: Tag = "p",
   children,
   ...props
 }: {

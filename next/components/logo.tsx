@@ -43,6 +43,8 @@ const [line1, line2] = text.split(/\r?\n/);
         width={200}
         height={200}
         className="h-10 w-10 rounded-xl "
+        // a fejlécben, a képernyő tetején van — ne töltsön később (lazy)
+        loading="eager"
       />
 
       

@@ -1,5 +1,7 @@
 // app/[locale]/(marketing)/blog/[slug]/page.tsx
 import React from "react";
+// kódkiemelés a cikkekben lévő kódrészletekhez — csak itt kell (korábban a globals.css minden oldalra betöltötte)
+import "@/app/prism.css";
 import { cleanStructuredData } from "@/lib/shared/structured-data";
 import { Metadata } from "next";
 

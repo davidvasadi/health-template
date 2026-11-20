@@ -3,6 +3,8 @@ import React, { useRef } from "react";
 import { useScroll, useTransform } from "framer-motion";
 import { motion } from "framer-motion";
 
+// a kártyacímek H3-ak (2026-11-20): a szakasz címe (H2) alá tartoznak — korábban H2-ként duplán szerepeltek
+// (gépes és telefonos változat), ami a címsor-szerkezetet zavarossá tette.
 export const StickyScroll = ({
   content,
 }: {
@@ -91,11 +93,11 @@ export const ScrollContent = ({
           className=""
         >
           <div>{item.icon}</div>
-          <motion.h2 className="max-w-md mt-2 font-bold text-2xl lg:text-4xl inline-block bg-clip-text text-left text-transparent bg-gradient-to-b from-white  to-white">
+          <motion.h3 className="max-w-md mt-2 font-bold text-2xl lg:text-4xl inline-block bg-clip-text text-left text-transparent bg-gradient-to-b from-white  to-white">
             {item.title}
-          </motion.h2>
+          </motion.h3>
 
-          <motion.p className="text-lg text-neutral-500 font-regular max-w-sm mt-2">
+          <motion.p className="text-lg text-neutral-500 max-w-sm mt-2">
             {item.description}
           </motion.p>
         </motion.div>
@@ -133,9 +135,9 @@ export const ScrollContentMobile = ({
       <div className="w-full">
         <motion.div className=" mb-6">
           <div>{item.icon}</div>
-          <motion.h2 className="mt-2 font-bold text-2xl lg:text-4xl inline-block bg-clip-text text-left text-transparent bg-gradient-to-b from-white  to-white">
+          <motion.h3 className="mt-2 font-bold text-2xl lg:text-4xl inline-block bg-clip-text text-left text-transparent bg-gradient-to-b from-white  to-white">
             {item.title}
-          </motion.h2>
+          </motion.h3>
 
           <motion.p className="text-sm md:text-base text-neutral-500 font-bold max-w-sm mt-2">
             {item.description}

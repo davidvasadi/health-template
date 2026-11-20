@@ -151,9 +151,12 @@ export const AnimatedTooltip: React.FC<AnimatedTooltipProps> = ({
                 alt={alt}
                 width={1600}
                 height={1000}
+                // a megjelenített méret (telefonon teljes szélesség, gépen a kártya) — e nélkül telefonon is az 1600 px-es
+                // változatot töltötte le; és az oldal alján van, ezért nem kell azonnal (lazy)
+                sizes="(min-width: 1024px) 480px, 100vw"
                 className="h-full w-full object-cover"
                 decoding="async"
-                loading="eager"
+                loading="lazy"
                 draggable={false}
               />
 
